@@ -111,12 +111,20 @@ Create a new context collection to organize your reference materials. Collection
 
 Add a new context item to your reference library. Context items are reference materials that power AI generation — they help the AI produce more accurate, on-brand, and relevant content.
 
+You can supply the body two ways:
+
+- **`content`** — paste the markdown body directly. Best for short or hand-authored material.
+- **`content_url`** — pass a public URL and the backend fetches it and converts it to clean markdown server-side using a headless browser + Mozilla Readability (the same engine used for the user-website context-import flow). Use this whenever the body is large, comes from a presigned-link export (e.g. Google Doc, connected-app sandbox), or you'd otherwise have to pull the page into your own conversation just to forward it.
+
+Exactly one of `content` or `content_url` is required — providing both returns a 400.
+
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | Yes | Descriptive name for the context item |
-| `content` | string | Yes | The reference content to store |
+| `content` | string | Conditional | Markdown body. Mutually exclusive with `content_url` — provide exactly one |
+| `content_url` | string | Conditional | Public URL — backend fetches it and extracts clean markdown server-side. Mutually exclusive with `content` |
 | `collection_id` | integer | No | Collection ID to organize the item (from `list_context_collections` or `create_context_collection`) |
 | `project_id` | string | No | Project ID to associate with (from `get_projects`) |
 
@@ -136,6 +144,7 @@ Add a new context item to your reference library. Context items are reference ma
 **Example prompts:**
 - "Add our brand guidelines to MarketCore"
 - "Store this competitive analysis as context"
+- "Save https://example.com/competitor-pricing as a context item called 'Acme pricing'"
 - "Add this product brief to the 'Product Launch' collection"
 
 ---
@@ -144,13 +153,16 @@ Add a new context item to your reference library. Context items are reference ma
 
 Update an existing context item — change its name, content, or move it between collections / projects. If the item has a linked editing canvas open in the MarketCore sidebar, its title and content stay in sync automatically.
 
+Like `add_context`, you can supply a new body either as inline `content` or as a `content_url` the backend fetches and converts to markdown server-side. Pass at most one — providing both returns a 400. Omit both to leave the body untouched (e.g. when you're only renaming the item or moving it between collections).
+
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `context_item_id` | string (uuid) | Yes | The context item to update |
 | `name` | string | No | If provided, updates the name. Omit to leave unchanged |
-| `content` | string | No | If provided, updates the content. Omit to leave unchanged. Triggers RAG re-embedding |
+| `content` | string | No | New markdown body. Omit to leave unchanged. Triggers RAG re-embedding. Mutually exclusive with `content_url` |
+| `content_url` | string | No | Public URL — backend fetches and converts to clean markdown server-side, then stores it as the new body. Mutually exclusive with `content` |
 | `collection_id` | integer \| null | **Yes (nullable)** | Full replace. Pass the current ID to keep the item in its collection, pass a different ID to move it, or pass `null` to remove it from any collection |
 | `project_id` | string (uuid) \| null | **Yes (nullable)** | Full replace. Pass the current ID to keep the project association, pass a different ID to move it, or pass `null` to disassociate it |
 
@@ -175,6 +187,7 @@ Update an existing context item — change its name, content, or move it between
 - "Rename that brand voice context item to 'Brand Voice v2'"
 - "Move the competitive analysis out of the 'Archive' collection"
 - "Update our pricing context with the new Enterprise tier info"
+- "Refresh the Acme pricing context item from https://example.com/competitor-pricing"
 
 ---
 
