@@ -4,7 +4,7 @@ description: Use this skill whenever the user is working with MarketCore — cre
 license: Proprietary
 metadata:
   mcp-server: marketcore
-  version: 0.2.4
+  version: 0.2.5
 ---
 
 # MarketCore AI Workflows
@@ -152,7 +152,9 @@ The five workflows you'll handle 80% of the time. Long-tail recipes (workflow-ru
    - Project brief → strategic anchor for a project (use Workflow 2, not this one).
    - Document-specific (one-off context for a single generation) → don't store; pass `collection_ids` or `dimension_option_ids` on `create_content` instead.
 2. If top-level + the user wants it organized: `marketcore:list_context_collections`. Use existing collection if a fit; otherwise `marketcore:create_context_collection`.
-3. `marketcore:add_context` with `name`, `content`, optional `collection_id` (top-level) or `project_id` (project-scoped). Pass `content` as **markdown** — if the source is HTML or another format, convert it to markdown first using whatever conversion tool is available in your environment.
+3. `marketcore:add_context` with `name` and the body, plus optional `collection_id` (top-level) or `project_id` (project-scoped). Pick the body argument based on what you have:
+   - **`content`** — paste markdown directly. Best for short or hand-authored material.
+   - **`content_url`** — pass a public URL and the backend fetches it and converts the page to clean markdown server-side. Use this whenever the source is a URL (blog post, marketing page, presigned-link export from Google Docs / connected-app sandbox, etc.) — don't `web_browse`/`web_fetch` it into your conversation first just to forward the bytes. Exactly one of `content` / `content_url` is required; both → 400.
 
 **Output to user.** "Added: [link]. Want to use this in a content generation now?"
 
@@ -212,7 +214,8 @@ The five workflows you'll handle 80% of the time. Long-tail recipes (workflow-ru
 | To attach an existing Content item to a project (no brief intent) | `marketcore:update_project(project_brief_id=…)` (which auto-attaches), OR have the user attach in-app | Don't `create_content(project_id=…)` to "duplicate" it into the project — orphaned copy. |
 | To add reference material reusable across all projects | `marketcore:add_context` (no `project_id`) | A Context Collection is just a folder; you still need `add_context` to put items in it. |
 | To add reference material specific to one project | `marketcore:add_context(project_id=…)` | `update_project(project_brief_id=…)` would make it the brief — only one of those per project. |
-| To edit the name, content, or location of an existing context item | `marketcore:update_context` | `add_context` would create a duplicate. Note: `collection_id` and `project_id` are full-replace on every call — pass `null` to clear. Use `marketcore:list_context_items` to find the ID, or `marketcore:get_context_item` to confirm the current `collection_id` / `project_id` values before the full-replace update. |
+| To edit the name, content, or location of an existing context item | `marketcore:update_context` | `add_context` would create a duplicate. Note: `collection_id` and `project_id` are full-replace on every call — pass `null` to clear. Use `marketcore:list_context_items` to find the ID, or `marketcore:get_context_item` to confirm the current `collection_id` / `project_id` values before the full-replace update. To replace the body from a URL, pass `content_url` instead of `content` — backend extracts the markdown server-side. |
+| To save a URL (blog post, competitor page, Google Doc export, presigned link) as a context item | `marketcore:add_context` with `content_url=<url>` | Don't `web_browse`/`web_fetch` the URL just to paste the markdown into `content` — backend has the same Mozilla Readability extractor and avoids the round-trip through your conversation. |
 | To know what content already exists about a topic | `marketcore:get_relevant_context` for context, OR `marketcore:list_content` for a content list | `create_content` would generate something new — wrong tool for "what already exists." |
 | To browse what's in the user's context library (full inventory, not RAG) | `marketcore:list_context_items` | `get_relevant_context` returns relevance-scored chunks, not item names. Use `list_context_items` for the catalog view. Pass `reference_library_only=true` to scope to just the top-level Reference Library. |
 | To read the full markdown of a specific context item | `marketcore:get_context_item(context_item_id)` | `list_context_items` only returns `content_intro` (a truncation). `get_relevant_context` returns RAG chunks. Use this for the actual content. |
