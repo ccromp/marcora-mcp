@@ -6,7 +6,7 @@ The high-frequency pitfalls are in `SKILL.md` (§ Pitfalls and conventions). Thi
 
 ## E1 — `get_unified_deliverable`'s "Document not found" error
 
-**Symptom.** `marketcore:update_project(project_brief_id=<bad-uuid>)` returns `"Document not found"`.
+**Symptom.** `marcora:update_project(project_brief_id=<bad-uuid>)` returns `"Document not found"`.
 
 **Cause.** The brief-resolution path delegates to a Xano function (`get_unified_deliverable`) that checks both the canvases and deliverables tables. If neither has a matching UUID, it throws this less-specific error.
 
@@ -20,9 +20,9 @@ The high-frequency pitfalls are in `SKILL.md` (§ Pitfalls and conventions). Thi
 
 **Symptom.** You expected a complete document and got a few hundred words.
 
-**Cause.** `marketcore:get_relevant_context` returns RAG chunks (typically a few hundred words each) plus parent `context_item_ids`. The MCP doesn't currently expose a way to fetch the full body of a context item via tool.
+**Cause.** `marcora:get_relevant_context` returns RAG chunks (typically a few hundred words each) plus parent `context_item_ids`. The MCP doesn't currently expose a way to fetch the full body of a context item via tool.
 
-**What to do.** Tell the user to look up the full item in the MarketCore app. For most "what context exists about X?" questions, the chunks themselves are sufficient.
+**What to do.** Tell the user to look up the full item in the Marcora app. For most "what context exists about X?" questions, the chunks themselves are sufficient.
 
 ---
 
@@ -60,7 +60,7 @@ The high-frequency pitfalls are in `SKILL.md` (§ Pitfalls and conventions). Thi
 
 **Symptom.** Import fails with an invalid ID error.
 
-**Cause.** `marketcore:list_community_blueprints` returns items with their own `blueprint_exchange_id` — distinct from a regular blueprint UUID. Use that exchange ID for `get_community_blueprint_details` and `import_community_blueprint`. The imported blueprint then has a fresh team-level UUID.
+**Cause.** `marcora:list_community_blueprints` returns items with their own `blueprint_exchange_id` — distinct from a regular blueprint UUID. Use that exchange ID for `get_community_blueprint_details` and `import_community_blueprint`. The imported blueprint then has a fresh team-level UUID.
 
 ---
 
@@ -72,7 +72,7 @@ When `update_project` sets a private Content item as a project's brief, the unde
 
 ## E8 — Project document `purpose` field
 
-`marketcore:get_project` returns documents with a `purpose` field:
+`marcora:get_project` returns documents with a `purpose` field:
 - `core_output` — the project's main work product
 - `supporting` — background material (the brief defaults to this)
 
@@ -92,7 +92,7 @@ Don't show the user a UUID like `7b2c4f...` as an identifier. Surface the human-
 
 **Cause.** This tool takes `markdown_content` as a parameter — it does not pull content by ID.
 
-**What to do.** Two-step: `marketcore:get_content(content_id)` → `marketcore:convert_markdown_to_word_doc(markdown_content=...)`. Optionally pass `document_url` (the original content's `link_url`) so the .docx footer links back.
+**What to do.** Two-step: `marcora:get_content(content_id)` → `marcora:convert_markdown_to_word_doc(markdown_content=...)`. Optionally pass `document_url` (the original content's `link_url`) so the .docx footer links back.
 
 ---
 

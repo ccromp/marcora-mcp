@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest a new tool or capability for the MarketCore MCP server
+about: Suggest a new tool or capability for the Marcora MCP server
 title: "[Feature] "
 labels: enhancement
 assignees: ''

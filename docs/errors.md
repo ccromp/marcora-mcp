@@ -8,9 +8,9 @@
 
 **Solutions:**
 - **OAuth:** Reconnect the MCP server in your client settings. Your token may have expired and failed to refresh.
-- **API key:** Verify your API key is correct and hasn't been revoked. Check [Integration Settings](https://app.marketcore.ai/integration-settings).
+- **API key:** Verify your API key is correct and hasn't been revoked. Check [Integration Settings](https://app.marcora.ai/integration-settings).
 - Ensure you're using the correct URL for your auth method:
-  - OAuth: `https://mcp.marketcore.ai`
+  - OAuth: `https://mcp.marcora.ai`
   - API key (SSE): `https://api.marketcore.ai/x2/mcp/EbZaDl-X/mcp/sse`
   - API key (Streaming): `https://api.marketcore.ai/x2/mcp/EbZaDl-X/mcp/stream`
 
@@ -38,7 +38,7 @@
 **Cause:** Using an SSE URL with a client that expects Streamable HTTP, or vice versa.
 
 **Solutions:**
-- OAuth URL (`https://mcp.marketcore.ai`) works with all compatible clients
+- OAuth URL (`https://mcp.marcora.ai`) works with all compatible clients
 - For API key connections, try switching between the SSE and Streaming URLs
 - Check your client's documentation for which transport it supports
 
@@ -71,11 +71,11 @@
 
 ## Rate Limits
 
-The MarketCore MCP server applies reasonable rate limits to prevent abuse. Under normal usage, you are unlikely to hit these limits. If you receive a rate limit error (HTTP 429), wait a moment before retrying.
+The Marcora MCP server applies reasonable rate limits to prevent abuse. Under normal usage, you are unlikely to hit these limits. If you receive a rate limit error (HTTP 429), wait a moment before retrying.
 
 ## Getting Help
 
 If you encounter an issue not covered here:
 
-- **GitHub Issues:** [github.com/ccromp/marketcore-mcp/issues](https://github.com/ccromp/marketcore-mcp/issues)
-- **Website:** [marketcore.ai](https://marketcore.ai)
+- **GitHub Issues:** [github.com/ccromp/marcora-mcp/issues](https://github.com/ccromp/marcora-mcp/issues)
+- **Website:** [marcora.ai](https://marcora.ai)

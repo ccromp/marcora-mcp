@@ -1,12 +1,12 @@
-# MarketCore MCP Server
+# Marcora MCP Server
 
-> AI-powered product context management — connect your AI tools to [MarketCore](https://marketcore.ai) through the Model Context Protocol.
+> AI-powered product context management — connect your AI tools to [Marcora](https://marcora.ai) through the Model Context Protocol.
 
-**Learn more:** [marketcore.ai](https://marketcore.ai)
+**Learn more:** [marcora.ai](https://marcora.ai)
 
 ## About
 
-This is the **public documentation repository** for MarketCore's hosted MCP server. The server itself is a commercial, closed-source remote service. This repo provides metadata, connection instructions, tool documentation, and support resources.
+This is the **public documentation repository** for Marcora's hosted MCP server. The server itself is a commercial, closed-source remote service. This repo provides metadata, connection instructions, tool documentation, and support resources.
 
 | | |
 |---|---|
@@ -18,9 +18,9 @@ This is the **public documentation repository** for MarketCore's hosted MCP serv
 
 ## What It Does
 
-MarketCore is a product context management platform for go-to-market teams. It stores your brand context, manages reusable content templates (blueprints), and generates marketing documents informed by your full product knowledge. The MCP server brings all of this into your AI assistant — create content, manage context, browse community templates, and organize projects without leaving your chat.
+Marcora is a product context management platform for go-to-market teams. It stores your brand context, manages reusable content templates (blueprints), and generates marketing documents informed by your full product knowledge. The MCP server brings all of this into your AI assistant — create content, manage context, browse community templates, and organize projects without leaving your chat.
 
-MarketCore's MCP server enables AI clients to:
+Marcora's MCP server enables AI clients to:
 
 - Manage product context and reference materials
 - Create and manage blueprints for content generation
@@ -31,11 +31,11 @@ MarketCore's MCP server enables AI clients to:
 
 ## Connection
 
-**Server URL (OAuth):** `https://mcp.marketcore.ai`
+**Server URL (OAuth):** `https://mcp.marcora.ai`
 
 **Authentication options:**
-- **OAuth 2.0** (recommended for interactive clients) — connect using `https://mcp.marketcore.ai`
-- **API Token** (for non-interactive environments) — generate a key at [Integration Settings](https://app.marketcore.ai/integration-settings) and use one of the API key URLs below
+- **OAuth 2.0** (recommended for interactive clients) — connect using `https://mcp.marcora.ai`
+- **API Token** (for non-interactive environments) — generate a key at [Integration Settings](https://app.marcora.ai/integration-settings) and use one of the API key URLs below
 
 **API Key URLs:**
 
@@ -51,8 +51,8 @@ Add to your MCP client config:
 ```json
 {
   "mcpServers": {
-    "marketcore": {
-      "url": "https://mcp.marketcore.ai"
+    "marcora": {
+      "url": "https://mcp.marcora.ai"
     }
   }
 }
@@ -62,21 +62,21 @@ See [docs/quickstart.md](docs/quickstart.md) for setup instructions for Claude, 
 
 ## Companion Anthropic Skills (recommended)
 
-Two companion **Anthropic Skills** ship alongside this server. Together they teach your AI client MarketCore's mental model, the right tool sequencing, the questions to ask the user before acting, and the pitfalls to avoid — so the agent stops misfiring on tasks that look ambiguous from tool descriptions alone.
+Two companion **Anthropic Skills** ship alongside this server. Together they teach your AI client Marcora's mental model, the right tool sequencing, the questions to ask the user before acting, and the pitfalls to avoid — so the agent stops misfiring on tasks that look ambiguous from tool descriptions alone.
 
 | Skill | What it covers | Source |
 |---|---|---|
-| **MarketCore AI Workflows** (`marketcore-mcp`) | Object model (content, blueprints, projects, context items), content-generation patterns, the 4-layer context model, project-brief mechanics, choosing between similar tools | [`skill/marketcore-mcp/`](skill/marketcore-mcp/) |
-| **MarketCore Workflow Builder** (`marketcore-workflow-builder`) | The 6 workflow MCP tools (`create_workflow`, `update_workflow`, `run_workflow`, `get_workflow`, `list_workflows`, `get_workflow_runs`), output destinations, scheduling, deduplication patterns, runner-summary conventions | [`skill/marketcore-workflow-builder/`](skill/marketcore-workflow-builder/) |
+| **Marcora AI Workflows** (`marcora-mcp`) | Object model (content, blueprints, projects, context items), content-generation patterns, the 4-layer context model, project-brief mechanics, choosing between similar tools | [`skill/marcora-mcp/`](skill/marcora-mcp/) |
+| **Marcora Workflow Builder** (`marcora-workflow-builder`) | The 6 workflow MCP tools (`create_workflow`, `update_workflow`, `run_workflow`, `get_workflow`, `list_workflows`, `get_workflow_runs`), output destinations, scheduling, deduplication patterns, runner-summary conventions | [`skill/marcora-workflow-builder/`](skill/marcora-workflow-builder/) |
 
 The two skills are independent — your AI client picks them up on demand based on the task. Install both for the full experience.
 
 ### Download
 
-Get the `.skill` files from the [latest release](https://github.com/ccromp/marketcore-mcp/releases/latest):
+Get the `.skill` files from the [latest release](https://github.com/ccromp/marcora-mcp/releases/latest):
 
-- `marketcore-mcp.skill` — the core MarketCore skill
-- `marketcore-workflow-builder.skill` — the workflow-building skill
+- `marcora-mcp.skill` — the core Marcora skill
+- `marcora-workflow-builder.skill` — the workflow-building skill
 
 Each `.skill` file is a zip archive containing `SKILL.md` and any bundled reference files.
 
@@ -87,8 +87,8 @@ Each `.skill` file is a zip archive containing `SKILL.md` and any bundled refere
 ```bash
 # Download and unzip into your skills directory
 mkdir -p ~/.claude/skills
-unzip ~/Downloads/marketcore-mcp.skill -d ~/.claude/skills/
-unzip ~/Downloads/marketcore-workflow-builder.skill -d ~/.claude/skills/
+unzip ~/Downloads/marcora-mcp.skill -d ~/.claude/skills/
+unzip ~/Downloads/marcora-workflow-builder.skill -d ~/.claude/skills/
 ```
 
 Restart Claude Code. The skills load automatically on any matching task.
@@ -106,9 +106,9 @@ These clients don't directly support Anthropic Skills (yet). Workaround: unzip a
 If you'd rather track `main` directly:
 
 ```bash
-git clone https://github.com/ccromp/marketcore-mcp.git
-ln -s "$(pwd)/marketcore-mcp/skill/marketcore-mcp" ~/.claude/skills/marketcore-mcp
-ln -s "$(pwd)/marketcore-mcp/skill/marketcore-workflow-builder" ~/.claude/skills/marketcore-workflow-builder
+git clone https://github.com/ccromp/marcora-mcp.git
+ln -s "$(pwd)/marcora-mcp/skill/marcora-mcp" ~/.claude/skills/marcora-mcp
+ln -s "$(pwd)/marcora-mcp/skill/marcora-workflow-builder" ~/.claude/skills/marcora-workflow-builder
 ```
 
 The unbundled skill source lives under [`skill/`](skill/).
@@ -116,8 +116,8 @@ The unbundled skill source lives under [`skill/`](skill/).
 ### Releases
 
 Skill releases are tagged independently per skill:
-- `marketcore-mcp` skill: `skill-vX.Y.Z` (legacy prefix kept for continuity) — see [Releases](https://github.com/ccromp/marketcore-mcp/releases).
-- `marketcore-workflow-builder` skill: `workflow-builder-vX.Y.Z`.
+- `marcora-mcp` skill: `skill-vX.Y.Z` (legacy prefix kept for continuity) — see [Releases](https://github.com/ccromp/marcora-mcp/releases).
+- `marcora-workflow-builder` skill: `workflow-builder-vX.Y.Z`.
 
 The current version of each skill is in the `metadata.version` field of its `SKILL.md`.
 
@@ -163,7 +163,7 @@ See [docs/tools.md](docs/tools.md) for the complete tool reference.
 - [Security & Privacy](docs/security.md)
 - [Changelog](docs/changelog.md)
 - [Support](docs/support.md)
-- [MarketCore Website Documentation](https://marketcore.ai/mcp)
+- [Marcora Website Documentation](https://marcora.ai/mcp)
 
 ## Security & Privacy
 
@@ -171,11 +171,11 @@ See [docs/security.md](docs/security.md) for details on data handling, permissio
 
 ## Support
 
-- **Bug reports & feature requests:** [GitHub Issues](https://github.com/ccromp/marketcore-mcp/issues)
-- **Website:** [marketcore.ai](https://marketcore.ai)
+- **Bug reports & feature requests:** [GitHub Issues](https://github.com/ccromp/marcora-mcp/issues)
+- **Website:** [marcora.ai](https://marcora.ai)
 
 ## License
 
-This repository contains documentation and metadata only. The MarketCore MCP server implementation is proprietary and not included.
+This repository contains documentation and metadata only. The Marcora MCP server implementation is proprietary and not included.
 
 Documentation is licensed under [CC BY 4.0](LICENSE).

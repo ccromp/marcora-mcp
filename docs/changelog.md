@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the MarketCore MCP server will be documented in this file.
+All notable changes to the Marcora MCP server will be documented in this file.
 
 ## 2026-05-15
 
@@ -35,7 +35,7 @@ All notable changes to the MarketCore MCP server will be documented in this file
 
 ### Added
 
-- **New tool:** `update_context` — update an existing context item's name, content, collection, or project association. When the item has a linked editing canvas open in the MarketCore sidebar, its title, content, and word count stay in sync automatically, and a realtime event is broadcast to any open editors. `collection_id` and `project_id` use full-replace semantics — you must pass them on every call (pass `null` to clear).
+- **New tool:** `update_context` — update an existing context item's name, content, collection, or project association. When the item has a linked editing canvas open in the Marcora sidebar, its title, content, and word count stay in sync automatically, and a realtime event is broadcast to any open editors. `collection_id` and `project_id` use full-replace semantics — you must pass them on every call (pass `null` to clear).
 
 ## 2026-04-17
 
@@ -49,21 +49,21 @@ All notable changes to the MarketCore MCP server will be documented in this file
 
 ### Enhanced
 
-- `add_context` — Added `link_url` field returning a direct URL to view the new context item in the MarketCore app. The URL resolves to the project, collection, or reference library view depending on which scope the item was added to.
-- `create_context_collection` — Added `link_url` field returning a direct URL to open the new collection in the MarketCore app.
+- `add_context` — Added `link_url` field returning a direct URL to view the new context item in the Marcora app. The URL resolves to the project, collection, or reference library view depending on which scope the item was added to.
+- `create_context_collection` — Added `link_url` field returning a direct URL to open the new collection in the Marcora app.
 - `get_context_collections` — Added `link_url` field on each returned collection. Documentation expanded to include the full output field table.
 
 ## 2026-04-14
 
 ### Enhanced
 
-- `get_projects` — Added `link_url` field returning a direct URL to view each project in the MarketCore app. Expanded output documentation with full field table.
+- `get_projects` — Added `link_url` field returning a direct URL to view each project in the Marcora app. Expanded output documentation with full field table.
 
 ## 2026-04-09
 
 ### Initial Release
 
-First public documentation for the MarketCore MCP Server with 25 tools across 7 categories:
+First public documentation for the Marcora MCP Server with 25 tools across 7 categories:
 
 **Account**
 - `get_current_user_info`
