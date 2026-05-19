@@ -1,8 +1,8 @@
 # Tools Reference
 
-The MarketCore MCP Server exposes a set of tools that your AI assistant can call directly to interact with your workspace. Each tool maps to a specific action — from generating content to retrieving context — and can be invoked naturally through conversation.
+The Marcora MCP Server exposes a set of tools that your AI assistant can call directly to interact with your workspace. Each tool maps to a specific action — from generating content to retrieving context — and can be invoked naturally through conversation.
 
-The tools below are available to any connected AI assistant once the MarketCore MCP Server is configured.
+The tools below are available to any connected AI assistant once the Marcora MCP Server is configured.
 
 ---
 
@@ -51,7 +51,7 @@ Returns the team's core context — foundational brand and company information u
 **Example prompts:**
 - "What's my brand context?"
 - "Show me my company's brand voice"
-- "What context do I have in MarketCore?"
+- "What context do I have in Marcora?"
 
 ---
 
@@ -70,7 +70,7 @@ Returns all context collections accessible to the current user. Collections orga
 | `description` | string | Collection description |
 | `is_private` | boolean | Whether this collection is private to the creator |
 | `item_count` | integer | Number of context items in this collection |
-| `link_url` | string | Direct URL to view this collection in the MarketCore app |
+| `link_url` | string | Direct URL to view this collection in the Marcora app |
 
 **Example prompts:**
 - "Show me my context collections"
@@ -99,7 +99,7 @@ Create a new context collection to organize your reference materials. Collection
 | `description` | string | Collection description |
 | `is_private` | boolean | Whether this collection is private to the creator |
 | `created_at` | integer | Unix timestamp of creation |
-| `link_url` | string | Direct URL to view this collection in the MarketCore app |
+| `link_url` | string | Direct URL to view this collection in the Marcora app |
 
 **Example prompts:**
 - "Create a new collection called 'Q2 Product Research'"
@@ -139,10 +139,10 @@ Exactly one of `content` or `content_url` is required — providing both returns
 | `collection_id` | integer | Collection this item belongs to (if assigned) |
 | `project_id` | string | Project association (if assigned) |
 | `created_at` | integer | Unix timestamp of creation |
-| `link_url` | string | Direct URL to view this context item in the MarketCore app. Resolves to the project, collection, or reference library view depending on the item's scope |
+| `link_url` | string | Direct URL to view this context item in the Marcora app. Resolves to the project, collection, or reference library view depending on the item's scope |
 
 **Example prompts:**
-- "Add our brand guidelines to MarketCore"
+- "Add our brand guidelines to Marcora"
 - "Store this competitive analysis as context"
 - "Save https://example.com/competitor-pricing as a context item called 'Acme pricing'"
 - "Add this product brief to the 'Product Launch' collection"
@@ -151,7 +151,7 @@ Exactly one of `content` or `content_url` is required — providing both returns
 
 ### `update_context`
 
-Update an existing context item — change its name, content, or move it between collections / projects. If the item has a linked editing canvas open in the MarketCore sidebar, its title and content stay in sync automatically.
+Update an existing context item — change its name, content, or move it between collections / projects. If the item has a linked editing canvas open in the Marcora sidebar, its title and content stay in sync automatically.
 
 Like `add_context`, you can supply a new body either as inline `content` or as a `content_url` the backend fetches and converts to markdown server-side. Pass at most one — providing both returns a 400. Omit both to leave the body untouched (e.g. when you're only renaming the item or moving it between collections).
 
@@ -181,7 +181,7 @@ Like `add_context`, you can supply a new body either as inline `content` or as a
 | `word_count` | integer | Word count of updated content |
 | `updated_at` | integer | Unix timestamp of last update |
 | `relevancy_processed_status` | string | RAG re-processing status (`unprocessed`, `provisional`, `complete`). Flips to `unprocessed` whenever name or content changes |
-| `link_url` | string | Direct URL to view this context item in the MarketCore app |
+| `link_url` | string | Direct URL to view this context item in the Marcora app |
 
 **Example prompts:**
 - "Rename that brand voice context item to 'Brand Voice v2'"
@@ -193,7 +193,7 @@ Like `add_context`, you can supply a new body either as inline `content` or as a
 
 ### `list_context_items`
 
-Lists context items from the team's context library. By default returns all items the user can see (across projects, collections, and the reference library). Set `reference_library_only=true` to return only items that are not in any project or collection — these are the items shown in the "Reference Library" section of the MarketCore web app.
+Lists context items from the team's context library. By default returns all items the user can see (across projects, collections, and the reference library). Set `reference_library_only=true` to return only items that are not in any project or collection — these are the items shown in the "Reference Library" section of the Marcora web app.
 
 Each returned item carries its own `collection_id` and `project_id` (both nullable), so you always know where it lives. To get the full markdown content of any item, pass its id to `get_context_item`.
 
@@ -226,7 +226,7 @@ Each returned item carries its own `collection_id` and `project_id` (both nullab
 - `get_relevant_context` — returns `context_item_ids` of parent items for matched chunks
 
 **Example prompts:**
-- "What context items do I have in MarketCore?"
+- "What context items do I have in Marcora?"
 - "Show me everything in my reference library"
 - "List the context items I haven't filed into a collection or project"
 
@@ -260,7 +260,7 @@ The IDs you pass here can come from `list_context_items`, `get_project(project_i
 | `relevancy_processed_status` | string | RAG indexing status |
 | `collection_id` | integer \| null | Collection this item lives in, or `null` |
 | `project_id` | string (uuid) \| null | Project this item is associated with, or `null` |
-| `link_url` | string | Direct URL to view this context item in the MarketCore app |
+| `link_url` | string | Direct URL to view this context item in the Marcora app |
 
 **Authorization:** the item must belong to your team. Items in private collections (where you are not the creator) and items in private projects (where you are not a member) return a 404 — same as items that do not exist.
 
@@ -374,7 +374,7 @@ Retrieve the full details of a specific blueprint by its UUID, including content
 | `category` | object/null | Content category |
 | `team_visibility` | string | Visibility within your team |
 | `exchange_visibility` | string | Community exchange visibility |
-| `web_url` | string | Direct URL to view in MarketCore |
+| `web_url` | string | Direct URL to view in Marcora |
 | `created_at` | integer | Unix timestamp of creation |
 
 **Example prompts:**
@@ -407,7 +407,7 @@ Create a reusable blueprint template for generating content at scale. Blueprints
 | `reference_content` | string | AI-polished reference version |
 | `input_instructions` | string | Guidance for what context to provide when generating |
 | `category` | object | Content category |
-| `link_url` | string | Direct link to view in MarketCore |
+| `link_url` | string | Direct link to view in Marcora |
 | `team_visibility` | string | Team visibility setting |
 | `created_at` | integer | Unix timestamp of creation |
 
@@ -442,7 +442,7 @@ Create an AI-assisted blueprint draft from a prompt. This creates a draft you ca
 | `uuid` | string | Unique identifier for this draft |
 | `title` | string | Blueprint draft name |
 | `content` | string | AI-generated blueprint template content in markdown |
-| `link_url` | string | Direct URL to view/edit in MarketCore |
+| `link_url` | string | Direct URL to view/edit in Marcora |
 
 **Example prompts:**
 - "Draft a blueprint for weekly newsletters"
@@ -474,7 +474,7 @@ Finalize (publish) a previously created blueprint draft into a full, usable blue
 | `reference_content` | string | AI-polished reference version |
 | `input_instructions` | string | Guidance for users on what context to provide |
 | `category` | object | Content category |
-| `link_url` | string | Direct link in MarketCore |
+| `link_url` | string | Direct link in Marcora |
 | `team_visibility` | string | Team visibility setting |
 | `created_at` | integer | Unix timestamp of creation |
 
@@ -488,7 +488,7 @@ Finalize (publish) a previously created blueprint draft into a full, usable blue
 
 ### `get_community_blueprints`
 
-Browse community blueprints available for import. Returns blueprints shared by MarketCore users, including name, summary, contributor info, and category.
+Browse community blueprints available for import. Returns blueprints shared by Marcora users, including name, summary, contributor info, and category.
 
 **Parameters:** None
 
@@ -537,7 +537,7 @@ Get the full details for a specific community blueprint, including complete cont
 
 ### `import_community_blueprint`
 
-Import a blueprint from the MarketCore community exchange into your team's library. Once imported, use it like any of your own blueprints to generate content.
+Import a blueprint from the Marcora community exchange into your team's library. Once imported, use it like any of your own blueprints to generate content.
 
 **Parameters:**
 
@@ -599,7 +599,7 @@ You must provide either `content` or `instructions` (not both).
 | `title` | string | Document title |
 | `content` | string | Document content in markdown |
 | `content_id` | string | Unique identifier for use with `get_content` and share tools |
-| `link_url` | string | Direct URL to view in MarketCore |
+| `link_url` | string | Direct URL to view in Marcora |
 | `created_at` | integer | Unix timestamp of creation |
 
 **Output (with blueprint — asynchronous):**
@@ -609,7 +609,7 @@ You must provide either `content` or `instructions` (not both).
 | `generation_id` | integer | ID to track async generation — pass to `get_generation_status` |
 
 **Example prompts:**
-- "Save this document to MarketCore" (with `content`)
+- "Save this document to Marcora" (with `content`)
 - "Write a blog post about our new product launch" (with `instructions`)
 - "Generate a case study using my case study blueprint" (with `instructions` + `blueprint_uuid`)
 - "Create content from my newsletter blueprint for the enterprise persona"
@@ -681,7 +681,7 @@ Retrieves the full content of a specific document by its `content_id` (UUID).
 | `stage` | string | `in_progress` or `ready` |
 | `category` | object/null | Content category, or null if not categorized |
 | `visibility` | string | Visibility setting (e.g. `private`, `team`) |
-| `link_url` | string | Direct URL to view in MarketCore |
+| `link_url` | string | Direct URL to view in Marcora |
 
 **Example prompts:**
 - "Show me the full content of that blog post"
@@ -693,7 +693,7 @@ Retrieves the full content of a specific document by its `content_id` (UUID).
 
 ### `create_external_share`
 
-Creates a public share link for content, with optional expiration. Accessible publicly without a MarketCore account.
+Creates a public share link for content, with optional expiration. Accessible publicly without a Marcora account.
 
 **Parameters:**
 
@@ -754,7 +754,7 @@ Returns all projects visible to the current user. Projects organize content into
 |---|---|---|
 | `id` | string (uuid) | Project ID. Pass to `get_project` or use when creating content |
 | `name` | string | Project name |
-| `link_url` | string (uri) | Direct URL to view this project in the MarketCore app |
+| `link_url` | string (uri) | Direct URL to view this project in the Marcora app |
 | `visibility` | string | Visibility setting (e.g. team, private) |
 | `status` | string | Project status (e.g. active, archived) |
 | `content_count` | integer | Number of content items in this project |
@@ -814,7 +814,7 @@ Create a new project for organizing content and context into a workstream.
 |---|---|---|
 | `name` | string | Project name |
 | `project_id` | string | Project identifier |
-| `link_url` | string | Direct URL to view in MarketCore |
+| `link_url` | string | Direct URL to view in Marcora |
 
 **Example prompts:**
 - "Create a project for our Q3 product launch"

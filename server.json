@@ -1,20 +1,20 @@
 {
-  "name": "com.marketcore/mcp-server",
-  "title": "MarketCore MCP Server",
-  "description": "Hosted MCP server for managing product context, blueprints, and AI-generated marketing content through MarketCore.",
-  "homepage": "https://marketcore.ai",
-  "repository": "https://github.com/ccromp/marketcore-mcp",
-  "documentation": "https://marketcore.ai/mcp",
-  "support": "https://github.com/ccromp/marketcore-mcp/issues",
+  "name": "ai.marcora/mcp-server",
+  "title": "Marcora MCP Server",
+  "description": "Hosted MCP server for managing product context, blueprints, and AI-generated marketing content through Marcora.",
+  "homepage": "https://marcora.ai",
+  "repository": "https://github.com/ccromp/marcora-mcp",
+  "documentation": "https://marcora.ai/mcp",
+  "support": "https://github.com/ccromp/marcora-mcp/issues",
   "version": "1.0.0",
   "transport": {
     "type": "streamable-http",
-    "url": "https://mcp.marketcore.ai"
+    "url": "https://mcp.marcora.ai"
   },
   "authentication": {
     "required": true,
     "types": ["oauth2", "apiKey"],
-    "oauth_url": "https://mcp.marketcore.ai",
+    "oauth_url": "https://mcp.marcora.ai",
     "api_key_urls": {
       "sse": "https://api.marketcore.ai/x2/mcp/EbZaDl-X/mcp/sse",
       "stream": "https://api.marketcore.ai/x2/mcp/EbZaDl-X/mcp/stream"
@@ -26,6 +26,6 @@
     "resources": false,
     "prompts": false
   },
-  "maintainer": "MarketCore",
+  "maintainer": "Marcora",
   "status": "production"
 }

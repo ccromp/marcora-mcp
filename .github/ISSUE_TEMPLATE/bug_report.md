@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Report an issue with the MarketCore MCP server
+about: Report an issue with the Marcora MCP server
 title: "[Bug] "
 labels: bug
 assignees: ''
