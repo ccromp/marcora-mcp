@@ -101,11 +101,22 @@ Suggest a workflow only when the user describes a repeatable multi-step generati
 
 ## Recipe H — Read the team's Brand Foundation directly
 
-Most of the time you don't need to call `marcora:get_core_context` — every `create_content` call pulls Brand Foundation in automatically (Layer 1 of the four-layer model).
+Most of the time you don't need to call `marcora:get_brand_foundation` — every `create_content` call pulls Brand Foundation in automatically (Layer 1 of the four-layer model).
 
 Call it explicitly when:
 - The user asks "what brand voice does the AI use?"
 - You're generating content *outside* Marcora (drafting a tweet in their voice elsewhere) and need the brand context.
 - You're debugging "why does the content sound off?" — maybe Brand Foundation is stale.
+- The user wants to update one of the four elements — fetch first with `marcora:get_brand_foundation({elements: ["<element>"]})` so the user can confirm what's being replaced, then call `marcora:update_brand_foundation`.
 
-Returns a single markdown string with all four sections concatenated.
+Returns structured JSON with per-element fields (`company_overview`, `brand_voice`, `writing_style`, `writing_examples`). Pass `elements` to scope the response; omit to return all four. Empty string is returned for any element the team has not filled out yet.
+
+## Recipe H2 — Update a Brand Foundation element
+
+When the user wants to change one of the four Brand Foundation elements:
+
+1. Read the current value: `marcora:get_brand_foundation({elements: ["<element>"]})`.
+2. Confirm with the user what's being replaced (Brand Foundation shapes every generation — unintended overwrites are costly).
+3. Write: `marcora:update_brand_foundation({element: "<element>", content: "<new markdown>"})`. Always full-replace — no patch semantics.
+
+Per-element character limits: `company_overview` 10,000; `brand_voice`, `writing_style`, `writing_examples` 20,000 each. Overflow returns a structured `ERROR_CODE_INPUT_ERROR` naming the limit; the write is rejected before any DB mutation.

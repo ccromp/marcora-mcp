@@ -113,9 +113,9 @@ Replace `YOUR_API_KEY` with the key from [Integration Settings](https://app.marc
 
 After connecting, try asking your AI client:
 
-> "What context do I have in Marcora?"
+> "What's my brand foundation?"
 
-If authentication was successful, the client will use the `get_core_context` tool to retrieve your account's context.
+If authentication was successful, the client will use the `get_brand_foundation` tool to retrieve your team's Brand Foundation.
 
 Other things to try:
 

@@ -2,6 +2,16 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-05-21
+
+### Changed
+
+- **Renamed `get_core_context` → `get_brand_foundation`.** Output shape changed from a single concatenated markdown blob (`core_context` field) to per-element JSON fields (`company_overview`, `brand_voice`, `writing_style`, `writing_examples`), with a new optional `elements` array parameter to scope the response. This matches the app's "Brand Foundation" terminology and gives the calling agent finer control over which elements to fetch. The disabled `Custom Instructions` category is excluded entirely.
+
+### Added
+
+- **New tool:** `update_brand_foundation` — overwrites a single Brand Foundation element with new content. Required `element` enum + `content` text. Always full-replace, no patch semantics. Per-element character limits enforced (10,000 for `company_overview`, 20,000 for the others) with a clear `ERROR_CODE_INPUT_ERROR` response naming the limit and the actual length if exceeded — write is rejected before any DB mutation.
+
 ## 2026-05-15
 
 ### Enhanced
@@ -69,7 +79,7 @@ First public documentation for the Marcora MCP Server with 25 tools across 7 cat
 - `get_current_user_info`
 
 **Context & Resources**
-- `get_core_context`
+- `get_core_context` *(renamed to `get_brand_foundation` on 2026-05-21)*
 - `get_context_collections`
 - `create_context_collection`
 - `add_context`
