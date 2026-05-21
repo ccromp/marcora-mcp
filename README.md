@@ -126,7 +126,8 @@ The current version of each skill is in the `metadata.version` field of its `SKI
 | Category | Tool | Description |
 |---|---|---|
 | Account | `get_current_user_info` | Get profile, subscription, and usage info |
-| Context & Resources | `get_core_context` | Get team's core brand context |
+| Context & Resources | `get_brand_foundation` | Get team's Brand Foundation (company overview, voice, style, examples) |
+| Context & Resources | `update_brand_foundation` | Overwrite one Brand Foundation element |
 | Context & Resources | `get_context_collections` | List context collections |
 | Context & Resources | `create_context_collection` | Create a new context collection |
 | Context & Resources | `add_context` | Add a context item to your library |

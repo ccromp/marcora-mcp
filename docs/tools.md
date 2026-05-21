@@ -36,22 +36,76 @@ Returns profile and subscription information for the currently authenticated use
 
 ## Context & Resources
 
-### `get_core_context`
+### `get_brand_foundation`
 
-Returns the team's core context — foundational brand and company information used to guide all AI-generated content, including company overview, brand voice, writing style, and examples.
+Returns the team's Brand Foundation — the foundational brand and company information that guides all AI-generated content. The four elements are:
 
-**Parameters:** None
+- **`company_overview`** — general information about the company
+- **`brand_voice`** — tone, core values, mission, and personality
+- **`writing_style`** — language complexity, sentence structure, formatting preferences, CTA style
+- **`writing_examples`** — sample content demonstrating the team's distinctive voice (free-form structure; users organize this however they like)
+
+By default returns all four elements. Pass `elements` to scope the response to a subset. The response is structured JSON — paste it directly into a downstream AI prompt (modern LLMs read JSON fine) or template-string the fields into markdown if you prefer.
+
+> **Note:** `create_content`, `create_plan`, and Marcora's in-app content generation system automatically pull Brand Foundation in — you only need this tool when you're operating *outside* those flows (e.g. providing Brand Foundation context to an external AI agent).
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `elements` | array of enum | No | Optional subset of elements to return. Values: `company_overview`, `brand_voice`, `writing_style`, `writing_examples`. Omit or pass empty to return all four |
 
 **Output:**
 
 | Field | Type | Description |
 |---|---|---|
-| `core_context` | string | Full core context document in markdown, containing company overview, brand voice, writing style, and writing examples sections |
+| `company_overview` | string | Markdown content for Company Overview. Empty string if not set. Only present if requested via `elements` |
+| `brand_voice` | string | Markdown content for Brand Voice. Empty string if not set. Only present if requested via `elements` |
+| `writing_style` | string | Markdown content for Writing Style. Empty string if not set. Only present if requested via `elements` |
+| `writing_examples` | string | Markdown content for Writing Examples. Free-form structure — whatever the user has saved. Empty string if not set. Only present if requested via `elements` |
 
 **Example prompts:**
-- "What's my brand context?"
+- "What's my brand foundation?"
 - "Show me my company's brand voice"
-- "What context do I have in Marcora?"
+- "Just show me my writing style and writing examples"
+
+---
+
+### `update_brand_foundation`
+
+Overwrites one of the team's four Brand Foundation elements with new content. **Always full-replace — no patch semantics.** Other elements are untouched. If the team has no row for the element yet, one is created.
+
+> **Important:** Before calling this tool, you should typically call `get_brand_foundation({elements: ["<element>"]})` first to read the current value so the user can confirm what's being replaced. Brand Foundation content shapes every AI-generated piece of content the team produces, so unintended overwrites are costly.
+
+**Elements and limits:**
+
+| Element | Description | Max chars |
+|---|---|---|
+| `company_overview` | General information about the company | 10,000 |
+| `brand_voice` | Tone, core values, mission, personality | 20,000 |
+| `writing_style` | Language complexity, sentence structure, formatting preferences, CTA style | 20,000 |
+| `writing_examples` | Sample content demonstrating the team's distinctive voice (free-form structure) | 20,000 |
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `element` | enum | Yes | Which element to overwrite. One of `company_overview`, `brand_voice`, `writing_style`, `writing_examples` |
+| `content` | string | Yes | New markdown content. Replaces existing content in full. Free-form — no enforced structure |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `element` | string | Which element was updated (echoes the input) |
+| `content` | string | Updated markdown content (echoes what was stored) |
+
+> **Errors:** If `content` exceeds the element's max character limit, the call returns a structured `ERROR_CODE_INPUT_ERROR` response naming both the limit and the actual length (e.g. *"company_overview content exceeds the 10000-character limit (got 12483 chars)"*). The write is rejected before any DB mutation — no partial updates.
+
+**Example prompts:**
+- "Update my brand voice to be less formal and more conversational"
+- "Replace my company overview with the latest one-pager I just shared"
+- "Save this as my writing examples"
 
 ---
 

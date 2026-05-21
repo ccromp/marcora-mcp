@@ -48,7 +48,7 @@ These are Marcora's core nouns. Internalize them before calling any tool.
   - **Project context** — scoped to a single project. Created by `add_context` with `project_id`. Always pulled in for that project's generations.
   - **Document-specific** — one-off chips passed at generation time as `collection_ids` or `dimension_option_ids` on `create_content`. Not persisted as reusable context.
 
-- **Brand Foundation** — The team's company overview, brand voice, writing style, and writing examples. Read with `marcora:get_core_context`. Always pulled into every content generation. You don't need to read it manually before generating.
+- **Brand Foundation** — The team's company overview, brand voice, writing style, and writing examples. Read with `marcora:get_brand_foundation`. Always pulled into every content generation. You don't need to read it manually before generating.
 
 - **Context Collection** — A folder for organizing reference items. Optional. Can be private to the creator or shared with the team. A project can have **default collections** automatically attached to its generations.
 
@@ -219,6 +219,8 @@ The five workflows you'll handle 80% of the time. Long-tail recipes (workflow-ru
 | To know what content already exists about a topic | `marcora:get_relevant_context` for context, OR `marcora:list_content` for a content list | `create_content` would generate something new — wrong tool for "what already exists." |
 | To browse what's in the user's context library (full inventory, not RAG) | `marcora:list_context_items` | `get_relevant_context` returns relevance-scored chunks, not item names. Use `list_context_items` for the catalog view. Pass `reference_library_only=true` to scope to just the top-level Reference Library. |
 | To read the full markdown of a specific context item | `marcora:get_context_item(context_item_id)` | `list_context_items` only returns `content_intro` (a truncation). `get_relevant_context` returns RAG chunks. Use this for the actual content. |
+| To read the team's Brand Foundation (company overview, brand voice, writing style, writing examples) | `marcora:get_brand_foundation` | `get_relevant_context` searches the Reference Library, not Brand Foundation. Also auto-pulled into every `create_content` — don't fetch as a setup step before generating. |
+| To change one of the four Brand Foundation elements | `marcora:update_brand_foundation` | Brand Foundation lives at the team level, not as Context items — `update_context` won't touch it. Always full-replace; fetch first with `get_brand_foundation` to confirm what's being replaced. |
 
 ---
 
@@ -226,7 +228,7 @@ The five workflows you'll handle 80% of the time. Long-tail recipes (workflow-ru
 
 - **Don't duplicate Content to "add it" to a project.** Attachment is a relationship (a `project_item` row), not a copy. Use `update_project(project_brief_id=...)` — it auto-attaches.
 
-- **Don't pre-fetch context before `create_content` — at all.** `create_content` already pulls in everything internally: Brand Foundation (so you don't need `marcora:get_core_context` either), Reference Library via relevancy scoring, Project Context if `project_id` is set, and any `collection_ids` you pass. Calling `marcora:get_relevant_context` or `marcora:get_core_context` as a setup step before generating is wasted work — the only legitimate uses for those tools are the narrow Workflow-1 sourcing-check (specific customer / incident not likely in the library) and direct user Q&A about brand voice or library contents.
+- **Don't pre-fetch context before `create_content` — at all.** `create_content` already pulls in everything internally: Brand Foundation (so you don't need `marcora:get_brand_foundation` either), Reference Library via relevancy scoring, Project Context if `project_id` is set, and any `collection_ids` you pass. Calling `marcora:get_relevant_context` or `marcora:get_brand_foundation` as a setup step before generating is wasted work — the only legitimate uses for those tools are the narrow Workflow-1 sourcing-check (specific customer / incident not likely in the library) and direct user Q&A about brand voice or library contents.
 
 - **Don't fetch the content body after generation.** Hand the user the `link_url`. `get_content` is for two cases only: (a) the user later asks a question that requires reading the body to answer, or (b) you need the markdown to feed `convert_markdown_to_word_doc`.
 
