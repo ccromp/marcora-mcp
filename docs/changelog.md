@@ -12,6 +12,7 @@ All notable changes to the Marcora MCP server will be documented in this file.
 
 - **`list_content` output:** canvas-type items now surface their category in the `category` field (previously hard-coded to `null` despite the column existing on the canvas table) and emit `stage` consistently with deliverable items (previously emitted `is_ready` for canvas items, breaking the declared schema).
 - **`create_project` response:** the response shape now matches its declared schema — top-level keys are exactly `project_id`, `name`, `link_url`, `project_brief`. The deprecated `system_prompt` and the unhelpful internal-id `project_brief_id` are no longer leaked. When `project_brief_details` is supplied, the response includes a `project_brief: {name, content_id}` object — `content_id` is the brief canvas's UUID, suitable for passing directly to `update_content` later. When no brief was created, `project_brief: null`.
+- **`get_project` response:** added top-level `project_brief: {name, content_id} | null` to match `create_project`'s shape. Previously the brief was buried inside `documents[]` with no unambiguous discriminator (the `purpose` field isn't brief-specific). Same field is in addition to — not a replacement for — the existing `documents` array.
 
 ## 2026-05-21
 
