@@ -700,13 +700,24 @@ Check the status of an async content generation. Call this after `create_content
 
 ---
 
-### `get_content_list`
+### `list_content`
 
-Returns all content visible to the current user as a single unified array. Content created from scratch and from blueprints are merged with consistent field names.
+Returns all content visible to the current user as a single unified array. Content created from scratch (canvas) and from blueprints (deliverable) are merged with consistent field names. The same `content_id` can be passed to `get_content`, `update_content`, and `create_external_share`.
 
 **Parameters:** None
 
-**Output:** Array of content items with IDs, names, categories, creation dates, and metadata.
+**Output:** Array of items.
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | string | Content name |
+| `content_id` | string (uuid) | Content identifier |
+| `visibility` | string | `private` or `team` |
+| `stage` | string | `in_progress` or `ready` |
+| `category` | object \| null | `{id, name}` or null if uncategorized |
+| `created_by` | string | Name of the creator |
+| `projects` | string[] | Project names this content belongs to |
+| `web_url` | string | Direct URL to view this content in Marcora |
 
 **Example prompts:**
 - "Show me all my content"
@@ -740,6 +751,55 @@ Retrieves the full content of a specific document by its `content_id` (UUID).
 **Example prompts:**
 - "Show me the full content of that blog post"
 - "Read my latest case study"
+
+---
+
+### `update_content`
+
+Update a content document (canvas or deliverable) by `content_id`. Partial-update semantics — every field besides `content_id` is optional and only the fields you supply are changed; everything else is left untouched. At least one mutable field must be supplied.
+
+> **Reading before writing:** for `content` edits that splice into existing text, call `get_content` first, edit the markdown in your context, then send the FULL new body back. This tool replaces the entire body — there is no patch / diff mode.
+
+> **Name behavior:** by default a document's name auto-syncs from the first markdown header in its body. Set `name_override` to lock a custom name; once locked, the title stays even when the body is edited. There is no un-lock path in this tool.
+
+> **Stage:** writing `stage` also keeps the internal `is_ready` bool in sync. For deliverables linked to a content plan, transitioning to `ready` moves the plan to `Complete` as a side-effect (non-blocking on failure).
+
+> **Project association:** pass `project_id` to set the document's project. If the document is already in a different project the old association is replaced; if already in the supplied project this is a no-op. Omit `project_id` to leave projects untouched. There's no way to remove a doc from all projects via this tool — use the Marcora app for that.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `content_id` | string (uuid) | Yes | UUID of the content to update. From `list_content`, `get_content`, `get_generation_status`, or `get_project` |
+| `content` | string | No | New full markdown body. Omit to leave body unchanged |
+| `name_override` | string | No | Custom document name. Setting this locks the name (won't auto-resync from content header on future edits) |
+| `stage` | string | No | `in_progress` or `ready` |
+| `visibility` | string | No | `private` or `team` |
+| `category_id` | integer | No | Category ID from `list_content_categories` |
+| `project_id` | string (uuid) | No | Project UUID to associate with this content. Replaces any existing project association |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `content_id` | string (uuid) | Content identifier |
+| `name` | string | Document name (post-update) |
+| `content` | string | Full document content in markdown |
+| `visibility` | string | `private` or `team` |
+| `stage` | string | `in_progress` or `ready` |
+| `category` | object \| null | `{id, name}` or null if uncategorized |
+| `link_url` | string | Direct URL to view this content in Marcora |
+
+**Errors:**
+- `notfound` — `content_id` doesn't match any content document
+- `inputerror` — no mutable field supplied; invalid `category_id`; invalid `project_id`; or the document is a non-editable canvas type (e.g. a context-item editor canvas, which is managed by a separate sync flow)
+- `accessdenied` — you don't have write access to the document
+
+**Example prompts:**
+- "Mark my latest case study as ready"
+- "Add this doc to the Q4 GTM project"
+- "Rename this document to 'Acme Pricing One-Pager'"
+- "Replace the body of my pricing one-pager with the markdown above"
 
 ---
 
@@ -852,27 +912,29 @@ Returns details for a specific project including its members, documents, and con
 
 ### `create_project`
 
-Create a new project for organizing content and context into a workstream.
+Create a new project for organizing content and context into a workstream. Optionally generates a project brief document in the same call.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | Yes | Project name |
-| `visibility` | string | No | Visibility setting |
-| `project_brief_details` | string | No | Optional details to create a project brief |
+| `visibility` | string | No | `team` or `private`. Defaults to `team` |
+| `project_brief_details` | string | No | If supplied, an AI-generated project brief is created and attached to the project. The brief's `content_id` is returned in the response so it can be passed to `update_content` later for edits |
 
 **Output:**
 
 | Field | Type | Description |
 |---|---|---|
+| `project_id` | string (uuid) | Project identifier |
 | `name` | string | Project name |
-| `project_id` | string | Project identifier |
-| `link_url` | string | Direct URL to view in Marcora |
+| `link_url` | string | Direct URL to view this project in Marcora |
+| `project_brief` | object \| null | Present (non-null) only when `project_brief_details` was supplied. `{name, content_id}`. `content_id` is the canvas UUID — pass it to `update_content` / `get_content` to edit or read the brief. `name` may be empty immediately after creation while AI generation is in flight |
 
 **Example prompts:**
 - "Create a project for our Q3 product launch"
 - "Start a new project called 'Brand Refresh 2025'"
+- "Create a project for our Acme deal with a brief covering the customer's stack and pain points"
 
 ---
 
