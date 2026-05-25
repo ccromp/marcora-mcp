@@ -883,13 +883,13 @@ Returns all projects visible to the current user. Projects organize content into
 
 ### `get_project`
 
-Returns details for a specific project including its members, documents, and context items.
+Returns details for a specific project including its members, documents, context items, and (when set) a top-level `project_brief` shortcut so the brief is directly addressable for follow-up edits via `update_content`.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `project_id` | string | Yes | Project UUID from `get_projects` |
+| `project_id` | string | Yes | Project UUID from `list_projects` |
 
 **Output:**
 
@@ -901,12 +901,14 @@ Returns details for a specific project including its members, documents, and con
 | `visibility` | string | Visibility setting |
 | `members` | array | Project members |
 | `documents` | array | Documents in this project |
+| `project_brief` | object \| null | The project's pinned brief document, if set. `{name, content_id}` — same shape as `create_project`'s `project_brief` field. Pass `content_id` to `update_content` / `get_content` to edit or read the brief. `null` if the project has no brief set |
 | `context_items` | array | Context items associated with this project |
 | `created_at` | integer | Unix timestamp of creation |
 
 **Example prompts:**
 - "Show me the details of my product launch project"
 - "What documents are in this project?"
+- "Open the brief for the Acme project so I can edit it"
 
 ---
 

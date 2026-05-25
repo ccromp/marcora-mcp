@@ -132,6 +132,8 @@ The five workflows you'll handle 80% of the time. Long-tail recipes (workflow-ru
 
 **Output to user.** "Brief set: [project link]."
 
+**To edit the brief (not change which doc IS the brief):** use `update_content` on the brief's `content_id`. Discover it via `get_project(project_id).project_brief.content_id` (the response includes a top-level `project_brief: {name, content_id} | null` shortcut so you don't have to guess which document is the brief) or, when the user just created the project, take it directly from the `create_project` response.
+
 **Pitfalls — this is the founding misfire that motivated this skill:**
 - **Don't** fetch the content with `get_content` and re-create it via `create_content(project_id=...)` to "put it in the project." That creates a duplicate with a fresh UUID, orphaned from the original. Attachment is a relationship, not a copy. `update_project` handles it.
 - **Don't** call `get_project` first to check if the doc is in the project. `update_project` handles both states.
