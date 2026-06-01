@@ -99,7 +99,7 @@ The five workflows you'll handle 80% of the time. Long-tail recipes (workflow-ru
 **Preconditions.** None hard-required. If you don't already know what blueprints exist, what projects exist, or what targeting options exist, fetch them first.
 
 **Steps.**
-1. If you don't already know it: `marcora:list_blueprints`. Propose a fitting one (check both the `blueprints` and `blueprint_drafts` arrays).
+1. If you don't already know it: `marcora:list_blueprints` (returns a flat array of published blueprints). Propose a fitting one.
    - **If nothing in the user's library fits**, also check `marcora:list_community_blueprints` (the Blueprint Exchange). If something there fits, propose it: "I don't see a matching template in your library, but '\[name]' on the Blueprint Exchange looks like a fit — want me to import it?" If they say yes: `marcora:get_community_blueprint_details` to confirm fit → `marcora:import_community_blueprint` → use the returned UUID as the `blueprint_uuid` in step 5.
 2. If you don't already know it: `marcora:list_projects`. If the user mentioned an initiative, propose scoping to it.
 3. If the user named an audience attribute and you don't already know the option IDs: `marcora:list_targeting_dimensions`. Pick *option* IDs.
@@ -242,8 +242,6 @@ The five workflows you'll handle 80% of the time. Long-tail recipes (workflow-ru
 - **`content` and `instructions` are mutually exclusive on `create_content`.** Pick one mode. `content` cannot combine with `blueprint_uuid` either.
 
 - **Targeting dimension IDs are *option* IDs, not dimension IDs.** Drill into the `options` array.
-
-- **`list_blueprints` returns drafts and published items separately.** Check both arrays — the user may mean a draft.
 
 - **`update_project` is team-scoped.** A project belonging to a different team the user is also a member of won't be visible until they switch active teams in the app.
 
