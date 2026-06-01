@@ -384,18 +384,25 @@ Returns targeting dimensions and their options for the current team. Dimensions 
 
 ## Blueprints
 
-### `get_blueprints`
+### `list_blueprints`
 
-Get all blueprints in your team's library, organized as a flat list. Each blueprint includes its content category and a web URL.
+Get all blueprints in your team's library as a flat list. Each blueprint includes its content category and a web URL.
 
 **Parameters:** None
 
-**Output:**
+**Output:** A flat array of blueprints. Each item:
 
 | Field | Type | Description |
 |---|---|---|
-| `blueprints` | array | List of published blueprints with UUIDs, names, summaries, and categories |
-| `blueprint_drafts` | array | In-progress blueprint drafts not yet finalized |
+| `blueprint_uuid` | string (uuid) | Unique identifier — pass as `blueprint_uuid` to `create_content` |
+| `name` | string | Blueprint name |
+| `input_instructions` | string | Guidance on what context to provide when generating from this blueprint |
+| `team_visibility` | string | Visibility within your team (e.g. `team`, `private`) |
+| `exchange_visibility` | string | Community exchange visibility (e.g. `public`, `none`) |
+| `content_count` | integer | Number of content items generated from this blueprint |
+| `created_at` | integer | Unix timestamp of creation |
+| `category` | object | Content category — `{ id, name }`, matches `list_content_categories` |
+| `web_url` | string | Direct URL to view this blueprint in Marcora |
 
 **Example prompts:**
 - "Show me my blueprints"

@@ -6,7 +6,11 @@ All notable changes to the Marcora MCP server will be documented in this file.
 
 ### Fixed
 
-- **`list_blueprints`** no longer errors with `Exception: Please use a numerically indexed array`. The underlying `blueprint_items` endpoint had been refactored to return a structured object (`{ blueprints: [...content categories with nested blueprint_items[]...], blueprint_drafts: [...] }`) instead of a flat list, but the tool still iterated it as a flat array. The tool now flattens the category-grouped structure correctly, sources `content_count` from each blueprint's `deliverable_count`, and reads drafts from the endpoint's `blueprint_drafts` array (dropping a redundant, mis-targeted secondary `canvas` call). Output schema is unchanged.
+- **`list_blueprints`** no longer errors with `Exception: Please use a numerically indexed array`. The underlying `blueprint_items` endpoint had been refactored to return a structured object (`{ blueprints: [...content categories with nested blueprint_items[]...], blueprint_drafts: [...] }`) instead of a flat list, but the tool still iterated it as a flat array. The tool now flattens the category-grouped structure correctly and sources `content_count` from each blueprint's `deliverable_count`.
+
+### Changed
+
+- **`list_blueprints` output is now a flat top-level array of blueprints** (previously an object wrapper `{ blueprints, blueprint_drafts }`). Each item carries `blueprint_uuid`, `name`, `input_instructions`, `team_visibility`, `exchange_visibility`, `content_count`, `created_at`, `category {id, name}`, and `web_url`. The `blueprint_drafts` array has been removed entirely — the tool no longer returns in-progress drafts.
 
 ## 2026-05-25
 
