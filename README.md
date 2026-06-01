@@ -2,7 +2,9 @@
 
 > AI-powered product context management — connect your AI tools to [Marcora](https://marcora.ai) through the Model Context Protocol.
 
-**Learn more:** [marcora.ai](https://marcora.ai)
+[![smithery badge](https://smithery.ai/badge/chris-2acp/marcora)](https://smithery.ai/servers/chris-2acp/marcora)
+
+**Learn more:** [marcora.ai](https://marcora.ai) · **Smithery:** [smithery.ai/servers/chris-2acp/marcora](https://smithery.ai/servers/chris-2acp/marcora)
 
 ## About
 
