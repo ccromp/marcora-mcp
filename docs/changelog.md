@@ -2,6 +2,16 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-06-03
+
+### Added
+
+- **`get_relevant_context`** — new optional `include_brand_foundation` parameter (boolean, default `false`). When `true`, the response gains a `brand_foundation` object carrying the team's four Brand Foundation elements (`company_overview`, `brand_voice`, `writing_style`, `writing_examples`), making the tool a one-stop context fetch for clients that write content themselves with their own model. Relevancy scoring would never surface Brand Foundation on its own, so previously a caller had to make a second `get_brand_foundation` call and stitch the two together. The Brand Foundation fetch is gated behind the flag — callers who don't opt in don't pay the extra query. When omitted or `false`, `brand_foundation` is `null`. The bundled Brand Foundation is sourced identically to `get_brand_foundation`, so the two always agree.
+
+### Changed
+
+- **`get_relevant_context` output** now includes a `brand_foundation` field (`object | null`) on every response — `null` unless `include_brand_foundation` is `true`. Existing fields (`relevant_context`, `context_rag_ids`, `context_item_ids`) are unchanged. Docs also now list the `dimension_option_ids` parameter, which the tool already accepted but the table had omitted.
+
 ## 2026-06-01
 
 ### Fixed

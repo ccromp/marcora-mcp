@@ -328,6 +328,8 @@ The IDs you pass here can come from `list_context_items`, `get_project(project_i
 
 Searches the team's context library and returns the most relevant chunks for a given prompt. Use this to gather supporting context before generating or refining content.
 
+Set `include_brand_foundation: true` to also receive the team's Brand Foundation (company overview, brand voice, writing style, writing examples) in the same response — a one-stop fetch of everything you need to write on-brand yourself with your own model. (You don't need it when handing off to `create_content`, which pulls Brand Foundation in automatically.)
+
 **Parameters:**
 
 | Parameter | Type | Required | Description |
@@ -335,7 +337,9 @@ Searches the team's context library and returns the most relevant chunks for a g
 | `prompt` | string | Yes | Search string describing what context you need |
 | `project_id` | string | No | Project ID to scope context search |
 | `collection_ids` | array | No | Collection IDs to scope context search |
+| `dimension_option_ids` | array | No | Targeting dimension option IDs to scope the search by audience / persona / industry |
 | `context_rag_ids` | array | No | Previously returned chunk IDs to exclude (for pagination) |
+| `include_brand_foundation` | boolean | No | When `true`, also returns the team's Brand Foundation in the response. Default `false`. When paginating, set it `true` on the first call and `false`/omit on follow-ups so it isn't re-sent each page |
 
 **Output:**
 
@@ -344,11 +348,13 @@ Searches the team's context library and returns the most relevant chunks for a g
 | `relevant_context` | string | Concatenated relevant context text from matched chunks |
 | `context_rag_ids` | array | Chunk IDs returned. Pass back to exclude from future searches |
 | `context_item_ids` | array | Parent context item IDs that the chunks belong to |
+| `brand_foundation` | object \| null | The team's four Brand Foundation elements (`company_overview`, `brand_voice`, `writing_style`, `writing_examples`); empty string for any not yet set. Non-null only when `include_brand_foundation` is `true`, otherwise `null` |
 
 **Example prompts:**
 - "Find context about our enterprise pricing"
 - "What do we know about competitor X?"
 - "Get context relevant to writing a product launch blog post"
+- "Pull together everything I need to write a healthcare launch email, including our brand foundation"
 
 ---
 
