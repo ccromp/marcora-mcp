@@ -691,25 +691,54 @@ You must provide either `content` or `instructions` (not both).
 
 ### `get_generation_status`
 
-Check the status of an async content generation. Call this after `create_content` (with `blueprint_uuid`), which returns a `generation_id`.
+Poll the status of an async generation by `generation_id`. Two tools produce a `generation_id` you can check here:
+- `create_content` with a `blueprint_uuid` (blueprint document generation)
+- `ask_content_assistant` (the in-document Content Assistant)
+
+The response always includes `status`, `generation_id`, and `flow_type`. `content` is `null` until the run finishes.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `generation_id` | string | Yes | The generation ID returned by `create_content` |
+| `generation_id` | string (uuid) | Yes | The generation ID returned by `create_content` (with `blueprint_uuid`) or `ask_content_assistant` |
 
 **Output:**
 
 | Field | Type | Description |
 |---|---|---|
-| `generation_id` | string | The generation ID being checked |
-| `status` | string | Generation status: `pending`, `gathering context`, `processing`, `completed`, or `failed` |
-| `content` | object | Content summary (present when status is `completed`). Use `get_content` with `content_id` to get full content |
+| `generation_id` | string (uuid) | The generation ID being checked |
+| `status` | string | Status of this run. Blueprint flow terminates at `completed`; Content Assistant flow terminates at `complete`; `failed` on error. Intermediate values: `pending`, `processing`, `streaming` |
+| `flow_type` | string | `ai_assistant` for `ask_content_assistant` runs, otherwise a blueprint/content generation |
+| `content` | object \| null | `null` until the run completes. Shape depends on `flow_type` (below) |
+
+**`content` — blueprint flow** (`flow_type` ≠ `ai_assistant`):
+
+| Field | Type | Description |
+|---|---|---|
+| `content_id` | string (uuid) | The generated deliverable's ID. Pass to `get_content` if you need the body |
+| `name` | string | Document name |
+| `blueprint_id` | integer | Blueprint used to generate |
+| `link_url` | string | Direct URL to view/open in Marcora |
+
+**`content` — Content Assistant flow** (`flow_type` = `ai_assistant`):
+
+> `status` is per-run, but `content` is the **current** state: the live document (which may include edits the user made themselves afterward) plus the **most recent** Content Assistant interaction on that document. It is intentionally not a frozen snapshot of this specific generation — a stale snapshot isn't useful, the current version is.
+
+| Field | Type | Description |
+|---|---|---|
+| `content_id` | string (uuid) | The canvas/deliverable the assistant acted on |
+| `name` | string \| null | Document name |
+| `document_type` | string | `canvas` or `deliverable` |
+| `assistant_summary` | string \| null | The most recent assistant reply shown in the document's sidebar thread |
+| `document_updated` | boolean | Whether the most recent interaction changed the document body (false for a reply-only / chat-only response) |
+| `current_content` | string \| null | The document's current markdown |
+| `link_url` | string | Direct URL to view/open in Marcora |
 
 **Example prompts:**
 - "Check on my content generation"
 - "Is my blog post done yet?"
+- "Did the assistant finish editing my document?"
 
 ---
 
@@ -813,6 +842,49 @@ Update a content document (canvas or deliverable) by `content_id`. Partial-updat
 - "Add this doc to the Q4 GTM project"
 - "Rename this document to 'Acme Pricing One-Pager'"
 - "Replace the body of my pricing one-pager with the markdown above"
+
+---
+
+### `ask_content_assistant`
+
+Send a natural-language request to Marcora's in-document **Content Assistant** for an existing document (a canvas or deliverable). The request can ask for an edit ("add an intro paragraph", "tighten paragraph two"), an extension, or pure ideation / a question ("give me three headline ideas") — the assistant decides whether to change the document or just reply.
+
+> This is the in-editor Content Assistant that operates on one specific document — not the general Marcora Agent.
+
+**Asynchronous.** Returns a `generation_id` (UUID) immediately and does the model work in the background. When the user has the document open in Marcora, the assistant's reply and any edits stream live into the document's AI Assistant sidebar via a realtime channel — they don't need to poll. Headless callers (or anyone wanting the result text) poll `get_generation_status` with the returned `generation_id`.
+
+**Behavior:**
+- The assistant only rewrites the document body when it decides the request warrants a change; otherwise it just replies in the sidebar thread.
+- `chat_only_mode: true` forces a reply-only response with no document changes.
+- The current document body and the prior sidebar conversation are loaded automatically; pass `collection_ids` and/or `project_id` to fold in extra context.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `content_id` | string (uuid) | Yes | The canvas or deliverable to act on (from `list_content`, `get_content`, or `get_project`). Canvas vs. deliverable is detected automatically |
+| `prompt` | string | Yes | The request, in natural language |
+| `selected_text` | string | No | Text the user has highlighted in the document, to focus the request on |
+| `thinking_mode` | boolean | No | Enable extended reasoning for harder requests |
+| `chat_only_mode` | boolean | No | Force a reply-only response with no document edit |
+| `ai_provider` | string | No | Model family: `anthropic` (default) or `openai` |
+| `collection_ids` | array | No | Context Collection IDs (from `list_context_collections`) to include |
+| `project_id` | string (uuid) | No | Project UUID (from `list_projects`) whose context to include |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `generation_id` | string (uuid) | Identifies this run. Poll `get_generation_status` with it for the result |
+| `status` | string | Always `pending` on dispatch |
+
+**Example prompts:**
+- "Add a short intro paragraph to this document"
+- "Give me three alternative headlines for this draft" (reply-only)
+- "Tighten the second paragraph and fix the tone"
+
+**Errors:**
+- `notfound` — `content_id` matches no canvas or deliverable
 
 ---
 
