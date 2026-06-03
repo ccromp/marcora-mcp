@@ -4,7 +4,7 @@ description: Use this skill whenever the user is working with Marcora — creati
 license: Proprietary
 metadata:
   mcp-server: marcora
-  version: 0.2.6
+  version: 0.3.1
 ---
 
 # Marcora AI Workflows
