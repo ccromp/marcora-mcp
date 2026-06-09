@@ -277,7 +277,7 @@ Each returned item carries its own `collection_id` and `project_id` (both nullab
 
 **Other ways to discover context-item IDs:**
 - `get_project(project_id).context_items` — items attached to a specific project
-- `get_relevant_context` — returns `context_item_ids` of parent items for matched chunks
+- `get_relevant_context` — its `sources[]` array carries the `context_item_id` of each parent item for the matched chunks
 
 **Example prompts:**
 - "What context items do I have in Marcora?"
@@ -326,7 +326,9 @@ The IDs you pass here can come from `list_context_items`, `get_project(project_i
 
 ### `get_relevant_context`
 
-Searches the team's context library and returns the most relevant chunks for a given prompt. Use this to gather supporting context before generating or refining content.
+Searches the team's context library and returns the most relevant chunks for a given prompt, assembled into a ready-to-use markdown packet. Alongside the packet it returns a structured `sources` array — one entry per parent context item — so you can cite and deep-link each source without follow-up lookups, plus a `retrieval` object echoing the scope the search ran under. Use this to gather supporting context before generating or refining content.
+
+`collection_ids` and `project_id` are **additive**: they broaden the search to ALSO include those collections / that project's context alongside your general reference library — they do not restrict results to only that collection or project.
 
 Set `include_brand_foundation: true` to also receive the team's Brand Foundation (company overview, brand voice, writing style, writing examples) in the same response — a one-stop fetch of everything you need to write on-brand yourself with your own model. (You don't need it when handing off to `create_content`, which pulls Brand Foundation in automatically.)
 
@@ -335,9 +337,9 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `prompt` | string | Yes | Search string describing what context you need |
-| `project_id` | string | No | Project ID to scope context search |
-| `collection_ids` | array | No | Collection IDs to scope context search |
-| `dimension_option_ids` | array | No | Targeting dimension option IDs to scope the search by audience / persona / industry |
+| `project_id` | string (uuid) | No | **Additive** — ALSO searches that project's context alongside the general library. Not an exclusive filter |
+| `collection_ids` | array | No | **Additive** — ALSO searches those collections alongside the general library. Not an exclusive filter |
+| `dimension_option_ids` | array | No | Targeting dimension option IDs that bias relevancy toward an audience / persona / industry |
 | `context_rag_ids` | array | No | Previously returned chunk IDs to exclude (for pagination) |
 | `include_brand_foundation` | boolean | No | When `true`, also returns the team's Brand Foundation in the response. Default `false`. When paginating, set it `true` on the first call and `false`/omit on follow-ups so it isn't re-sent each page |
 
@@ -345,13 +347,49 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 
 | Field | Type | Description |
 |---|---|---|
-| `relevant_context` | string | Concatenated relevant context text from matched chunks |
-| `context_rag_ids` | array | Chunk IDs returned. Pass back to exclude from future searches |
-| `context_item_ids` | array | Parent context item IDs that the chunks belong to |
-| `brand_foundation` | object \| null | The team's four Brand Foundation elements (`company_overview`, `brand_voice`, `writing_style`, `writing_examples`); empty string for any not yet set. Non-null only when `include_brand_foundation` is `true`, otherwise `null` |
+| `relevant_context` | string | Ready-to-use markdown context packet assembled from the matched chunks |
+| `context_rag_ids` | array (uuid) | All chunk IDs returned. Pass back in `context_rag_ids` to exclude from future searches (pagination) |
+| `brand_foundation` | object | Always present — see below. `elements` is `null` unless `include_brand_foundation` is `true` |
+| `retrieval` | object | Echo of the search scope this response ran under — see below |
+| `sources` | array | One entry per parent context item the returned chunks came from — see below |
+
+> The previous top-level `context_item_ids` field has been **removed** — each entry in `sources` carries its own `context_item_id`, and the union of every source's `context_rag_ids` equals the top-level `context_rag_ids`.
+
+**`brand_foundation` object:**
+
+| Field | Type | Description |
+|---|---|---|
+| `included` | boolean | `true` only when `include_brand_foundation: true` was passed |
+| `elements` | object \| null | `null` unless included. When present: `company_overview`, `brand_voice`, `writing_style`, `writing_examples` (strings; empty string for any not yet set) |
+| `link_url` | string | Deep-link to the Brand Foundation tab in the Marcora app. Present only when included |
+
+**`retrieval` object:**
+
+| Field | Type | Description |
+|---|---|---|
+| `team_scope` | string | Always `authenticated_user_active_team` |
+| `project_id` | string (uuid) \| null | Echo of the `project_id` input |
+| `collection_ids` | array | Echo of the `collection_ids` input |
+| `dimension_option_ids` | array | Echo of the `dimension_option_ids` input |
+| `excluded_context_rag_ids` | array (uuid) | Echo of the `context_rag_ids` input (the exclusions) |
+| `returned_count` | integer | Number of context chunks returned |
+
+**`sources[]` — each entry:**
+
+| Field | Type | Description |
+|---|---|---|
+| `context_item_id` | string (uuid) | The parent context item's ID |
+| `context_item_name` | string \| null | The item's name |
+| `content_type` | string \| null | One of `file`, `manual`, `webpage`, `canvas`, `deliverable`, `integration_data`, `call_transcript` |
+| `link_url` | string \| null | Deep-link that opens this item in the Marcora app (present for every source) |
+| `source_url` | string | Original external page URL — **present only for `webpage` items**, omitted otherwise |
+| `collection_id` | integer \| null | Collection the item belongs to, if any |
+| `project_id` | string (uuid) \| null | Project the item belongs to, if any |
+| `last_updated` | integer \| null | Unix-ms timestamp of the item's last update (`null` if never updated) |
+| `context_rag_ids` | array (uuid) | The chunk IDs in this response that came from this item |
 
 **Example prompts:**
-- "Find context about our enterprise pricing"
+- "Find context about our enterprise pricing" (then cite each source via its `link_url`)
 - "What do we know about competitor X?"
 - "Get context relevant to writing a product launch blog post"
 - "Pull together everything I need to write a healthcare launch email, including our brand foundation"

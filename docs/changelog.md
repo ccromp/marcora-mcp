@@ -2,6 +2,18 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-06-09
+
+### Changed
+
+- **`get_relevant_context` response reshaped** to give clients everything they need to cite and link sources in a single call:
+  - **New `sources` array** — one entry per parent context item that contributed chunks. Each carries `context_item_id`, `context_item_name`, `content_type`, a `link_url` deep-link into the Marcora app, `collection_id` / `project_id` / `last_updated`, and the `context_rag_ids` from that item (the per-source chunk lists partition the top-level `context_rag_ids`). `webpage` items additionally carry `source_url` (the original external page URL); other content types omit it.
+  - **New `retrieval` object** echoing the scope the search ran under: `team_scope`, `project_id`, `collection_ids`, `dimension_option_ids`, `excluded_context_rag_ids`, `returned_count`.
+  - **`brand_foundation` reshaped** from a flat object to `{ included, elements, link_url }` — `elements` (the four Brand Foundation fields) is `null` unless `include_brand_foundation: true`, and `link_url` deep-links the Brand Foundation tab when included.
+  - **Removed the top-level `context_item_ids`** field — each `sources[]` entry now carries its own `context_item_id`. `relevant_context` and `context_rag_ids` are unchanged.
+  - Implementation note: the new per-source metadata is assembled from data already loaded by the existing retrieval queries (no added per-chunk lookups); only a single `webpage`-table lookup is added to resolve `source_url`. Retrieval itself is unchanged — the same chunks/items are returned as before.
+- **`get_relevant_context` input docs clarified:** `collection_ids` and `project_id` are **additive** — they broaden the search to also include those collections / that project's context alongside the general reference library; they are not exclusive filters. (Behavior is unchanged; only the wording was misleading.)
+
 ## 2026-06-03
 
 ### Added
