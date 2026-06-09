@@ -190,8 +190,8 @@ The five workflows you'll handle 80% of the time. Long-tail recipes (workflow-ru
 - **Fetch the full content of a known item ("pull the brand voice guide", "open the manager-feedback transcript")** → `marcora:get_context_item(context_item_id)`. Returns full markdown + metadata + link.
 
 **Steps (RAG path).**
-1. `marcora:get_relevant_context` with a descriptive `prompt`. Optionally scope with `project_id` or `collection_ids`. This is the *only* legitimate use of this tool besides the narrow Workflow 1 sourcing-check.
-2. Returns RAG chunks (a few hundred words each, not full items) plus parent `context_item_ids`.
+1. `marcora:get_relevant_context` with a descriptive `prompt`. Optionally **broaden** with `project_id` or `collection_ids` — these are *additive* (they add that project's / those collections' items on top of the general library, they don't restrict to only them). This is the *only* legitimate use of this tool besides the narrow Workflow 1 sourcing-check.
+2. Returns RAG chunks (a few hundred words each, not full items) plus a `sources[]` array — one entry per parent context item, each with its `context_item_id`, name, `content_type`, a `link_url` deep-link (and `source_url` for webpage items), and the chunk IDs from that item. Use `sources` to cite/link what you surface.
 3. If results are sparse: paginate with `context_rag_ids` (excludes already-returned chunks), or offer to add new context.
 4. If the user wants the *full* content of one of the surfaced items, follow up with `marcora:get_context_item(context_item_id)` — `get_relevant_context` only returns chunks, not the whole item.
 5. Summarize for the user — don't dump raw chunks unless asked.
