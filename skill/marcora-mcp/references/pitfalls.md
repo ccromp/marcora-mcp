@@ -20,9 +20,9 @@ The high-frequency pitfalls are in `SKILL.md` (§ Pitfalls and conventions). Thi
 
 **Symptom.** You expected a complete document and got a few hundred words.
 
-**Cause.** `marcora:get_relevant_context` returns RAG chunks (typically a few hundred words each) plus parent `context_item_ids`. The MCP doesn't currently expose a way to fetch the full body of a context item via tool.
+**Cause.** `marcora:get_relevant_context` returns RAG chunks (typically a few hundred words each) plus a `sources[]` array — one entry per parent item, each with its `context_item_id` and a `link_url`.
 
-**What to do.** Tell the user to look up the full item in the Marcora app. For most "what context exists about X?" questions, the chunks themselves are sufficient.
+**What to do.** For the full body of a surfaced item, call `marcora:get_context_item(context_item_id)` (take the ID from `sources[]`), or hand the user the source's `link_url` to open it in the Marcora app. For most "what context exists about X?" questions, the chunks themselves are sufficient.
 
 ---
 
