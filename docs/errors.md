@@ -49,7 +49,7 @@
 **Cause:** Passing an incorrect or stale ID to a tool (e.g., `blueprint_uuid`, `content_id`, `project_id`).
 
 **Solutions:**
-- Use the corresponding list tool to get fresh IDs (e.g., `get_blueprints` before `get_blueprint`)
+- Use the corresponding list tool to get fresh IDs (e.g., `list_blueprints` before `get_blueprint`)
 - IDs are UUIDs — ensure you're passing the full string, not a truncated version
 
 ### Content generation timeout
@@ -66,8 +66,8 @@
 **Cause:** Using an ID that doesn't exist for your team.
 
 **Solutions:**
-- Use `get_content_categories` to get valid category IDs
-- Use `get_targeting_dimensions` to get valid dimension option IDs
+- Use `list_content_categories` to get valid category IDs
+- Use `list_targeting_dimensions` to get valid dimension option IDs
 
 ## Rate Limits
 

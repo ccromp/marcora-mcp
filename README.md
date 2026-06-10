@@ -130,29 +130,45 @@ The current version of each skill is in the `metadata.version` field of its `SKI
 | Account | `get_current_user_info` | Get profile, subscription, and usage info |
 | Context & Resources | `get_brand_foundation` | Get team's Brand Foundation (company overview, voice, style, examples) |
 | Context & Resources | `update_brand_foundation` | Overwrite one Brand Foundation element |
-| Context & Resources | `get_context_collections` | List context collections |
+| Context & Resources | `list_context_collections` | List context collections |
 | Context & Resources | `create_context_collection` | Create a new context collection |
 | Context & Resources | `add_context` | Add a context item to your library |
+| Context & Resources | `update_context` | Update an existing context item |
+| Context & Resources | `list_context_items` | List context items in your library |
+| Context & Resources | `get_context_item` | Get a context item's full markdown content |
 | Context & Resources | `get_relevant_context` | Search context library by prompt |
-| Reference | `get_content_categories` | List content categories |
-| Reference | `get_targeting_dimensions` | List targeting dimensions and options |
-| Blueprints | `get_blueprints` | List all blueprints |
+| Reference | `list_content_categories` | List content categories |
+| Reference | `list_targeting_dimensions` | List targeting dimensions and options |
+| Blueprints | `list_blueprints` | List all blueprints |
 | Blueprints | `get_blueprint` | Get blueprint details by UUID |
 | Blueprints | `create_blueprint` | Create a reusable content template |
 | Blueprints | `create_blueprint_draft` | Create an AI-assisted blueprint draft |
 | Blueprints | `finalize_blueprint_draft` | Publish a blueprint draft |
-| Community Blueprints | `get_community_blueprints` | Browse community templates |
+| Community Blueprints | `list_community_blueprints` | Browse community templates |
 | Community Blueprints | `get_community_blueprint_details` | Get community blueprint details |
 | Community Blueprints | `import_community_blueprint` | Import a community blueprint |
 | Content | `create_content` | Generate content (with or without blueprint) |
 | Content | `get_generation_status` | Check async generation status |
-| Content | `get_content_list` | List all content |
+| Content | `list_content` | List all content |
 | Content | `get_content` | Get full content by ID |
+| Content | `update_content` | Update a content document (canvas or deliverable) |
+| Content | `ask_content_assistant` | Run the in-document Content Assistant on a document |
 | Sharing & Export | `create_external_share` | Create a public share link |
 | Sharing & Export | `convert_markdown_to_word_doc` | Export markdown as Word doc |
-| Projects | `get_projects` | List all projects |
+| Projects | `list_projects` | List all projects |
 | Projects | `get_project` | Get project details |
 | Projects | `create_project` | Create a new project |
+| Projects | `update_project` | Update mutable fields on a project |
+| Plans | `list_plans` | List content plans (with filters) |
+| Plans | `get_plan` | Get plan details by UUID |
+| Plans | `create_plan` | Create a new content plan |
+| Plans | `update_plan` | Update a plan or transition its stage |
+| Workflows | `list_workflows` | List workflows |
+| Workflows | `get_workflow` | Get a workflow's full definition |
+| Workflows | `create_workflow` | Create a new workflow template |
+| Workflows | `update_workflow` | Update, activate, or archive a workflow |
+| Workflows | `run_workflow` | Run a workflow now |
+| Workflows | `get_workflow_runs` | Inspect workflow run history |
 
 See [docs/tools.md](docs/tools.md) for the complete tool reference.
 

@@ -115,7 +115,7 @@ Returns all context collections accessible to the current user. Collections orga
 
 **Parameters:** None
 
-**Output:** Array of context collections, each with the following fields:
+**Output:** An object with a single `collections` key holding an array of context collections. Each item:
 
 | Field | Type | Description |
 |---|---|---|
@@ -180,7 +180,7 @@ Exactly one of `content` or `content_url` is required — providing both returns
 | `content` | string | Conditional | Markdown body. Mutually exclusive with `content_url` — provide exactly one |
 | `content_url` | string | Conditional | Public URL — backend fetches it and extracts clean markdown server-side. Mutually exclusive with `content` |
 | `collection_id` | integer | No | Collection ID to organize the item (from `list_context_collections` or `create_context_collection`) |
-| `project_id` | string | No | Project ID to associate with (from `get_projects`) |
+| `project_id` | string | No | Project ID to associate with (from `list_projects`) |
 
 **Output:**
 
@@ -259,7 +259,7 @@ Each returned item carries its own `collection_id` and `project_id` (both nullab
 |---|---|---|---|
 | `reference_library_only` | boolean | No | When `true`, returns only items not in any project or collection. Default `false` returns everything |
 
-**Output:** An array of context items. Each item has:
+**Output:** An object with a single `context_items` key holding an array of context items. Each item has:
 
 | Field | Type | Description |
 |---|---|---|
@@ -398,13 +398,13 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 
 ## Reference
 
-### `get_content_categories`
+### `list_content_categories`
 
 Returns all content categories available to your team. Categories organize blueprints and content by type (e.g. GTM Strategy, Product Launch, etc).
 
 **Parameters:** None
 
-**Output:** Array of categories with `id`, `name`, and metadata. Use the `id` as `category_id` when creating blueprints or content.
+**Output:** An object with a single `categories` key holding an array of categories, each with `id` and `name`. Use the `id` as `category_id` when creating blueprints or content.
 
 **Example prompts:**
 - "What content categories do I have?"
@@ -412,13 +412,13 @@ Returns all content categories available to your team. Categories organize bluep
 
 ---
 
-### `get_targeting_dimensions`
+### `list_targeting_dimensions`
 
 Returns targeting dimensions and their options for the current team. Dimensions are categories (e.g. Buying Stage, Persona) with selectable options used to target content generation.
 
 **Parameters:** None
 
-**Output:** Array of dimensions, each containing selectable options with IDs. Pass `dimension_option_ids` to `create_content` to target generation.
+**Output:** An object with a single `dimensions` key holding an array of dimensions. Each dimension has `id`, `name`, and an `options` array (each option `{ id, name }`). Pass option `id`s as `dimension_option_ids` to `create_content` to target generation.
 
 **Example prompts:**
 - "What targeting dimensions are available?"
@@ -434,7 +434,7 @@ Get all blueprints in your team's library as a flat list. Each blueprint include
 
 **Parameters:** None
 
-**Output:** A flat array of blueprints. Each item:
+**Output:** An object with a single `blueprints` key holding a flat array of blueprints. Each item:
 
 | Field | Type | Description |
 |---|---|---|
@@ -497,7 +497,7 @@ Create a reusable blueprint template for generating content at scale. Blueprints
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | Yes | Blueprint name |
-| `category_id` | integer | Yes | Category ID from `get_content_categories` |
+| `category_id` | integer | Yes | Category ID from `list_content_categories` |
 | `source_content` | string | Yes | Well-structured markdown template content |
 
 **Output:**
@@ -521,7 +521,7 @@ Create a reusable blueprint template for generating content at scale. Blueprints
 - "Build me a template for product launch announcements"
 
 **Common errors:**
-- Invalid `category_id` — use `get_content_categories` first to get valid IDs
+- Invalid `category_id` — use `list_content_categories` first to get valid IDs
 - Empty `source_content` — provide a well-structured markdown template
 
 ---
@@ -537,7 +537,7 @@ Create an AI-assisted blueprint draft from a prompt. This creates a draft you ca
 | `name` | string | Yes | Name for the draft |
 | `instructions` | string | Yes | Description of the blueprint to create |
 | `content` | string | Yes | Initial content as markdown |
-| `category_id` | integer | No | Category ID from `get_content_categories` |
+| `category_id` | integer | No | Category ID from `list_content_categories` |
 
 **Output:**
 
@@ -591,13 +591,13 @@ Finalize (publish) a previously created blueprint draft into a full, usable blue
 
 ## Community Blueprints
 
-### `get_community_blueprints`
+### `list_community_blueprints`
 
 Browse community blueprints available for import. Returns blueprints shared by Marcora users, including name, summary, contributor info, and category.
 
 **Parameters:** None
 
-**Output:** Array of community blueprints with IDs, names, summaries, contributor details, and categories.
+**Output:** An object with a single `community_blueprints` key holding an array of community blueprints. Each item carries `id`, `slug`, `name`, `summary`, `is_featured`, `input_instructions`, `visibility`, `contributor_name`, `contributor_company`, `category`, and `category_short`.
 
 **Example prompts:**
 - "Show me community blueprints"
@@ -614,7 +614,7 @@ Get the full details for a specific community blueprint, including complete cont
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `blueprint_exchange_id` | string | No | Blueprint exchange ID from `get_community_blueprints` |
+| `blueprint_exchange_id` | string | No | Blueprint exchange ID from `list_community_blueprints` |
 
 **Output:**
 
@@ -648,7 +648,7 @@ Import a blueprint from the Marcora community exchange into your team's library.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `blueprint_exchange_id` | string | No | Blueprint exchange ID from `get_community_blueprints` |
+| `blueprint_exchange_id` | string | No | Blueprint exchange ID from `list_community_blueprints` |
 
 **Output:**
 
@@ -722,7 +722,7 @@ You must provide either `content` or `instructions` (not both).
 **Common errors:**
 - Providing both `content` and `instructions` — use one or the other
 - Using `content` with `blueprint_uuid` — blueprints require `instructions`
-- Invalid `blueprint_uuid` — use `get_blueprints` to find valid UUIDs
+- Invalid `blueprint_uuid` — use `list_blueprints` to find valid UUIDs
 - Timeout on synchronous calls — AI-generated content can take 1–3 minutes, which is normal
 
 ---
@@ -786,7 +786,7 @@ Returns all content visible to the current user as a single unified array. Conte
 
 **Parameters:** None
 
-**Output:** Array of items.
+**Output:** An object with a single `content` key holding an array of items.
 
 | Field | Type | Description |
 |---|---|---|
@@ -979,13 +979,13 @@ Export a markdown document as a downloadable Word (.docx) file. Returns a downlo
 
 ## Projects
 
-### `get_projects`
+### `list_projects`
 
 Returns all projects visible to the current user. Projects organize content into workstreams.
 
 **Parameters:** None
 
-**Output:**
+**Output:** An object with a single `projects` key holding an array of projects. Each item:
 
 | Field | Type | Description |
 |---|---|---|
@@ -1265,3 +1265,187 @@ Partial update of a plan: mutable fields and stage transitions. All fields are o
 - "Assign this plan to the content team"
 - "Set a due date of next Friday on this plan"
 - "Dismiss the outdated Q2 plan"
+
+---
+
+## Workflows
+
+Workflows are reusable, multi-step automations that a Managed Agents session executes on demand or on a schedule. Build them with `create_workflow`, activate and edit them with `update_workflow`, trigger them with `run_workflow`, and inspect run history with `get_workflow_runs`. The companion **Marcora Workflow Builder** skill documents authoring patterns (step design, scheduling, deduplication, runner-summary conventions).
+
+### `list_workflows`
+
+List workflows for your active team. Supports an optional status filter and a name substring search. Call this before `create_workflow` to check for duplicate names.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `status` | string | No | Filter by status: `draft`, `active`, or `archived`. Omit to return all |
+| `search` | string | No | Substring match against workflow name |
+| `page` | integer | No | Page number (default 1) |
+| `per_page` | integer | No | Items per page (default 20, max 100) |
+
+**Output:** A paginated object.
+
+| Field | Type | Description |
+|---|---|---|
+| `items` | array | Array of workflow summaries |
+| `items[].id` | string (uuid) | Workflow ID. Use as `workflow_id` in `get_workflow`, `update_workflow`, `run_workflow`, and `get_workflow_runs` |
+| `items[].name` | string | Workflow name |
+| `items[].status` | string | `draft`, `active`, or `archived` |
+| `items[].link_url` | string (uri) | Direct URL to view the workflow in Marcora |
+| `itemsTotal` | integer | Total number of matching workflows |
+| `curPage` | integer | Current page |
+| `nextPage` | integer/null | Next page number, or null if last page |
+| `prevPage` | integer/null | Previous page number, or null if first page |
+
+**Example prompts:**
+- "What workflows do I have?"
+- "List my active automations"
+- "Do I already have a workflow named 'Weekly digest'?"
+
+---
+
+### `get_workflow`
+
+Fetch one workflow's full definition plus its triggers and latest run. Always call this before `update_workflow` — partial updates clobber unspecified keys, so you need the current values first.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `workflow_id` | string (uuid) | Yes | UUID of the workflow to fetch |
+
+**Output:** An object with a single `workflow` key.
+
+| Field | Type | Description |
+|---|---|---|
+| `workflow.id` | string (uuid) | Workflow ID |
+| `workflow.name` | string | Workflow name |
+| `workflow.status` | string | `draft`, `active`, or `archived` |
+| `workflow.steps` | array | Ordered step definitions |
+| `workflow.inputs` | object | Declared input schema |
+| `workflow.allowed_tools` | array | Tool allowlist for the runner |
+| `workflow._triggers` | array | Schedule/trigger configs (inspect `_triggers[0].schedule_config` and `.is_enabled`) |
+| `workflow._latest_run` | object/null | Most recent run (carries its own `link_url`), or null if never run |
+| `workflow.link_url` | string (uri) | Direct URL to view the workflow in Marcora |
+
+**Example prompts:**
+- "Show me the details of that workflow"
+- "What's this workflow's schedule?"
+- "When did this workflow last run?"
+
+---
+
+### `create_workflow`
+
+Create a new workflow template for your active team. Workflows start as `draft` — activate them with `update_workflow` once the user confirms. Check `list_workflows` with a `search` filter for duplicate names first.
+
+> **Scheduling:** include `schedule_config` ONLY if the user explicitly wants the workflow scheduled. Otherwise omit it and the workflow runs on demand via `run_workflow`.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | Human-readable workflow name. Confirm with the user before creating |
+| `description` | string | No | One or two sentences; becomes part of the runner's system prompt |
+| `steps` | array | Yes | Ordered list of steps. Each should be specific enough that a fresh agent can execute it without follow-up questions |
+| `inputs` | object | No | Declares what the workflow needs (e.g. `topic`, `date_range`); resolved from trigger bindings on scheduled runs |
+| `allowed_tools` | array | No | Tool allowlist for the runner. Prefer tight allowlists, especially for scheduled runs |
+| `tags` | string[] | No | Optional tags |
+| `schedule_config` | object | No | Scheduling config. Shape: `{ "frequency": "daily"\|"weekly"\|"hourly", "interval_hours": N, "timezone": "UTC" }`. Omit unless scheduling is requested |
+
+**Output:** The created workflow object — `id`, `team_id`, `created_by_user_id`, `name`, `description`, `status` (`draft`), `inputs`, `steps`, `allowed_tools`, `tags`, `created_at`, `updated_at`, `link_url`. Use `id` as `workflow_id` in the other workflow tools.
+
+**Example prompts:**
+- "Create a workflow that drafts a weekly LinkedIn post from our latest content"
+- "Set up an automation to import new call transcripts every Monday"
+
+---
+
+### `update_workflow`
+
+Partial update of a workflow template — only the keys you send mutate; unspecified keys are preserved. Call `get_workflow` first to read the current values, then send the minimal diff.
+
+> **Activate / soft-delete:** `{ workflow_id, status: "active" }` activates; `{ workflow_id, status: "archived" }` soft-deletes.
+
+> **Do NOT send `schedule_config`** — it is rejected with an InputError on update. Schedule edits happen in the Marcora UI.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `workflow_id` | string (uuid) | Yes | UUID of the workflow to update |
+| `name` | string | No | New name |
+| `description` | string | No | New description |
+| `status` | string | No | `draft`, `active`, or `archived` (use `archived` as soft-delete) |
+| `steps` | array | No | Replacement step definitions |
+| `inputs` | object | No | Replacement input schema |
+| `allowed_tools` | array | No | Replacement tool allowlist |
+| `tags` | string[] | No | Replacement tags |
+
+**Output:** The updated workflow object — `id`, `name`, `status`, `steps`, `inputs`, `allowed_tools`, `tags`, `updated_at`, `link_url`.
+
+**Example prompts:**
+- "Activate that workflow"
+- "Archive the old digest workflow"
+- "Rename this workflow to 'Q3 launch prep'"
+
+---
+
+### `run_workflow`
+
+Manually run a workflow now. Creates a workflow run and dispatches a Managed Agents session. Inspect the returned `status` to know what happened.
+
+> **Check `status`:** `running` → dispatch succeeded, a session is live; `failed` → dispatch failed, read `error_reason` for the cause; `skipped` → the runner decided no work was needed (rare for manual runs).
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `workflow_id` | string (uuid) | Yes | UUID of the workflow to run |
+| `input_values` | object | No | Object matching the workflow's declared `inputs` schema. Pass `{}` or omit for workflows with no inputs. Call `get_workflow` first if unsure |
+
+**Output:** The workflow run object.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | string (uuid) | Workflow run UUID. Use as `run_id` in `get_workflow_runs` (single mode) to inspect the run |
+| `workflow_template_id` | string (uuid) | Parent workflow UUID |
+| `status` | string | `running`, `failed`, or `skipped` |
+| `trigger_type` | string | How the run was triggered (`manual` here) |
+| `runner_session_id` | string | Managed Agents session ID for the run |
+| `error_reason` | string/null | Failure cause when `status` is `failed`, else null |
+| `error_summary` | string | Human-readable error summary |
+| `link_url` | string (uri) | Direct URL to view this run in Marcora |
+
+**Example prompts:**
+- "Run the weekly digest workflow now"
+- "Trigger that automation manually"
+
+---
+
+### `get_workflow_runs`
+
+Inspect workflow run history. Two modes, controlled by whether `run_id` is supplied: omit it for a paginated list of runs; supply it for a single run's detail including step logs and tool-call logs.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `workflow_id` | string (uuid) | Yes | UUID of the workflow |
+| `run_id` | string (uuid) | No | If supplied → single-run detail; if omitted → paginated list of runs |
+| `status` | string | No | List-mode filter (e.g. `failed`). Ignored in single mode |
+| `page` | integer | No | List-mode page number (default 1) |
+| `per_page` | integer | No | List-mode page size (default 20) |
+
+**Output:** An object whose shape depends on the mode:
+
+- **List mode** (`run_id` omitted): `items` — an array of runs, each `{ id, workflow_template_id, status, link_url }` — plus `itemsTotal` (integer).
+- **Single-run mode** (`run_id` supplied): `id`, `workflow_template_id`, `status`, `_step_logs` (array), `_tool_call_logs` (array), and `link_url`.
+
+**Example prompts:**
+- "Did my workflow run?"
+- "Show me the latest runs of this workflow"
+- "What did that run do?"
+- "Show me the failed runs"
