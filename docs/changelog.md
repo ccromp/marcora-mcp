@@ -2,6 +2,32 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-06-10
+
+### Changed
+
+- **Output shape — eight list tools now return a JSON object wrapping their array** instead of a bare top-level array, so each can carry a spec-compliant `outputSchema` (the MCP spec requires `outputSchema` to be a top-level `object`). Each wraps its array under one semantic key, and the item fields are otherwise unchanged:
+  - `list_blueprints` → `{ "blueprints": [...] }`
+  - `list_projects` → `{ "projects": [...] }`
+  - `list_content` → `{ "content": [...] }`
+  - `list_context_collections` → `{ "collections": [...] }`
+  - `list_context_items` → `{ "context_items": [...] }`
+  - `list_community_blueprints` → `{ "community_blueprints": [...] }`
+  - `list_content_categories` → `{ "categories": [...] }`
+  - `list_targeting_dimensions` → `{ "dimensions": [...] }`
+
+  Clients that previously read the bare array must now read `response.<key>` (e.g. `response.projects`).
+- **`get_workflow_runs` output schema** is now a single top-level `object` (previously a `oneOf` of two object shapes, which has no top-level `type` and so could not be promoted to `outputSchema`). The returned data is unchanged — list mode still returns `items` + `itemsTotal`; single-run mode still returns the run fields plus `_step_logs` / `_tool_call_logs`.
+- **Per-tool `annotations`** (`title`, `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) are now published on every customer tool, and a valid `outputSchema` is now promoted on all of them.
+
+### Added
+
+- **Workflows documentation** — `docs/tools.md` now documents the six workflow tools (`list_workflows`, `get_workflow`, `create_workflow`, `update_workflow`, `run_workflow`, `get_workflow_runs`) under a new **Workflows** section. They were previously undocumented.
+
+### Fixed
+
+- **Documentation tool-name corrections** — several tools had been documented under stale `get_*` names that did not match the live `list_*` tools. Renamed throughout `docs/tools.md`, `docs/errors.md`, and the README tool table: `get_content_categories` → `list_content_categories`, `get_targeting_dimensions` → `list_targeting_dimensions`, `get_community_blueprints` → `list_community_blueprints`, `get_projects` → `list_projects`, and `get_blueprints` → `list_blueprints`. The README "Available Tools" table was also refreshed to list every current tool (adding the missing/renamed Context, Content, Projects, Plans, and Workflows entries).
+
 ## 2026-06-09
 
 ### Changed
