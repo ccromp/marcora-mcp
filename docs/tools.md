@@ -10,7 +10,7 @@ The tools below are available to any connected AI assistant once the Marcora MCP
 
 ### `get_current_user_info`
 
-Returns profile and subscription information for the currently authenticated user, including active team, role, subscription plan, and usage statistics.
+Returns profile and subscription information for the currently authenticated user, including active team, role, subscription plan, and AI-credit usage.
 
 **Parameters:** None
 
@@ -25,7 +25,8 @@ Returns profile and subscription information for the currently authenticated use
 | `plan_name` | string | Subscription plan display name |
 | `plan_slug` | string | Subscription plan identifier |
 | `subscription_status` | string | Current subscription status |
-| `usage` | object | Usage statistics for the current billing period |
+| `ai_credits_available` | integer | AI credits remaining this billing period (limit minus used) |
+| `ai_credits_max` | integer | AI credit limit for this billing period |
 
 **Example prompts:**
 - "What plan am I on?"
