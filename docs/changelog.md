@@ -19,6 +19,7 @@ All notable changes to the Marcora MCP server will be documented in this file.
   Clients that previously read the bare array must now read `response.<key>` (e.g. `response.projects`).
 - **`get_workflow_runs` output schema** is now a single top-level `object` (previously a `oneOf` of two object shapes, which has no top-level `type` and so could not be promoted to `outputSchema`). The returned data is unchanged — list mode still returns `items` + `itemsTotal`; single-run mode still returns the run fields plus `_step_logs` / `_tool_call_logs`.
 - **Per-tool `annotations`** (`title`, `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) are now published on every customer tool, and a valid `outputSchema` is now promoted on all of them.
+- **`get_current_user_info` reshaped** — the nested `usage` object is removed. The response now exposes two top-level integer fields: `ai_credits_max` (the plan's AI-credit limit) and `ai_credits_available` (credits remaining = limit minus used). The other fields (`name`, `email`, `active_team_name`, `active_team_role`, `subscription_status`, `plan_name`, `plan_slug`) are unchanged. Annotations and `outputSchema` were also added to this tool (it had been temporarily detached during the annotations pass).
 
 ### Added
 
