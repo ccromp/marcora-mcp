@@ -46,9 +46,11 @@ Returns the team's Brand Foundation — the foundational brand and company infor
 - **`writing_style`** — language complexity, sentence structure, formatting preferences, CTA style
 - **`writing_examples`** — sample content demonstrating the team's distinctive voice (free-form structure; users organize this however they like)
 
+**When to use it:** call it whenever the user asks about — or wants the agent to use — their brand voice, company overview, writing style, or writing examples (e.g. *"What is our brand voice?"*, *"What is the brand voice of `<company>`?"*, *"Summarize our company overview"*). These four elements live ONLY here — `get_relevant_context`'s relevancy search does **not** surface Brand Foundation, so this is the correct tool for any brand-voice / company-overview / writing-style / writing-examples question, not relevancy search.
+
 By default returns all four elements. Pass `elements` to scope the response to a subset. The response is structured JSON — paste it directly into a downstream AI prompt (modern LLMs read JSON fine) or template-string the fields into markdown if you prefer.
 
-> **Note:** `create_content`, `create_plan`, and Marcora's in-app content generation system automatically pull Brand Foundation in — you only need this tool when you're operating *outside* those flows (e.g. providing Brand Foundation context to an external AI agent).
+> **Note:** You don't need to call this before `create_content` or `create_plan` — those pull Brand Foundation in automatically. Call it directly whenever the user wants to see, discuss, or hand off their Brand Foundation.
 
 **Parameters:**
 
@@ -333,6 +335,10 @@ Searches the team's context library and returns the most relevant chunks for a g
 
 Set `include_brand_foundation: true` to also receive the team's Brand Foundation (company overview, brand voice, writing style, writing examples) in the same response — a one-stop fetch of everything you need to write on-brand yourself with your own model. (You don't need it when handing off to `create_content`, which pulls Brand Foundation in automatically.)
 
+> **Tip — bundle Brand Foundation on the first call:** Default the **first** `get_relevant_context` call of a conversation to `include_brand_foundation: true`. Brand Foundation is always-on foundational context that relevancy scoring never surfaces on its own; pulling it in once, up front, means the agent has the team's company overview and brand voice on hand for the rest of the session — useful even when just answering a question. On **subsequent** calls in the same conversation, set it `false`/omit so it isn't re-sent each time.
+
+> For **Brand Foundation specifically** (brand voice, company overview, writing style, writing examples), relevancy search will **not** return those elements — use `get_brand_foundation`, or `include_brand_foundation: true` above. A *"what is our brand voice?"* question can't be answered from relevancy chunks alone.
+
 **Parameters:**
 
 | Parameter | Type | Required | Description |
@@ -342,7 +348,7 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 | `collection_ids` | array | No | **Additive** — ALSO searches those collections alongside the general library. Not an exclusive filter |
 | `dimension_option_ids` | array | No | Targeting dimension option IDs that bias relevancy toward an audience / persona / industry |
 | `context_rag_ids` | array | No | Previously returned chunk IDs to exclude (for pagination) |
-| `include_brand_foundation` | boolean | No | When `true`, also returns the team's Brand Foundation in the response. Default `false`. When paginating, set it `true` on the first call and `false`/omit on follow-ups so it isn't re-sent each page |
+| `include_brand_foundation` | boolean | No | When `true`, also returns the team's Brand Foundation in the response. Default `false`. Recommended `true` on the **first** call of a conversation (and when paginating, the first page), then `false`/omit on follow-ups so it isn't re-sent each time |
 
 **Output:**
 
