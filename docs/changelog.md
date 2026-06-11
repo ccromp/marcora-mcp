@@ -2,6 +2,16 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-06-11
+
+### Changed
+
+- **Brand Foundation tool-selection guidance (instructions only — no behavior or I/O change).** Tightened the descriptions on two tools so agents reliably reach for Brand Foundation when a user asks about it:
+  - `get_brand_foundation` now has an explicit **"When to use it"** trigger (brand voice / company overview / writing style / writing examples questions) and the old note that framed it as an outside-the-flow / external-agent tool was reworded so it no longer discourages direct use.
+  - `get_relevant_context` now (a) cross-references `get_brand_foundation` — relevancy search does not surface Brand Foundation elements, so a *"what is our brand voice?"* question can't be answered from relevancy chunks — and (b) recommends defaulting `include_brand_foundation: true` on the **first** call of a conversation (then `false`/omit on subsequent calls), so the agent has company overview + brand voice on hand for the whole session.
+
+  No parameters, output shapes, or annotations changed.
+
 ## 2026-06-10
 
 ### Changed
