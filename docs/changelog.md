@@ -2,6 +2,17 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-06-19
+
+### Changed
+
+- **`create_workflow` — `allowed_tools` is now required.** A workflow cannot be created without an explicit, non-empty tool allowlist (an empty list would let the runner inherit the full tool set). Omitting it now returns a clean input-validation error. Previously `allowed_tools` was optional, and omitting it produced a fatal error. No change to the success output shape.
+
+### Fixed
+
+- **`create_workflow` no longer returns a fatal error.** Calls now surface backend rejections as clean input errors instead of an internal `ERROR_FATAL`.
+- **`create_blueprint_draft` now returns a valid `uuid`.** The draft's identifier (and its `link_url`) were previously `null`, which also broke `finalize_blueprint_draft`. The full `create_blueprint_draft → finalize_blueprint_draft` chain now works end to end.
+
 ## 2026-06-11
 
 ### Changed
