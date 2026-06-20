@@ -551,7 +551,7 @@ Create an AI-assisted blueprint draft from a prompt. This creates a draft you ca
 | Field | Type | Description |
 |---|---|---|
 | `id` | integer | Record ID for the blueprint draft |
-| `uuid` | string | Unique identifier for this draft |
+| `uuid` | string | Unique identifier for this draft — pass as `draft_uuid` to `finalize_blueprint_draft` |
 | `title` | string | Blueprint draft name |
 | `content` | string | AI-generated blueprint template content in markdown |
 | `link_url` | string | Direct URL to view/edit in Marcora |
@@ -1358,7 +1358,7 @@ Create a new workflow template for your active team. Workflows start as `draft` 
 | `description` | string | No | One or two sentences; becomes part of the runner's system prompt |
 | `steps` | array | Yes | Ordered list of steps. Each should be specific enough that a fresh agent can execute it without follow-up questions |
 | `inputs` | object | No | Declares what the workflow needs (e.g. `topic`, `date_range`); resolved from trigger bindings on scheduled runs |
-| `allowed_tools` | array | No | Tool allowlist for the runner. Prefer tight allowlists, especially for scheduled runs |
+| `allowed_tools` | array | **Yes** | **Required, non-empty.** The exact set of tools the workflow runner is permitted to use. A workflow cannot be created without an explicit allowlist — an empty list would let the runner inherit the full tool set. Prefer tight allowlists, especially for scheduled runs |
 | `tags` | string[] | No | Optional tags |
 | `schedule_config` | object | No | Scheduling config. Shape: `{ "frequency": "daily"\|"weekly"\|"hourly", "interval_hours": N, "timezone": "UTC" }`. Omit unless scheduling is requested |
 
