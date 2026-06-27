@@ -168,20 +168,24 @@ Create a new context collection to organize your reference materials. Collection
 
 Add a new context item to your reference library. Context items are reference materials that power AI generation — they help the AI produce more accurate, on-brand, and relevant content.
 
-You can supply the body two ways:
+You can supply the body in exactly one of three ways:
 
-- **`content`** — paste the markdown body directly. Best for short or hand-authored material.
-- **`content_url`** — pass a public URL and the backend fetches it and converts it to clean markdown server-side using a headless browser + Mozilla Readability (the same engine used for the user-website context-import flow). Use this whenever the body is large, comes from a presigned-link export (e.g. Google Doc, connected-app sandbox), or you'd otherwise have to pull the page into your own conversation just to forward it.
+- **`content`** — paste the markdown body directly. Best for short or hand-authored material. Creates a plain-text (`manual`) item.
+- **`import_url`** — pass a public URL to import **once**. The backend fetches it and converts it to clean markdown server-side using a headless browser + Mozilla Readability (the same engine used for the user-website context-import flow), then stores that markdown as a **static snapshot**. The URL is **not** retained and the item is **not** refreshable. Use for one-off imports — a presigned-link export (e.g. Google Doc, connected-app sandbox), a competitor's blog post, or anything you'd otherwise have to pull into your own conversation just to forward.
+- **`connected_webpage_url`** — pass a URL to track as a live **web page**. The backend fetches the page, stores it as a `webpage` context item, and **remembers the URL** so it can be re-pulled later (via `update_context` `refresh_webpage`, or the refresh button in the Marcora web app). Use this for the customer's own pages and any page you want to keep current. If the same URL is already tracked, the existing item is **updated in place** (no duplicate).
 
-Exactly one of `content` or `content_url` is required — providing both returns a 400.
+Providing zero, or more than one, of `content` / `import_url` / `connected_webpage_url` returns a 400.
+
+> **Web pages require admin or editor role.** `connected_webpage_url` is rejected for collaborators, matching the in-app *Add web page* rule. `content` and `import_url` remain available to collaborators.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | Yes | Descriptive name for the context item |
-| `content` | string | Conditional | Markdown body. Mutually exclusive with `content_url` — provide exactly one |
-| `content_url` | string | Conditional | Public URL — backend fetches it and extracts clean markdown server-side. Mutually exclusive with `content` |
+| `content` | string | Conditional | Markdown body (creates a `manual` item). Provide exactly one of `content` / `import_url` / `connected_webpage_url` |
+| `import_url` | string | Conditional | Public URL imported **once** as a static markdown snapshot (URL not retained, not refreshable). Provide exactly one of the three body inputs |
+| `connected_webpage_url` | string | Conditional | Public URL tracked as a live, refreshable `webpage` item (URL stored; dedupes by URL; admin/editor only). Provide exactly one of the three body inputs |
 | `collection_id` | integer | No | Collection ID to organize the item (from `list_context_collections` or `create_context_collection`) |
 | `project_id` | string | No | Project ID to associate with (from `list_projects`) |
 
@@ -191,17 +195,19 @@ Exactly one of `content` or `content_url` is required — providing both returns
 |---|---|---|
 | `id` | string | Context item ID |
 | `name` | string | Context item name |
+| `content_type` | string | `manual` (from `content` / `import_url`) or `webpage` (from `connected_webpage_url`) |
 | `content` | string | The stored reference content |
 | `word_count` | integer | Word count of content |
-| `collection_id` | integer | Collection this item belongs to (if assigned) |
-| `project_id` | string | Project association (if assigned) |
+| `collection_id` | integer \| null | Collection this item belongs to (null if none) |
+| `project_id` | string \| null | Project association (null if none) |
 | `created_at` | integer | Unix timestamp of creation |
 | `link_url` | string | Direct URL to view this context item in the Marcora app. Resolves to the project, collection, or reference library view depending on the item's scope |
 
 **Example prompts:**
 - "Add our brand guidelines to Marcora"
 - "Store this competitive analysis as context"
-- "Save https://example.com/competitor-pricing as a context item called 'Acme pricing'"
+- "Import https://example.com/competitor-pricing as a one-off snapshot called 'Acme pricing'"
+- "Track our pricing page (https://example.com/pricing) as a web page so I can refresh it later"
 - "Add this product brief to the 'Product Launch' collection"
 
 ---
@@ -210,20 +216,25 @@ Exactly one of `content` or `content_url` is required — providing both returns
 
 Update an existing context item — change its name, content, or move it between collections / projects. If the item has a linked editing canvas open in the Marcora sidebar, its title and content stay in sync automatically.
 
-Like `add_context`, you can supply a new body either as inline `content` or as a `content_url` the backend fetches and converts to markdown server-side. Pass at most one — providing both returns a 400. Omit both to leave the body untouched (e.g. when you're only renaming the item or moving it between collections).
+Like `add_context`, you can supply a new body either as inline `content` or as an `import_url` the backend fetches and converts to markdown server-side. Pass at most one — providing both returns a 400. Omit both to leave the body untouched (e.g. when you're only renaming the item or moving it between collections).
+
+To **re-pull a tracked web-page item** from its stored URL — the same action as the refresh button in the Marcora web app — pass **`refresh_webpage: true`**. No content is needed; the content comes from re-fetching the page, and `name` / `content` / `import_url` are ignored when it's set. `refresh_webpage` only works on items added via `add_context` `connected_webpage_url` (content type `webpage`); on any other item it returns a clear error. Requires admin or editor role.
+
+> **`import_url` vs `refresh_webpage`:** `import_url` replaces the body with a fresh **one-off snapshot** and does not establish a tracked URL. To keep a web-page item in sync with its source over time, use `refresh_webpage` on an item that was created with `connected_webpage_url`.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `context_item_id` | string (uuid) | Yes | The context item to update |
-| `name` | string | No | If provided, updates the name. Omit to leave unchanged |
-| `content` | string | No | New markdown body. Omit to leave unchanged. Triggers RAG re-embedding. Mutually exclusive with `content_url` |
-| `content_url` | string | No | Public URL — backend fetches and converts to clean markdown server-side, then stores it as the new body. Mutually exclusive with `content` |
+| `refresh_webpage` | boolean | No | Set `true` to re-pull a `webpage` item's content from its stored URL. Ignores `name` / `content` / `import_url`. Errors on non-webpage items. Admin/editor only |
+| `name` | string | No | If provided, updates the name. Omit to leave unchanged. Ignored when `refresh_webpage` is true |
+| `content` | string | No | New markdown body. Omit to leave unchanged. Triggers RAG re-embedding. Mutually exclusive with `import_url`. Ignored when `refresh_webpage` is true |
+| `import_url` | string | No | Public URL — backend fetches and converts to clean markdown server-side, then stores it as a fresh one-off snapshot body. Mutually exclusive with `content`. Ignored when `refresh_webpage` is true |
 | `collection_id` | integer \| null | **Yes (nullable)** | Full replace. Pass the current ID to keep the item in its collection, pass a different ID to move it, or pass `null` to remove it from any collection |
 | `project_id` | string (uuid) \| null | **Yes (nullable)** | Full replace. Pass the current ID to keep the project association, pass a different ID to move it, or pass `null` to disassociate it |
 
-> **Important:** `collection_id` and `project_id` use full-replace semantics — you must pass them on every call. Omitting them is NOT the same as leaving them unchanged. If you don't know the current values, call `get_context_item` first or check the context item in the web app before updating.
+> **Important:** `collection_id` and `project_id` use full-replace semantics — you must pass them on every call (even with `refresh_webpage`, pass the item's current values; the refresh does not change them). Omitting them is NOT the same as leaving them unchanged. If you don't know the current values, call `get_context_item` first or check the context item in the web app before updating.
 
 **Output:**
 
@@ -244,7 +255,8 @@ Like `add_context`, you can supply a new body either as inline `content` or as a
 - "Rename that brand voice context item to 'Brand Voice v2'"
 - "Move the competitive analysis out of the 'Archive' collection"
 - "Update our pricing context with the new Enterprise tier info"
-- "Refresh the Acme pricing context item from https://example.com/competitor-pricing"
+- "I updated our pricing page — refresh that web-page context item"
+- "Re-import the Acme snapshot from https://example.com/competitor-pricing"
 
 ---
 
@@ -270,6 +282,7 @@ Each returned item carries its own `collection_id` and `project_id` (both nullab
 | `name` | string | Context item name |
 | `content_intro` | string | Short truncation of the content for previews |
 | `content_type` | string | One of `manual`, `webpage`, `canvas`, `deliverable`, `integration_data`, `call_transcript`, `file` |
+| `source_url` | string \| null | For `webpage` items, the tracked page URL (re-pull it with `update_context` `refresh_webpage`); `null` for all other item types |
 | `word_count` | integer | Word count of the full content |
 | `created_at` | integer | Unix timestamp of creation |
 | `updated_at` | integer \| null | Unix timestamp of last update |
@@ -310,6 +323,7 @@ The IDs you pass here can come from `list_context_items`, `get_project(project_i
 | `content` | string | Full markdown content |
 | `content_intro` | string | Short truncation used in listings |
 | `content_type` | string | One of `manual`, `webpage`, `canvas`, `deliverable`, `integration_data`, `call_transcript`, `file` |
+| `source_url` | string \| null | For `webpage` items, the tracked page URL (re-pull it with `update_context` `refresh_webpage`, or pass it back to `add_context` `connected_webpage_url`); `null` for all other item types |
 | `word_count` | integer | Word count of the content |
 | `created_at` | integer | Unix timestamp of creation |
 | `updated_at` | integer \| null | Unix timestamp of last update |
