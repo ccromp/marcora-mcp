@@ -2,6 +2,22 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-06-27
+
+### Changed
+
+- **`add_context` / `update_context` — `content_url` renamed to `import_url`** (breaking, on those two tools). The behavior is unchanged — fetch a public URL once, convert to clean markdown server-side, store it as a static snapshot — but the name now makes clear it is a **one-off import** that does NOT retain the URL or create a refreshable item. Callers using `content_url` must switch to `import_url`. (Use the new `connected_webpage_url` / `refresh_webpage` instead when you want a tracked, refreshable web page.)
+
+### Added
+
+- **`add_context` — `connected_webpage_url`.** Pass a URL to create a true, tracked **web-page** context item (`content_type: "webpage"`): the page is fetched, stored, and its URL is **remembered** so it can be re-pulled later. Dedupes by URL — adding a URL that's already tracked updates the existing item in place instead of creating a duplicate. Requires admin or editor role (matches the in-app *Add web page* rule). This brings MCP to parity with the app's *Add web page* feature, which `import_url` (a static snapshot) does not.
+- **`update_context` — `refresh_webpage: true`.** Re-pulls a tracked web-page item's content from its stored URL — the same action as the app's refresh button. No content needed; `name` / `content` / `import_url` are ignored when set. Only valid on items created via `connected_webpage_url`; returns a clear input error on any other item. Requires admin or editor role.
+- **`list_context_items` / `get_context_item` — `source_url` field.** For `webpage` items this is the tracked page URL (`null` for all other types), so an agent can discover which items are refreshable and re-pull them without the user hand-feeding URLs.
+
+### Fixed
+
+- **`add_context` web-page items created without a collection are no longer hidden.** A web page added via `connected_webpage_url` with no `collection_id` was created successfully but then excluded from `list_context_items` / `get_context_item` (it was stored with `collection_id = 0`, a dangling reference the team-scoped read queries filter out). Now stored as `null`, so new web-page items appear immediately. (Only affected the new web-page path; `content` / `import_url` items were never impacted.)
+
 ## 2026-06-19
 
 ### Changed
