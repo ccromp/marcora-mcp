@@ -50,7 +50,7 @@ Returns the team's Brand Foundation — the foundational brand and company infor
 
 By default returns all four elements. Pass `elements` to scope the response to a subset. The response is structured JSON — paste it directly into a downstream AI prompt (modern LLMs read JSON fine) or template-string the fields into markdown if you prefer.
 
-> **Note:** You don't need to call this before `create_content` or `create_plan` — those pull Brand Foundation in automatically. Call it directly whenever the user wants to see, discuss, or hand off their Brand Foundation.
+> **Note:** You don't need to call this before `create_content` with `instructions` (or `create_plan`) — those pull Brand Foundation in automatically. But if **you** are composing content yourself to save via the `content` parameter of `create_content`/`update_content`, fetch it first (or use `get_relevant_context` with `include_brand_foundation: true`), since those verbatim-save paths consult no context. Call it directly whenever the user wants to see, discuss, or hand off their Brand Foundation.
 
 **Parameters:**
 
@@ -347,7 +347,7 @@ Searches the team's context library and returns the most relevant chunks for a g
 
 `collection_ids` and `project_id` are **additive**: they broaden the search to ALSO include those collections / that project's context alongside your general reference library — they do not restrict results to only that collection or project.
 
-Set `include_brand_foundation: true` to also receive the team's Brand Foundation (company overview, brand voice, writing style, writing examples) in the same response — a one-stop fetch of everything you need to write on-brand yourself with your own model. (You don't need it when handing off to `create_content`, which pulls Brand Foundation in automatically.)
+Set `include_brand_foundation: true` to also receive the team's Brand Foundation (company overview, brand voice, writing style, writing examples) in the same response — a one-stop fetch of everything you need to write on-brand yourself with your own model. Use this whenever **you** are composing content to save via the `content` parameter of `create_content` or `update_content` (those paths store text verbatim and consult no context). You **don't** need it when handing off to `create_content` with `instructions` — that path pulls Brand Foundation in automatically.
 
 > **Tip — bundle Brand Foundation on the first call:** Default the **first** `get_relevant_context` call of a conversation to `include_brand_foundation: true`. Brand Foundation is always-on foundational context that relevancy scoring never surfaces on its own; pulling it in once, up front, means the agent has the team's company overview and brand voice on hand for the rest of the session — useful even when just answering a question. On **subsequent** calls in the same conversation, set it `false`/omit so it isn't re-sent each time.
 
@@ -701,6 +701,8 @@ You must provide either `content` or `instructions` (not both).
 - **With `instructions`** (synchronous): Creates a freeform document from an AI prompt. Takes 1–3 minutes.
 - **With `instructions` + `blueprint_uuid`** (asynchronous): Generates content from a blueprint template. Returns a `generation_id` to poll via `get_generation_status`. Takes 3–5 minutes.
 
+> **Context handling depends on which input you use.** With **`instructions`** (Marcora writes it), the tool pulls all relevant context internally — Brand Foundation + Reference Library (relevancy-scored) + Project Context (if `project_id`) + any `collection_ids` — so do **not** pre-fetch with `get_relevant_context`; that's wasted work. With **`content`** (you supply finished text), the tool stores your markdown **verbatim** and consults **no** context. So if you're composing the content yourself, call `get_relevant_context` with `include_brand_foundation: true` **first** and write from what it returns — otherwise your draft ignores the team's brand and reference material. Rule of thumb: to have Marcora write against full team context automatically, use `instructions`; use `content` to save text the user already wrote/approved, or when the user wants *you* to do the writing (fetch context first).
+
 **Parameters:**
 
 | Parameter | Type | Required | Description |
@@ -859,7 +861,7 @@ Retrieves the full content of a specific document by its `content_id` (UUID).
 
 Update a content document (canvas or deliverable) by `content_id`. Partial-update semantics — every field besides `content_id` is optional and only the fields you supply are changed; everything else is left untouched. At least one mutable field must be supplied.
 
-> **Reading before writing:** for `content` edits that splice into existing text, call `get_content` first, edit the markdown in your context, then send the FULL new body back. This tool replaces the entire body — there is no patch / diff mode.
+> **Ground the body before you write it:** the `content` you send REPLACES the entire body verbatim (there is no patch / diff mode), and this tool consults **no** Brand Foundation or Reference Library of its own. So whenever you author or rewrite the body yourself, fetch context first: call `get_content` to read the current body, AND call `get_relevant_context` with `include_brand_foundation: true` to pull the team's brand voice and reference material; then compose the FULL new body from both and send it back. Body content written without fetching context first will be off-brand. (No fetch needed when you're only changing non-body fields — `stage`, `visibility`, `category_id`, `project_id`, or `name_override`.)
 
 > **Name behavior:** by default a document's name auto-syncs from the first markdown header in its body. Set `name_override` to lock a custom name; once locked, the title stays even when the body is edited. There is no un-lock path in this tool.
 
