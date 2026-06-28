@@ -2,6 +2,13 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-06-28
+
+### Changed
+
+- **`create_content`, `get_relevant_context`, `update_content` — context-fetch guidance is now conditional on who writes.** The instructions previously told agents never to call `get_relevant_context` before `create_content`. That holds only when Marcora does the writing (the `instructions` path, which pulls Brand Foundation + Reference Library + Project Context internally). When the agent composes the content itself and saves it via the `content` parameter — of either `create_content` or `update_content` — those paths store the text verbatim and consult no context, so the agent must call `get_relevant_context` with `include_brand_foundation: true` first or the result is off-brand. Tool instructions, `docs/tools.md`, and the `marcora-mcp` skill were updated to make the rule conditional. No input/output schema changes.
+- **MCP server display name** changed to **"Marcora: Brand Context & Writing"** (was "Marcora MCP Server").
+
 ## 2026-06-27
 
 ### Changed
