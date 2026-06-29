@@ -1,0 +1,22 @@
+{
+  "name": "marcora",
+  "version": "1.0.0",
+  "description": "Marcora — the context layer for GTM teams. Bundles the hosted Marcora MCP server with its two companion skills (marcora-mcp and marcora-workflow-builder) so your AI assistant can create on-brand marketing content, manage brand context and blueprints, organize projects, and build reusable workflows.",
+  "author": {
+    "name": "Marcora",
+    "url": "https://marcora.ai"
+  },
+  "homepage": "https://marcora.ai/mcp",
+  "repository": "https://github.com/ccromp/marcora-mcp",
+  "license": "LicenseRef-Proprietary",
+  "keywords": [
+    "marcora",
+    "marketing",
+    "content",
+    "gtm",
+    "brand",
+    "blueprints",
+    "workflows",
+    "mcp"
+  ]
+}
