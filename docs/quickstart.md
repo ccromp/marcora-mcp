@@ -17,14 +17,13 @@ https://mcp.marcora.ai
 
 ## Option 2: API Token
 
-For environments where OAuth isn't practical, use an API key with one of these endpoints:
+For environments where OAuth isn't practical, use an API key with the same connection URL:
 
-| Transport | URL |
-|---|---|
-| SSE | `https://api.marketcore.ai/x2/mcp/EbZaDl-X/mcp/sse` |
-| Streamable HTTP | `https://api.marketcore.ai/x2/mcp/EbZaDl-X/mcp/stream` |
+```
+https://mcp.marcora.ai
+```
 
-Generate your API key at [Integration Settings](https://app.marcora.ai/integration-settings).
+Pass the key in an `Authorization: Bearer <your-api-key>` header — the server negotiates the right transport automatically. Generate your API key at [Integration Settings](https://app.marcora.ai/integration-settings).
 
 ---
 
@@ -90,13 +89,13 @@ Add to your VS Code settings (`.vscode/mcp.json`):
 
 ### API Token Configuration (Any Client)
 
-If your client requires an API key instead of OAuth, use the SSE or Streamable HTTP URL with your API key:
+If your client requires an API key instead of OAuth, use the same connection URL with your API key in an `Authorization` header:
 
 ```json
 {
   "mcpServers": {
     "marcora": {
-      "url": "https://api.marketcore.ai/x2/mcp/EbZaDl-X/mcp/stream",
+      "url": "https://mcp.marcora.ai",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY"
       }

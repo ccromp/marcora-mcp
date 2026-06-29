@@ -1,7 +1,7 @@
 {
   "name": "ai.marcora/mcp-server",
   "title": "Marcora MCP Server",
-  "description": "Hosted MCP server for managing product context, blueprints, and AI-generated marketing content through Marcora.",
+  "description": "Hosted MCP server for Marcora — the context layer for GTM teams. One source of truth for brand and company context, blueprints, and AI-generated marketing content, in any AI tool.",
   "homepage": "https://marcora.ai",
   "repository": "https://github.com/ccromp/marcora-mcp",
   "documentation": "https://marcora.ai/mcp",
@@ -15,10 +15,7 @@
     "required": true,
     "types": ["oauth2", "apiKey"],
     "oauth_url": "https://mcp.marcora.ai",
-    "api_key_urls": {
-      "sse": "https://api.marketcore.ai/x2/mcp/EbZaDl-X/mcp/sse",
-      "stream": "https://api.marketcore.ai/x2/mcp/EbZaDl-X/mcp/stream"
-    },
+    "api_key_url": "https://mcp.marcora.ai",
     "instructions": "See docs/authentication.md"
   },
   "capabilities": {

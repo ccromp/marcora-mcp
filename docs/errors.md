@@ -9,10 +9,7 @@
 **Solutions:**
 - **OAuth:** Reconnect the MCP server in your client settings. Your token may have expired and failed to refresh.
 - **API key:** Verify your API key is correct and hasn't been revoked. Check [Integration Settings](https://app.marcora.ai/integration-settings).
-- Ensure you're using the correct URL for your auth method:
-  - OAuth: `https://mcp.marcora.ai`
-  - API key (SSE): `https://api.marketcore.ai/x2/mcp/EbZaDl-X/mcp/sse`
-  - API key (Streaming): `https://api.marketcore.ai/x2/mcp/EbZaDl-X/mcp/stream`
+- Ensure you're using the correct URL: `https://mcp.marcora.ai` (the same for both OAuth and API key — the server negotiates the right transport automatically).
 
 ### 403 Forbidden
 

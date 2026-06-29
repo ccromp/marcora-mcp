@@ -25,12 +25,7 @@ OAuth is handled automatically by the MCP client. When you add the connection UR
 
 Best for non-interactive environments, CI/CD pipelines, headless agent setups, or clients that support direct API key configuration.
 
-**API Key URLs:**
-
-| Transport | URL |
-|---|---|
-| SSE | `https://api.marketcore.ai/x2/mcp/EbZaDl-X/mcp/sse` |
-| Streamable HTTP | `https://api.marketcore.ai/x2/mcp/EbZaDl-X/mcp/stream` |
+**API Key URL:** `https://mcp.marcora.ai` — the same URL as OAuth. The server negotiates the right transport automatically; pass your key in the `Authorization` header (see below).
 
 **How to get your API key:**
 1. Log in to Marcora at [app.marcora.ai](https://app.marcora.ai)

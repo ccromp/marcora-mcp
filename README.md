@@ -1,6 +1,6 @@
 # Marcora MCP Server
 
-> AI-powered product context management — connect your AI tools to [Marcora](https://marcora.ai) through the Model Context Protocol.
+> The context layer for GTM teams — one source of truth for brand and company context, so your whole team produces consistent, on-brand content in any AI tool. Connect your AI tools to [Marcora](https://marcora.ai) through the Model Context Protocol.
 
 [![smithery badge](https://smithery.ai/badge/chris-2acp/marcora)](https://smithery.ai/servers/chris-2acp/marcora)
 
@@ -20,11 +20,11 @@ This is the **public documentation repository** for Marcora's hosted MCP server.
 
 ## What It Does
 
-Marcora is a product context management platform for go-to-market teams. It stores your brand context, manages reusable content templates (blueprints), and generates marketing documents informed by your full product knowledge. The MCP server brings all of this into your AI assistant — create content, manage context, browse community templates, and organize projects without leaving your chat.
+Marcora is the context layer for go-to-market teams — one source of truth for your brand and company context, so your whole team produces consistent, on-brand content in any AI tool. It stores your brand context, manages reusable content templates (blueprints), and generates marketing documents informed by your full company context. The MCP server brings all of this into your AI assistant — create content, manage context, browse community templates, and organize projects without leaving your chat.
 
 Marcora's MCP server enables AI clients to:
 
-- Manage product context and reference materials
+- Manage brand and company context and reference materials
 - Create and manage blueprints for content generation
 - Generate marketing content from context and blueprints
 - Organize work with projects and collections
@@ -37,14 +37,7 @@ Marcora's MCP server enables AI clients to:
 
 **Authentication options:**
 - **OAuth 2.0** (recommended for interactive clients) — connect using `https://mcp.marcora.ai`
-- **API Token** (for non-interactive environments) — generate a key at [Integration Settings](https://app.marcora.ai/integration-settings) and use one of the API key URLs below
-
-**API Key URLs:**
-
-| Transport | URL |
-|---|---|
-| SSE | `https://api.marketcore.ai/x2/mcp/EbZaDl-X/mcp/sse` |
-| Streamable HTTP | `https://api.marketcore.ai/x2/mcp/EbZaDl-X/mcp/stream` |
+- **API Token** (for non-interactive environments) — generate a key at [Integration Settings](https://app.marcora.ai/integration-settings) and connect to the same URL (`https://mcp.marcora.ai`), passing the key in an `Authorization: Bearer <your-api-key>` header. The server negotiates the right transport automatically.
 
 ## Quickstart
 
