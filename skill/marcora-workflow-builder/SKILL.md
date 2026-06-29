@@ -1,7 +1,7 @@
 ---
 name: marcora-workflow-builder
 description: Use this skill whenever the user wants to build, modify, run, or troubleshoot a Marcora workflow — a reusable, multi-step process the user can run on demand or on a schedule. Triggers on phrases like "every day", "every week", "on a schedule", "recurring", "automate this", and ALSO on "playbook", "make this reusable", "I want an agent that does X", "set this up so I can run it again later", or any request to encapsulate a sequence of work so it can be re-run consistently. Covers the 6 workflow MCP tools, choosing where the output should land, scheduling, deduplication patterns, and what the runner should write to its run summary.
-license: Proprietary
+license: CC-BY-4.0
 metadata:
   mcp-server: marcora
   version: 0.1.0
