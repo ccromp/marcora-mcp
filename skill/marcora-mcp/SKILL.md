@@ -1,7 +1,7 @@
 ---
 name: marcora-mcp
 description: Use this skill whenever the user is working with Marcora — creating, editing, or sharing content (blogs, emails, case studies, one-pagers, battle cards, launch materials), generating from blueprints, managing projects, setting a project brief, adding reference context, browsing the community blueprint exchange, or asking what's already in their library. Orchestrates Marcora MCP tools into the standard product-marketing workflows and applies Marcora's domain rules so the right artifact lands in the right place. Triggers on mentions of Marcora, blueprints, projects, project briefs, the Reference Library, Brand Foundation, Targeting Dimensions, Context Collections, the Blueprint Exchange, or any product-marketing content task that should be done in Marcora — even when the user doesn't explicitly say "Marcora."
-license: Proprietary
+license: CC-BY-4.0
 metadata:
   mcp-server: marcora
   version: 0.3.1
