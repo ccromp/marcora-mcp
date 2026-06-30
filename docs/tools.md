@@ -697,6 +697,8 @@ Import a blueprint from the Marcora community exchange into your team's library.
 
 Create content by supplying your own text directly, generating from an AI prompt, or generating from a blueprint.
 
+> **Revising an existing document? Use `update_content` instead** — edit it in place rather than forking a new doc. Edits are non-destructive: Marcora keeps a version history and the user can revert from the app.
+
 You must provide either `content` or `instructions` (not both).
 
 - **With `content`** (synchronous): Saves your supplied text directly as a document — no AI generation. Returns immediately.
@@ -862,6 +864,8 @@ Retrieves the full content of a specific document by its `content_id` (UUID).
 ### `update_content`
 
 Update a content document (canvas or deliverable) by `content_id`. Partial-update semantics — every field besides `content_id` is optional and only the fields you supply are changed; everything else is left untouched. At least one mutable field must be supplied.
+
+> **Use this to revise an existing document — edit it in place; don't create a new one.** Edits are safe: Marcora keeps a full version history and the user can revert any change from the app.
 
 > **Ground the body before you write it:** the `content` you send REPLACES the entire body verbatim (there is no patch / diff mode), and this tool consults **no** Brand Foundation or Reference Library of its own. So whenever you author or rewrite the body yourself, fetch context first: call `get_content` to read the current body, AND call `get_relevant_context` with `include_brand_foundation: true` to pull the team's brand voice and reference material; then compose the FULL new body from both and send it back. Body content written without fetching context first will be off-brand. (No fetch needed when you're only changing non-body fields — `stage`, `visibility`, `category_id`, `project_id`, or `name_override`.)
 
