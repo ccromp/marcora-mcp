@@ -1,10 +1,10 @@
 ---
 name: marcora-mcp
-description: Use this skill whenever the user is working with Marcora — creating, editing, or sharing content (blogs, emails, case studies, one-pagers, battle cards, launch materials), generating from blueprints, managing projects, setting a project brief, adding reference context, browsing the community blueprint exchange, or asking what's already in their library. Orchestrates Marcora MCP tools into the standard product-marketing workflows and applies Marcora's domain rules so the right artifact lands in the right place. Triggers on mentions of Marcora, blueprints, projects, project briefs, the Reference Library, Brand Foundation, Targeting Dimensions, Context Collections, the Blueprint Exchange, or any product-marketing content task that should be done in Marcora — even when the user doesn't explicitly say "Marcora."
+description: Use this skill BEFORE calling any Marcora MCP tool (the `mcp__marcora*` family — create_content, update_content, get_content, add_context, etc.) and whenever a request involves Marcora, including any `marcora.ai` URL the user pastes (e.g. an `app.marcora.ai/library/<id>` or `/canvas/<id>` link). It maps the Marcora tools to the standard product-marketing workflows — creating, editing, and sharing content; generating from blueprints; managing projects and briefs; adding reference context; browsing the Blueprint Exchange; answering what's in the library — and applies Marcora's domain rules so the right artifact lands in the right place. Triggers on Marcora, blueprints, projects, project briefs, the Reference Library, Brand Foundation, Targeting Dimensions, Context Collections, the Blueprint Exchange, a Marcora content URL, or any product-marketing content task — even when the user doesn't say "Marcora."
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.3.1
+  version: 0.4.0
 ---
 
 # Marcora AI Workflows
@@ -22,6 +22,17 @@ You are connected to Marcora, a product-marketing context platform for go-to-mar
 Apply this skill on any Marcora-related task. **You may already have relevant context in your awareness** — a list of blueprints the user mentioned earlier, a project they're currently working on, content they just generated. Use what you already have; only call discovery tools (`marcora:list_*`) to fill genuine gaps. Don't re-list what you already know.
 
 If the user explicitly opts out ("don't use my Marcora tools for this"), respect that and don't call any `marcora:*` tool.
+
+---
+
+## Starting from a Marcora URL or ID
+
+If the user hands you a Marcora URL, the UUID in the path **is** the object id — use it directly; don't `web_browse` the page (the `marcora.ai` domain means this is Marcora-tool territory).
+
+- `app.marcora.ai/library/<uuid>` and `app.marcora.ai/canvas/<uuid>` are the same **Content document** (saved view vs. editor view) → `get_content(content_id=<uuid>)` to read it, `update_content(content_id=<uuid>, …)` to revise it.
+- `app.marcora.ai/project/<uuid>` → `get_project`.
+
+*(A `/canvas/<uuid>` link is occasionally a blueprint draft rather than a finished document — only matters if `get_content` comes back empty.)*
 
 ---
 
