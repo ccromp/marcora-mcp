@@ -875,7 +875,7 @@ Update a content document (canvas or deliverable) by `content_id`. Partial-updat
 
 > **Project association:** pass `project_id` to set the document's project. If the document is already in a different project the old association is replaced; if already in the supplied project this is a no-op. Omit `project_id` to leave projects untouched. There's no way to remove a doc from all projects via this tool — use the Marcora app for that.
 
-> **Change summary:** pass `change_summary` describing what you changed and why — it's shown in the document's AI-assistant history sidebar so a human can scan what each edit did. Size it to the change: a short sentence is usually plenty (e.g. "Tightened the closing CTA"), but go longer when the edit is substantial, and **markdown is supported** (e.g. a bulleted list when you made several distinct edits). Optional but recommended on every call; omitted or blank falls back to a generic "Content updated via MCP." label. Only recorded when the call also changes the body (`content`).
+> **Change summary:** pass `change_summary` — what you changed and why — shown in the document's AI-assistant history sidebar for a human to skim, so **write it as skimmable markdown**: a single line for one small edit (e.g. "Tightened the closing CTA"); for several distinct edits, a short **bulleted list** where each bullet is a bold 2–5 word lead, a colon, then the detail. Match length to substance — don't pad. Recommended on every call; blank/omitted falls back to a generic "Content updated via MCP." label. Only recorded when the call also changes the body (`content`).
 
 **Parameters:**
 
@@ -888,7 +888,7 @@ Update a content document (canvas or deliverable) by `content_id`. Partial-updat
 | `visibility` | string | No | `private` or `team` |
 | `category_id` | integer | No | Category ID from `list_content_categories` |
 | `project_id` | string (uuid) | No | Project UUID to associate with this content. Replaces any existing project association |
-| `change_summary` | string | No | Summary of what changed and why, shown in the document's AI-assistant history. Markdown supported; size it to the change (a sentence to a few paragraphs). Recommended on every call; blank/omitted falls back to a generic label. Only recorded when `content` also changes |
+| `change_summary` | string | No | What changed and why, shown in the document's AI-assistant history. Format as skimmable markdown — a bulleted list (bold lead + detail) for multi-part edits. Recommended on every call; blank/omitted falls back to a generic label. Only recorded when `content` also changes |
 
 **Output:**
 
