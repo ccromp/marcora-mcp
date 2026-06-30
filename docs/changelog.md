@@ -10,6 +10,7 @@ All notable changes to the Marcora MCP server will be documented in this file.
 
 ### Added
 
+- **`update_content` — `change_summary` input.** Pass a summary of what you changed and why (e.g. "Tightened the closing CTA"); it's shown in the document's AI-assistant history sidebar in place of the generic "Content updated via MCP." that every MCP edit otherwise logs — so after several edits the history stays scannable instead of a wall of identical rows. Size it to the change (a sentence to a few paragraphs) and use markdown where it helps. Optional and backward-compatible: omitted or whitespace-only falls back to the generic label. Only recorded when the call also changes the body (`content`).
 - **`add_context` — `import_status` output field.** For `import_url` items: `"processing"` immediately after the call, `"ready"` once content has loaded. `null` for pasted content and web pages. (Relatedly, `content` is `null` and `word_count` is `0` in the immediate response for imports — fetch the body with `get_context_item`.)
 
 ## 2026-06-28
