@@ -171,7 +171,7 @@ Add a new context item to your reference library. Context items are reference ma
 You can supply the body in exactly one of three ways:
 
 - **`content`** — paste the markdown body directly. Best for short or hand-authored material. Creates a plain-text (`manual`) item.
-- **`import_url`** — pass a public URL to import **once**. The backend fetches it and converts it to clean markdown server-side using a headless browser + Mozilla Readability (the same engine used for the user-website context-import flow), then stores that markdown as a **static snapshot**. The URL is **not** retained and the item is **not** refreshable. Use for one-off imports — a presigned-link export (e.g. Google Doc, Composio sandbox), a competitor's blog post, or anything you'd otherwise have to pull into your own conversation just to forward.
+- **`import_url`** — pass a public URL to import **once**. The backend fetches it and converts it to clean markdown server-side using a headless browser + Mozilla Readability (the same engine used for the user-website context-import flow), then stores that markdown as a **static snapshot**. The URL is **not** retained and the item is **not** refreshable. Use for one-off imports — a presigned-link export (e.g. Google Doc, Composio sandbox), a competitor's blog post, or anything you'd otherwise have to pull into your own conversation just to forward. Importing is **asynchronous**: the call returns immediately with the new item's `id` and `import_status: "processing"`, and the content finishes loading a moment later — poll `get_context_item` to confirm (the content appears and `import_status` flips to `"ready"`). Because it returns right away, you can import many URLs back-to-back without anything timing out. If an item is still missing a minute or two later, the fetch didn't succeed — check the URL and try again.
 - **`connected_webpage_url`** — pass a URL to track as a live **web page**. The backend fetches the page, stores it as a `webpage` context item, and **remembers the URL** so it can be re-pulled later (via `update_context` `refresh_webpage`, or the refresh button in the Marcora web app). Use this for the customer's own pages and any page you want to keep current. If the same URL is already tracked, the existing item is **updated in place** (no duplicate).
 
 Providing zero, or more than one, of `content` / `import_url` / `connected_webpage_url` returns a 400.
@@ -196,8 +196,9 @@ Providing zero, or more than one, of `content` / `import_url` / `connected_webpa
 | `id` | string | Context item ID |
 | `name` | string | Context item name |
 | `content_type` | string | `manual` (from `content` / `import_url`) or `webpage` (from `connected_webpage_url`) |
-| `content` | string | The stored reference content |
-| `word_count` | integer | Word count of content |
+| `content` | string \| null | The stored reference content. `null` for `import_url` items in the immediate response (still loading) — fetch the full body with `get_context_item` |
+| `word_count` | integer | Word count of content (`0` while an import is still processing) |
+| `import_status` | string \| null | For `import_url` items: `"processing"` right after the call, `"ready"` once the content has loaded. `null` for pasted content and web pages |
 | `collection_id` | integer \| null | Collection this item belongs to (null if none) |
 | `project_id` | string \| null | Project association (null if none) |
 | `created_at` | integer | Unix timestamp of creation |
@@ -207,6 +208,7 @@ Providing zero, or more than one, of `content` / `import_url` / `connected_webpa
 - "Add our brand guidelines to Marcora"
 - "Store this competitive analysis as context"
 - "Import https://example.com/competitor-pricing as a one-off snapshot called 'Acme pricing'"
+- "Import these 20 article URLs into my 'Research' collection"
 - "Track our pricing page (https://example.com/pricing) as a web page so I can refresh it later"
 - "Add this product brief to the 'Product Launch' collection"
 

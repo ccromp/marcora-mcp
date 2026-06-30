@@ -2,6 +2,16 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-06-30
+
+### Changed
+
+- **`add_context` — `import_url` is now asynchronous.** Importing a URL used to fetch and convert the page inline, which could take 15–60s and **time out** on slow pages — and bulk-importing several URLs back-to-back made it worse. Now the call returns **immediately** with the new item's `id` and `import_status: "processing"`; the content finishes loading in the background a moment later. Poll `get_context_item` to confirm (the content appears and `import_status` flips to `"ready"`). You can fire many imports in a row without timeouts. If an item is still missing a minute or two later, the fetch failed — check the URL and retry. The `content` (paste) and `connected_webpage_url` paths are unchanged.
+
+### Added
+
+- **`add_context` — `import_status` output field.** For `import_url` items: `"processing"` immediately after the call, `"ready"` once content has loaded. `null` for pasted content and web pages. (Relatedly, `content` is `null` and `word_count` is `0` in the immediate response for imports — fetch the body with `get_context_item`.)
+
 ## 2026-06-28
 
 ### Changed
