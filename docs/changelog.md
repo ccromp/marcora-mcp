@@ -2,6 +2,12 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-07-02
+
+### Added
+
+- **`invite_user` — new Account tool.** Invite someone to the team by email as a `creator` or `admin`, or into a specific project as a `collaborator`, without leaving the agent. It wraps the same invitation flow the web app uses (dedupe guards, invitation email, sign-up/login links) and returns the exact `invite_link` in the response, so the agent can share it directly (e.g. paste it into Slack) instead of relying on the email — `emailed: true` confirms the invitation was sent. Authorization matches the app: admins can invite any role, a creator can invite collaborators only, viewers cannot invite. `project_id` is required for a collaborator (the project they'll work in) and optional for a creator/admin (also adds them to that project and deep-links their invite there — it does not limit their access). *Currently on the `dev` server; not yet promoted to the live customer MCP.*
+
 ## 2026-06-30
 
 ### Changed

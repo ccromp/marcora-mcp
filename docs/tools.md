@@ -35,6 +35,48 @@ Returns profile and subscription information for the currently authenticated use
 
 ---
 
+### `invite_user`
+
+Invite someone to your Marcora account by email. An invitation email is sent automatically, and the response also returns the exact invite link so you can share it directly (e.g. paste it to the person in Slack).
+
+Roles: **creator** (a full team member who can create and edit content), **admin** (a team administrator), and **collaborator** (a project-scoped member who only works inside one project). Brand-new invitees get a sign-up link; people who already have a Marcora account get a login link and see the invitation in-app after they log in.
+
+> **Who can invite whom.** You must be an **admin** to invite an admin or a creator (admins can invite any role). A **creator** can invite collaborators only. Viewers cannot invite anyone.
+
+> **`project_id` behavior.** Required for a **collaborator** — it's the project they'll collaborate on. Optional for a **creator/admin**, where it does **not** limit their access (they keep full team access); it just also adds them to that project and deep-links their invite so they land in it on first sign-in.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `email` | string | Yes | Email address of the person to invite |
+| `role` | string | Yes | `admin`, `creator`, or `collaborator` |
+| `project_id` | string | Conditional | Project UUID (from `list_projects`). Required for `collaborator`; optional for `creator`/`admin` to also add them to that project |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `outcome` | string | `invited` (an invitation email was sent) or `added_to_project` (the email was already a team member and was added straight to the project) |
+| `emailed` | boolean | True when an invitation email was sent |
+| `invite_link` | string \| null | The exact link to share directly — the sign-up link (with the project deep-link when a project was given) for new users, or the login URL for existing users. `null` when no invitation was sent |
+| `message` | string | Human-readable summary of what happened |
+| `email` | string | The invited email address |
+| `role` | string | `admin`, `creator`, or `collaborator` |
+| `project_id` | string \| null | Project the invitee was added to / pointed at, if any |
+| `existing_user` | boolean \| null | True if the email already had a Marcora account (login link) vs a new sign-up link |
+| `invitation_id` | integer \| null | ID of the created/reused invitation, when one was sent |
+| `invite_token` | string \| null | Invitation token, when one was sent |
+
+> **Errors.** A collaborator with no `project_id` returns a 400. Inviting a creator/admin when you are not an admin returns a 403. An email that is already an active team member (with no project to add them to), or already has a pending invitation, returns a clear error.
+
+**Example prompts:**
+- "Invite jordan@acme.com to the team as a creator"
+- "Add sam@acme.com as a collaborator on the Website Update project"
+- "Invite priya@acme.com as an admin and give me the sign-up link to send her"
+
+---
+
 ## Context & Resources
 
 ### `get_brand_foundation`
