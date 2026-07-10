@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (the `mcp__marco
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.4.0
+  version: 0.4.1
 ---
 
 # Marcora AI Workflows
@@ -39,6 +39,14 @@ If the user hands you a Marcora URL, the UUID in the path **is** the object id �
 ## Connection
 
 The Marcora MCP server is hosted; the user's MCP client connects directly. You do nothing for setup. Every tool call runs as the authenticated user against their active team — auth is implicit. If a call returns an auth error, tell the user to reconnect in Marcora's integration settings; don't try to recover.
+
+---
+
+## Backend — don't misread the lane
+
+The Marcora backend is **Railway** (`marcora-backend`) in every environment — production, staging, previews, PR envs. `/x/api:…`-shaped URLs are **legacy-format compatibility paths served BY the Railway backend — NOT evidence of Xano.** The `api:<hash>` segment is Xano's old URL convention, so models reflexively pattern-match it to Xano; that prior is wrong here. The migration preserved the URL shape deliberately so no per-URL repointing was needed.
+
+Before naming a backend in any report or diagnosis, **fingerprint the lane**: `<host>/x/health` returns `{"service":"marcora-backend","version":<commit>}`. If you see that, it's Railway — don't call it Xano. (Xano is decommissioned; a read-only legacy reference probe exists for developers until ~2026-08-07.)
 
 ---
 
