@@ -8,7 +8,7 @@ The high-frequency pitfalls are in `SKILL.md` (§ Pitfalls and conventions). Thi
 
 **Symptom.** `marcora:update_project(project_brief_id=<bad-uuid>)` returns `"Document not found"`.
 
-**Cause.** The brief-resolution path delegates to a Xano function (`get_unified_deliverable`) that checks both the canvases and deliverables tables. If neither has a matching UUID, it throws this less-specific error.
+**Cause.** The brief-resolution path delegates to a backend function (`get_unified_deliverable` — Xano-era name, now served by the Railway `marcora-backend`) that checks both the canvases and deliverables tables. If neither has a matching UUID, it throws this less-specific error.
 
 **What to do.** Verify the UUID. Common mistakes:
 - Pasting a `project_id` where a content UUID was expected.
