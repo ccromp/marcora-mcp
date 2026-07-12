@@ -11,8 +11,8 @@
     {
       "name": "marcora",
       "source": "./plugin",
-      "description": "The context layer for GTM teams. Bundles the hosted Marcora MCP server (OAuth or API token) with its two companion skills — marcora-mcp (object model + the five core workflows) and marcora-workflow-builder (build, modify, run reusable multi-step workflows) — so your AI assistant can create on-brand marketing content, manage brand context and blueprints, and automate recurring marketing work.",
-      "version": "1.0.0",
+      "description": "The context layer for GTM teams. Bundles the hosted Marcora MCP server (OAuth or API token) with its companion skill — marcora-mcp (object model, the core content workflows, the content plans board and playbooks, and reusable multi-step workflows) — so your AI assistant can create on-brand marketing content, manage brand context and blueprints, plan and produce content, and automate recurring marketing work.",
+      "version": "1.1.0",
       "author": {
         "name": "Marcora"
       },

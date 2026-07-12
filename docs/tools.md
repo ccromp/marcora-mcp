@@ -1167,11 +1167,13 @@ Update mutable fields on an existing project (name, visibility, status, project 
 
 ---
 
-## Plans
+## Plans & Playbooks
 
-Plans are units of content intent — a titled, assignable record that captures what content needs to be created, when, and with what context. Use plans to queue content work, track progress through stages, and link produced content back to the originating plan.
+Plans are units of content intent — a titled, assignable record that captures what content needs to be created, when, and with what context. Use plans to queue content work, track progress through stages, produce the content a plan describes (`produce_plan`), and link produced content back to the originating plan. **Playbooks** are reusable, ordered templates of plan items you can stamp out as a batch (`instantiate_playbook`).
 
-**Stage lifecycle:** `Suggested` → `Accepted` → `In_Process` → `Complete` (or `Dismissed` from any stage except `Dismissed`).
+**Stage lifecycle:** `Suggested` → `Accepted` → `In_Process` → `Complete` (or `Dismissed` from any stage except `Dismissed`). There is no delete tool — dismiss a plan with `update_plan` `target_stage: "Dismissed"`.
+
+**Visibility:** plans are `private` (creator-only) by default; assigning to another team member auto-promotes to `team`. Playbooks default to `team`, and `instantiate_playbook` inherits the playbook's visibility onto the plans it creates.
 
 ---
 
@@ -1342,9 +1344,152 @@ Partial update of a plan: mutable fields and stage transitions. All fields are o
 
 ---
 
+### `produce_plan`
+
+Produce (generate) the actual content a plan describes — the MCP equivalent of the **Generate** button on the plans board. The plan must be in the `Accepted` stage (transition a `Suggested` plan first with `update_plan` `target_stage: "Accepted"`). Consumes team AI credits and typically takes 1–2 minutes; confirm with the user before producing a plan they didn't explicitly ask to produce. The plan's `prompt`, targeting dimensions, context collections, and project association are used as generation inputs — set them via `update_plan` before producing.
+
+**Both paths are asynchronous** — the call returns immediately with a `generation_id`; poll `get_generation_status`. On completion the backend links the produced content and moves the plan to `In_Process` (then `Complete` when a deliverable reaches ready).
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `plan_uuid` | string (uuid) | Yes | UUID of the plan to produce. Must be in `Accepted` stage |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `path` | string | `deliverable` (plan has a blueprint) or `canvas` (no blueprint) |
+| `generation_id` | string | Poll `get_generation_status` with this until complete |
+| `plan_uuid` | string (uuid) | The plan being produced |
+
+**Example prompts:**
+- "Go ahead and produce that launch email plan"
+- "Generate the content for this plan"
+
+---
+
+### `list_playbooks`
+
+List all content playbooks visible to the caller in the current team (team-visible playbooks plus the caller's own private ones). Returns summaries only — call `get_playbook` for a playbook's items. Use before `instantiate_playbook` / `update_playbook` to find the right id.
+
+**Parameters:** none.
+
+**Output:** an array of playbook summary objects (`id`, `name`, `description`, `visibility`, item count, timestamps).
+
+**Example prompts:**
+- "What playbooks do I have?"
+- "Show my content templates"
+
+---
+
+### `get_playbook`
+
+Fetch one content playbook by id, including its full ordered list of items.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `playbook_id` | integer | Yes | ID of the playbook to fetch |
+
+**Output:** the playbook object with an ordered `items` array. Each item carries the plan fields it will stamp out (title, description, prompt, blueprint, category) plus an `offset_days` used by `instantiate_playbook` to compute due dates from an anchor date.
+
+**Example prompts:**
+- "What's in my launch-week playbook?"
+
+---
+
+### `create_playbook`
+
+Create a reusable content playbook — an ordered template of content-plan items ("save a repeatable content sequence"). Provide a name and, optionally, the ordered items; each item becomes one content plan when the playbook is instantiated. To build a playbook from plans you already ran, use `create_playbook_from_plans` instead.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | Playbook name |
+| `description` | string | No | Free-text description |
+| `visibility` | string | No | `team` (default) or `private` |
+| `items` | array | No | Ordered playbook items (each becomes one plan on instantiation) |
+
+**Output:** the created playbook object.
+
+**Example prompts:**
+- "Make me a launch-week playbook"
+- "Save this sequence as a template"
+
+---
+
+### `create_playbook_from_plans`
+
+Create a playbook by capturing existing content plans as reusable template items ("save what worked as a template"). Pass the plan UUIDs; their title / description / prompt / blueprint / category are copied into ordered playbook items.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `plan_ids` | uuid[] | Yes | Plan UUIDs to capture as ordered template items |
+| `name` | string | No | Playbook name (derived if omitted) |
+| `description` | string | No | Free-text description |
+| `visibility` | string | No | `team` (default) or `private` |
+
+**Output:** the created playbook object.
+
+**Example prompts:**
+- "Turn these plans into a playbook"
+- "Save this campaign as a template"
+
+---
+
+### `update_playbook`
+
+Edit a content playbook. Any playbook is fully editable. Pass only the fields to change: `name` and/or `description` patch in place. If `items` is provided it **fully replaces** the playbook's items and their order; omit `items` to leave them untouched. Changing `visibility` is creator-only.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `playbook_id` | integer | Yes | ID of the playbook to update |
+| `name` | string | No | New name |
+| `description` | string | No | New description |
+| `visibility` | string | No | `team` or `private` (creator-only) |
+| `items` | array | No | If provided, REPLACES the full ordered item list |
+
+**Output:** the updated playbook object.
+
+**Example prompts:**
+- "Add a follow-up email to my launch playbook"
+- "Reorder these steps"
+
+---
+
+### `instantiate_playbook`
+
+Run a playbook: create one content plan per playbook item, in order, as a batch. Plans land in the `Accepted` stage with source `playbook` and inherit the playbook's visibility. Optionally anchor due dates to a date (each item's `offset_days` is applied to `anchor_date`) and/or scope the batch to a project. This is a distinct bulk action — it does not create or edit the playbook itself.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `playbook_id` | integer | Yes | ID of the playbook to instantiate |
+| `anchor_date` | string | No | ISO date YYYY-MM-DD. Each item's `offset_days` is added to it to compute that plan's due date |
+| `project_id` | string (uuid) | No | Scope the created plans to this project |
+| `assigned_to` | integer | No | Assign the created plans to this team member |
+| `category_id` | integer | No | Apply this content category to the created plans |
+
+**Output:** the batch of created plans.
+
+**Example prompts:**
+- "Run my launch playbook"
+- "Instantiate this template anchored to next Monday"
+
+---
+
 ## Workflows
 
-Workflows are reusable, multi-step automations that a Managed Agents session executes on demand or on a schedule. Build them with `create_workflow`, activate and edit them with `update_workflow`, trigger them with `run_workflow`, and inspect run history with `get_workflow_runs`. The companion **Marcora Workflow Builder** skill documents authoring patterns (step design, scheduling, deduplication, runner-summary conventions).
+Workflows are reusable, multi-step automations that a Managed Agents session executes on demand or on a schedule. Build them with `create_workflow`, activate and edit them with `update_workflow`, trigger them with `run_workflow`, and inspect run history with `get_workflow_runs`. The companion **`marcora-mcp`** skill documents authoring patterns (step design, scheduling, deduplication, runner-summary conventions) in its Workflows chapter.
 
 ### `list_workflows`
 

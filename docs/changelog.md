@@ -2,6 +2,16 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-07-12
+
+### Changed
+
+- **One server, one skill.** The separate **Content Plans** MCP server has been retired and its 11 tools folded into the main **Brand Context & Writing** server (`mcp.marcora.ai`) — so users connect **one** server. In lockstep, the two companion skills are unified into **one** (`marcora-mcp`, v0.5.0): the former `marcora-workflow-builder` skill is now the skill's **Workflows** chapter, and a new **Content Plans & Playbooks** chapter covers the plans board. The Claude Code plugin + marketplace bundle rebuilt to ship one server + one skill (plugin v1.1.0).
+
+### Added
+
+- **Content Plans & Playbooks tools now on the main server** — `produce_plan` (produce a plan's content — async on both the blueprint→deliverable and no-blueprint→canvas paths; poll `get_generation_status`), plus the six playbook tools `list_playbooks`, `get_playbook`, `create_playbook`, `create_playbook_from_plans`, `update_playbook`, and `instantiate_playbook` (run a playbook into a batch of plans, optionally anchored to a date via `anchor_date` + each item's `offset_days`). Documented in `docs/tools.md` under **Plans & Playbooks**. Plans are `private` by default; playbooks default to `team` and instantiation inherits the playbook's visibility.
+
 ## 2026-07-02
 
 ### Added
