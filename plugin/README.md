@@ -1,9 +1,9 @@
 # Marcora — Claude Code Plugin
 
-Bundles the hosted **Marcora MCP server** with its two companion skills so your
+Bundles the hosted **Marcora MCP server** with its companion skill so your
 AI assistant can create on-brand marketing content, manage brand context and
-blueprints, organize projects, and build reusable workflows — all without
-leaving your chat.
+blueprints, organize projects, plan and produce content on the plans board with
+playbooks, and build reusable workflows — all without leaving your chat.
 
 [marcora.ai](https://marcora.ai) · [MCP docs](https://marcora.ai/mcp)
 
@@ -11,14 +11,12 @@ leaving your chat.
 
 | Component | What it does |
 |---|---|
-| **MCP server** (`marcora`) | Hosted, remote (streamable-HTTP) server at `https://mcp.marcora.ai`. Exposes the full Marcora toolset — content, projects, blueprints, Brand Foundation, Reference Library, community blueprints, workflows. |
-| **Skill** `marcora-mcp` | The object model + the five core product-marketing workflows; applies Marcora's domain rules so the right artifact lands in the right place. |
-| **Skill** `marcora-workflow-builder` | Building, modifying, running, and scheduling reusable multi-step Marcora workflows. |
+| **MCP server** (`marcora`) | Hosted, remote (streamable-HTTP) server at `https://mcp.marcora.ai`. Exposes the full Marcora toolset — content, projects, blueprints, Brand Foundation, Reference Library, community blueprints, content plans, playbooks, and workflows. |
+| **Skill** `marcora-mcp` | The object model + the core product-marketing workflows; the content plans board and playbooks; building reusable multi-step workflows; applies Marcora's domain rules so the right artifact lands in the right place. |
 
-Once installed, the skills invoke as `/marcora:marcora-mcp` and
-`/marcora:marcora-workflow-builder`, and Marcora's tools appear as
-`mcp__marcora__*`. Both skills are also model-invoked automatically when your
-task calls for them.
+Once installed, the skill invokes as `/marcora:marcora-mcp`, and Marcora's tools
+appear as `mcp__marcora__*`. The skill is also model-invoked automatically when
+your task calls for it.
 
 ## Install
 
@@ -77,10 +75,10 @@ variable in your `.mcp.json`:
 }
 ```
 
-## Companion skills
+## Companion skill
 
-The two skills are a meaningful upgrade over the bare tool definitions — install
-them with the plugin and Claude will apply Marcora's operational patterns
+The skill is a meaningful upgrade over the bare tool definitions — install it
+with the plugin and Claude will apply Marcora's operational patterns
 automatically. See the
 [MCP overview](https://marcora.ai/docs/mcp-overview#companion-anthropic-skills-recommended).
 

@@ -29,6 +29,8 @@ Marcora's MCP server enables AI clients to:
 - Generate marketing content from context and blueprints
 - Organize work with projects and collections
 - Browse and import community blueprints and templates
+- Plan content on the plans board and produce it, individually or from reusable playbooks
+- Automate recurring work with reusable, multi-step workflows
 - Share content externally and export to Word
 
 ## Connection
@@ -55,25 +57,21 @@ Add to your MCP client config:
 
 See [docs/quickstart.md](docs/quickstart.md) for setup instructions for Claude, ChatGPT, Claude Desktop, Cursor, and VS Code.
 
-## Companion Anthropic Skills (recommended)
+## Companion Anthropic Skill (recommended)
 
-Two companion **Anthropic Skills** ship alongside this server. Together they teach your AI client Marcora's mental model, the right tool sequencing, the questions to ask the user before acting, and the pitfalls to avoid — so the agent stops misfiring on tasks that look ambiguous from tool descriptions alone.
+One companion **Anthropic Skill** ships alongside this server. It teaches your AI client Marcora's mental model, the right tool sequencing, the questions to ask the user before acting, and the pitfalls to avoid — so the agent stops misfiring on tasks that look ambiguous from tool descriptions alone.
 
 | Skill | What it covers | Source |
 |---|---|---|
-| **Marcora AI Workflows** (`marcora-mcp`) | Object model (content, blueprints, projects, context items), content-generation patterns, the 4-layer context model, project-brief mechanics, choosing between similar tools | [`skill/marcora-mcp/`](skill/marcora-mcp/) |
-| **Marcora Workflow Builder** (`marcora-workflow-builder`) | The 6 workflow MCP tools (`create_workflow`, `update_workflow`, `run_workflow`, `get_workflow`, `list_workflows`, `get_workflow_runs`), output destinations, scheduling, deduplication patterns, runner-summary conventions | [`skill/marcora-workflow-builder/`](skill/marcora-workflow-builder/) |
+| **Marcora AI Workflows** (`marcora-mcp`) | Object model (content, blueprints, projects, context items); content-generation patterns; the 4-layer context model; project-brief mechanics; the content plans board and playbooks; building reusable multi-step workflows; and choosing between similar tools | [`skill/marcora-mcp/`](skill/marcora-mcp/) |
 
-The two skills are independent — your AI client picks them up on demand based on the task. Install both for the full experience.
+Your AI client picks the skill up on demand based on the task.
 
 ### Download
 
-Get the `.skill` files from the [latest release](https://github.com/ccromp/marcora-mcp/releases/latest):
+Get the `.skill` file from the [latest release](https://github.com/ccromp/marcora-mcp/releases/latest):
 
-- `marcora-mcp.skill` — the core Marcora skill
-- `marcora-workflow-builder.skill` — the workflow-building skill
-
-Each `.skill` file is a zip archive containing `SKILL.md` and any bundled reference files.
+- `marcora-mcp.skill` — the Marcora skill (a zip archive containing `SKILL.md` and its bundled reference files).
 
 ### Install
 
@@ -83,18 +81,17 @@ Each `.skill` file is a zip archive containing `SKILL.md` and any bundled refere
 # Download and unzip into your skills directory
 mkdir -p ~/.claude/skills
 unzip ~/Downloads/marcora-mcp.skill -d ~/.claude/skills/
-unzip ~/Downloads/marcora-workflow-builder.skill -d ~/.claude/skills/
 ```
 
-Restart Claude Code. The skills load automatically on any matching task.
+Restart Claude Code. The skill loads automatically on any matching task.
 
 **Claude Desktop:**
 
-Import each `.skill` file via Claude Desktop's Skills folder. See [Anthropic's Skills documentation](https://support.anthropic.com/en/articles/agent-skills) for the current path on your platform.
+Import the `.skill` file via Claude Desktop's Skills folder. See [Anthropic's Skills documentation](https://support.anthropic.com/en/articles/agent-skills) for the current path on your platform.
 
 **ChatGPT, Cursor, and other non-Anthropic clients:**
 
-These clients don't directly support Anthropic Skills (yet). Workaround: unzip a `.skill` file and paste the contents of `SKILL.md` into your client's custom instructions or system-prompt slot. Bundled reference files can be pasted in too if your client supports longer context.
+These clients don't directly support Anthropic Skills (yet). Workaround: unzip the `.skill` file and paste the contents of `SKILL.md` into your client's custom instructions or system-prompt slot. Bundled reference files can be pasted in too if your client supports longer context.
 
 ### Power-user install (clone and symlink)
 
@@ -103,18 +100,13 @@ If you'd rather track `main` directly:
 ```bash
 git clone https://github.com/ccromp/marcora-mcp.git
 ln -s "$(pwd)/marcora-mcp/skill/marcora-mcp" ~/.claude/skills/marcora-mcp
-ln -s "$(pwd)/marcora-mcp/skill/marcora-workflow-builder" ~/.claude/skills/marcora-workflow-builder
 ```
 
 The unbundled skill source lives under [`skill/`](skill/).
 
 ### Releases
 
-Skill releases are tagged independently per skill:
-- `marcora-mcp` skill: `skill-vX.Y.Z` (legacy prefix kept for continuity) — see [Releases](https://github.com/ccromp/marcora-mcp/releases).
-- `marcora-workflow-builder` skill: `workflow-builder-vX.Y.Z`.
-
-The current version of each skill is in the `metadata.version` field of its `SKILL.md`.
+The skill is tagged `skill-vX.Y.Z` — see [Releases](https://github.com/ccromp/marcora-mcp/releases). The current version is in the `metadata.version` field of its `SKILL.md`.
 
 ## Available Tools
 
@@ -152,10 +144,17 @@ The current version of each skill is in the `metadata.version` field of its `SKI
 | Projects | `get_project` | Get project details |
 | Projects | `create_project` | Create a new project |
 | Projects | `update_project` | Update mutable fields on a project |
-| Plans | `list_plans` | List content plans (with filters) |
-| Plans | `get_plan` | Get plan details by UUID |
-| Plans | `create_plan` | Create a new content plan |
-| Plans | `update_plan` | Update a plan or transition its stage |
+| Plans & Playbooks | `list_plans` | List content plans (with filters) |
+| Plans & Playbooks | `get_plan` | Get plan details by UUID |
+| Plans & Playbooks | `create_plan` | Create a new content plan |
+| Plans & Playbooks | `update_plan` | Update a plan or transition its stage |
+| Plans & Playbooks | `produce_plan` | Produce (generate) the content a plan describes |
+| Plans & Playbooks | `list_playbooks` | List content playbooks |
+| Plans & Playbooks | `get_playbook` | Get a playbook and its ordered items |
+| Plans & Playbooks | `create_playbook` | Author a reusable playbook of plan items |
+| Plans & Playbooks | `create_playbook_from_plans` | Capture existing plans as a playbook |
+| Plans & Playbooks | `update_playbook` | Rename, re-describe, or restructure a playbook |
+| Plans & Playbooks | `instantiate_playbook` | Run a playbook into a batch of plans (optionally anchored to a date) |
 | Workflows | `list_workflows` | List workflows |
 | Workflows | `get_workflow` | Get a workflow's full definition |
 | Workflows | `create_workflow` | Create a new workflow template |
