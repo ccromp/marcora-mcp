@@ -113,6 +113,8 @@ The skill is tagged `skill-vX.Y.Z` — see [Releases](https://github.com/ccromp/
 | Category | Tool | Description |
 |---|---|---|
 | Account | `get_current_user_info` | Get profile, subscription, and usage info |
+| Account | `get_team_info` | List every team you belong to + each team's members (numeric user_ids for assignment) |
+| Account | `set_active_team` | Switch your active team (returns `previous_team_id` to restore) |
 | Context & Resources | `get_brand_foundation` | Get team's Brand Foundation (company overview, voice, style, examples) |
 | Context & Resources | `update_brand_foundation` | Overwrite one Brand Foundation element |
 | Context & Resources | `list_context_collections` | List context collections |
