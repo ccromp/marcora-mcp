@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (the `mcp__marco
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.5.0
+  version: 0.5.1
 ---
 
 # Marcora AI Workflows
@@ -350,6 +350,8 @@ The **starting stage is set automatically from `source`**, you don't control it 
 | To read the full markdown of a specific context item | `marcora:get_context_item(context_item_id)` | `list_context_items` only returns `content_intro` (a truncation). `get_relevant_context` returns RAG chunks. Use this for the actual content. |
 | To read the team's Brand Foundation (company overview, brand voice, writing style, writing examples) | `marcora:get_brand_foundation` | `get_relevant_context` searches the Reference Library, not Brand Foundation. Auto-pulled into `create_content` when you pass `instructions` — don't fetch as a setup step before *generating*. (Do fetch it when you're supplying `content` yourself.) |
 | To change one of the four Brand Foundation elements | `marcora:update_brand_foundation` | Brand Foundation lives at the team level, not as Context items — `update_context` won't touch it. Always full-replace; fetch first with `get_brand_foundation` to confirm what's being replaced. |
+| To find a teammate's numeric `user_id` (to assign a plan/content to them) | `marcora:get_team_info` | `get_current_user_info` is only *you*. `get_team_info` lists every team you're in + each member's numeric `user_id` — the value `assigned_to` / `update_plan(assigned_to=…)` expects. Pending invites show `user_id: null` (can't be assigned yet). |
+| To switch which team you're working in | `marcora:set_active_team` | Changes your active team for **all** subsequent calls. ⚠️ Global — it applies everywhere for the account (app tabs, Cora sessions, other clients). Tell the user first; capture the returned `previous_team_id` and switch back when done. |
 
 ---
 

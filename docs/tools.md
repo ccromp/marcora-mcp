@@ -77,6 +77,62 @@ Roles: **creator** (a full team member who can create and edit content), **admin
 
 ---
 
+### `get_team_info`
+
+Returns every team you belong to, each with its full member roster. Read-only, no inputs. Use it before assigning a plan or content to a teammate (to get their numeric `user_id` — the value `assigned_to` expects), or to answer questions about the team. Deliberately excludes credits/subscription — call `get_current_user_info` for those.
+
+**Parameters:** none.
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `teams` | array | Every team the caller is an active member of |
+| `teams[].team_id` | integer | Numeric team id. Pass to `set_active_team` |
+| `teams[].team_name` | string | Team name |
+| `teams[].is_active` | boolean | True for the caller's currently active team (exactly one) |
+| `teams[].your_role` | string | The caller's role in this team (e.g. `admin`, `editor`, `viewer`) |
+| `teams[].members` | array | The team's members |
+| `teams[].members[].user_id` | integer \| null | Numeric user id (what `assigned_to` expects). `null` for a pending invite |
+| `teams[].members[].name` | string | Member name (or the invited email for pending invites) |
+| `teams[].members[].email` | string \| null | Member email |
+| `teams[].members[].role` | string | Member's role |
+| `teams[].members[].status` | string | `active` or `invited` |
+
+**Example prompts:**
+- "Who's on my team?"
+- "Assign this plan to Sarah" (look up Sarah's `user_id`, then `update_plan`)
+
+---
+
+### `set_active_team`
+
+Sets your active team — the team all subsequent Marcora tool calls operate against. Input: `team_id` (from `get_team_info`).
+
+> **⚠️ Global effect.** Switching your active team changes it **everywhere** for your account — open Marcora app tabs, running Cora sessions, and every other connected MCP client — because it writes the same active-team setting the in-app switcher uses. Tell the user before switching, and don't switch while other work is mid-flight for them. The response returns `previous_team_id` so you can restore their original team when done: switch → do the work → `set_active_team` back to `previous_team_id`.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | The numeric `team_id` (from `get_team_info`) to switch to. Must be a team you belong to |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `previous_team_id` | integer \| null | The team that was active before this call. Pass it back to `set_active_team` to restore |
+| `active_team.team_id` | integer | The now-active team's id |
+| `active_team.team_name` | string | The now-active team's name |
+
+> **Errors.** A `team_id` you don't belong to (or that doesn't exist) returns a readable "you are not a member of that team" error. A missing / non-positive `team_id` returns a readable input error.
+
+**Example prompts:**
+- "Switch me to my Acme team"
+- "Work in my other team for this, then switch me back"
+
+---
+
 ## Context & Resources
 
 ### `get_brand_foundation`
