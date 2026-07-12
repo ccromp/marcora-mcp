@@ -85,17 +85,12 @@ The 5 most common workflows are in `SKILL.md`. This file covers less-frequent re
 
 ---
 
-## Recipe G — Workflow execution (advanced)
+## Recipe G — Workflows and Content Plans / Playbooks
 
-Workflows orchestrate multi-step content generations in sequence. Newer feature with fewer published patterns. Treat as advanced — most user requests are simpler with a single `create_content` call.
+These two surfaces now have full chapters in `SKILL.md` — read them there, not here:
 
-- `marcora:list_workflows` — list defined workflows.
-- `marcora:get_workflow(workflow_id)` — inspect a workflow.
-- `marcora:create_workflow` / `marcora:update_workflow` — author / modify.
-- `marcora:run_workflow` — execute.
-- `marcora:get_workflow_runs` — execution history.
-
-Suggest a workflow only when the user describes a repeatable multi-step generation process they want to automate.
+- **Workflows** (`create_workflow`, `update_workflow`, `run_workflow`, `get_workflow`, `list_workflows`, `get_workflow_runs`) — building, running, and scheduling reusable multi-step processes; output destinations; dedup via `since_last_run`; runner summary conventions. See the **Workflows** chapter.
+- **Content Plans & Playbooks** (`create_plan`, `get_plan`, `list_plans`, `update_plan`, `produce_plan`; `list_playbooks`, `get_playbook`, `create_playbook`, `create_playbook_from_plans`, `update_playbook`, `instantiate_playbook`) — the plans board, the stage machine, async `produce_plan`, playbook `anchor_date` instantiation, and visibility defaults. See the **Content Plans & Playbooks** chapter.
 
 ---
 

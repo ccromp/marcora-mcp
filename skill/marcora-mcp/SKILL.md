@@ -1,10 +1,10 @@
 ---
 name: marcora-mcp
-description: Use this skill BEFORE calling any Marcora MCP tool (the `mcp__marcora*` family — create_content, update_content, get_content, add_context, etc.) and whenever a request involves Marcora, including any `marcora.ai` URL the user pastes (e.g. an `app.marcora.ai/library/<id>` or `/canvas/<id>` link). It maps the Marcora tools to the standard product-marketing workflows — creating, editing, and sharing content; generating from blueprints; managing projects and briefs; adding reference context; browsing the Blueprint Exchange; answering what's in the library — and applies Marcora's domain rules so the right artifact lands in the right place. Triggers on Marcora, blueprints, projects, project briefs, the Reference Library, Brand Foundation, Targeting Dimensions, Context Collections, the Blueprint Exchange, a Marcora content URL, or any product-marketing content task — even when the user doesn't say "Marcora."
+description: Use this skill BEFORE calling any Marcora MCP tool (the `mcp__marcora*` family — create_content, update_content, get_content, add_context, create_plan, produce_plan, instantiate_playbook, create_workflow, etc.) and whenever a request involves Marcora, including any `marcora.ai` URL the user pastes (e.g. an `app.marcora.ai/library/<id>` or `/canvas/<id>` link). It maps the Marcora tools to the standard product-marketing workflows — creating, editing, and sharing content; generating from blueprints; managing projects and briefs; adding reference context; browsing the Blueprint Exchange; answering what's in the library; managing content plans and playbooks; and building reusable, multi-step workflows — and applies Marcora's domain rules so the right artifact lands in the right place. Triggers on Marcora, blueprints, projects, project briefs, the Reference Library, Brand Foundation, Targeting Dimensions, Context Collections, the Blueprint Exchange, a Marcora content URL, content plans, the plans board, producing a plan, playbooks, instantiating or running a playbook, and on workflow cues ("every day", "every week", "on a schedule", "recurring", "automate this", "make this reusable", "I want an agent that does X") — even when the user doesn't say "Marcora."
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.4.1
+  version: 0.5.0
 ---
 
 # Marcora AI Workflows
@@ -75,7 +75,11 @@ These are Marcora's core nouns. Internalize them before calling any tool.
 
 - **Content category** — A taxonomy slot for blueprints and content (GTM Strategy, Product Launch, Sales Enablement). Required when creating a blueprint, optional when creating content. Organizational only — doesn't change generation behavior.
 
-- **Workflow** — A reusable, multi-step process the user can run on demand or on a schedule. **For anything workflow-related — building, editing, running, troubleshooting — defer to the `marcora-workflow-builder` skill.** It owns the 6 workflow tools (`create_workflow`, `update_workflow`, `run_workflow`, `get_workflow`, `list_workflows`, `get_workflow_runs`) and the patterns around output destinations, scheduling, and dedup.
+- **Workflow** — A reusable, multi-step process the user can run on demand or on a schedule. Owns the 6 workflow tools (`create_workflow`, `update_workflow`, `run_workflow`, `get_workflow`, `list_workflows`, `get_workflow_runs`). See the **Workflows** chapter below for the output-destination, scheduling, and dedup patterns.
+
+- **Content Plan** — A tracked content idea/intent on the plans board, moving through stages Suggested → Accepted → In_Process → Complete (or Dismissed). Created by `create_plan`, produced into a real Content document by `produce_plan`. **Private to its creator by default.** See the **Content Plans & Playbooks** chapter.
+
+- **Playbook** — A reusable, ordered template of content-plan items ("save a repeatable content sequence"). Instantiated into a batch of plans by `instantiate_playbook`, optionally anchored to a date. **Team-visible by default.** See the **Content Plans & Playbooks** chapter.
 
 ### Relationship map
 
@@ -109,7 +113,7 @@ Outside a project, only layers 1, 2, and 4 apply.
 
 ## Core workflows
 
-The five workflows you'll handle 80% of the time. Long-tail recipes (workflow-running, community-blueprint imports, exports) live in `references/workflows.md`.
+The five workflows you'll handle 80% of the time. Two more surfaces — **Workflows** and **Content Plans & Playbooks** — have their own chapters below. Long-tail recipes (community-blueprint imports, exports, sharing, project rename/archive) live in `references/workflows.md`.
 
 ### Workflow 1 — Generate content (the everyday case)
 
@@ -227,6 +231,103 @@ The five workflows you'll handle 80% of the time. Long-tail recipes (workflow-ru
 
 ---
 
+## Workflows — reusable, multi-step processes
+
+A **workflow** lets the user describe a multi-step process once and run it reliably afterwards — manually on demand, on a schedule, or both — without re-explaining the steps each time.
+
+> **Mindset:** a workflow is a *reusable, named process*. Some are scheduled (a daily digest, a weekly competitor sweep); many are not (a launch playbook, a customer-onboarding routine run on demand). **Both are first-class** — don't assume "workflow = recurring scheduled task."
+
+### Signals the user wants a workflow
+
+- **Process encapsulation / reusability** — "make this a reusable thing", "I do this every time we launch", "build me a playbook for…", "I want an agent that does X."
+- **Re-running with different inputs** — "run this for our next competitor", "do this for each of these 5 customers."
+- **Scheduling cues** — "every day", "every Monday morning", "weekly", "recurring", "automate this."
+- **Watching for new things** — "whenever a new X appears, do Y with it" → a scheduled workflow with a `since_last_run` input binding.
+- **Explicit mentions** of cron, webhooks, runners, or triggers.
+
+If intent is ambiguous, ask: *"Do you want to run this once, or set it up as a reusable process you can run again later — manually, on a schedule, or both?"*
+
+> **Workflow vs. Playbook — pick the right surface.** A **Playbook** (below) produces a *batch of content plans* — an ordered set of things to write, landing on the plans board for a human to produce. A **Workflow** runs an *agent through arbitrary steps* (search, summarize, create content, send an email) in a background session. "Save this content sequence as a template" → playbook. "Every Monday, sweep competitor blogs and email me a digest" → workflow.
+
+### The 6 workflow tools
+
+- **`create_workflow`** — Create a template. Inputs: `name`, `steps`, `description`, `inputs`, `allowed_tools`, `tags`, optional `schedule_config`. Always creates as `status="draft"`.
+- **`get_workflow`** — Fetch one workflow with triggers + latest run. Call before `update_workflow` to avoid clobbering unknown fields.
+- **`list_workflows`** — List the user's workflows (`status`, `search`, pagination). Call with `search:` before creating to spot duplicate names.
+- **`update_workflow`** — Partial update; send only keys you want to change. `status: "active"` to activate, `status: "archived"` to soft-delete.
+- **`run_workflow`** — Manually dispatch a run. Inspect `.status`: `"running"` = success, `"failed"` = check `.error_reason`.
+- **`get_workflow_runs`** — Run history. Pass `run_id` for single-run detail (step logs + tool-call logs); omit for a paginated list.
+
+### Building well
+
+1. **Confirm intent before creating.** Restate the workflow in one or two sentences; call `create_workflow` only after the user agrees.
+2. **Confirm where the result lands — BEFORE creating.** Workflows run in a background runner with no live chat surface. Every run writes a markdown summary to its run-detail page, but most workflows also send output somewhere. Ask which of:
+   - **(a) An external destination** — depending on the user's connected integrations: `create_content`, `add_context`, `create_project`, `update_context`, `create_external_share`, or connected toolkits (GMAIL_SEND_EMAIL / Slack / Teams / Discord, GOOGLETASKS_INSERT_TASK / Asana / Linear, Google Docs / Sheets / Notion).
+   - **(b) Run summary only** — the user just reads the result on the run-detail page. Legitimate for "look something up / summarize / find me" workflows. Restate it back so they know where to look.
+3. **Translate steps into plain-language `{name, description}` entries** specific enough that a fresh agent can act without follow-up. Add `agent_hint` for non-obvious guidance. Tool names in step descriptions render as chips — write them in canonical `SCREAMING_SNAKE_CASE`.
+4. **Set `allowed_tools` narrowly** (3–6 tools). An empty list is rejected by the backend (`allowed_tools_required`) — even summary-only workflows need read tools spelled out (e.g. `web_search`, `web_browse`).
+5. **Always create as `status="draft"` first;** activate with `update_workflow status:"active"` only once the user confirms.
+6. **Scheduling is optional.** For clocked workflows: `schedule_config: {"frequency": "daily"|"weekly"|"hourly", "interval_hours": N, "timezone": "UTC"}`. The trigger is created `is_enabled=false`; the user enables it in the UI. Cron expressions are not supported in v1. **Skip `schedule_config` entirely for manual/on-demand workflows.**
+7. **For workflows that process entities over time** ("summarize new content each week"), be explicit about dedup BEFORE creating: use a `since_last_run` input binding (the scheduler/resolver compute the window from the trigger's `last_successful_run_at` — don't compute it yourself), match schedule cadence to lookback, and write source entity IDs into downstream artifacts so a future run can tell what it already processed. Raise this proactively if the user doesn't.
+
+### What the runner writes to its run summary
+
+The runner agent's FINAL message becomes the run's `result_summary` (rendered as markdown on the detail page). Instruct it to: format in markdown, lead with a one-line conclusion, and **link back to anything created** (most Marcora tools return a `url`/`link` — include it). For summary-only workflows, the summary IS the deliverable — make it complete.
+
+**Marker prefixes** the relay parses from the runner's final message to set run status: `Workflow complete: <md>` → succeeded · `Partial completion: <md>` → succeeded (partial) · `SKIP: <reason>` → skipped · `FAIL: <reason>` → failed. No prefix → the final message becomes `result_summary` as-is.
+
+### Risk warnings
+
+- **Never activate a scheduled workflow without an explicit "yes"** — it's long-lived state. On-demand workflows can stay in draft until the user says "make it active."
+- **Hard-delete isn't exposed** — use `update_workflow status:"archived"` (restorable via `status:"draft"`/`"active"`).
+- **Duplicate names aren't DB-prevented** — `list_workflows search:"<name>"` first if re-creating is possible.
+- **Schedule edits via MCP are NOT supported in v1** — direct the user to the workflow's settings UI.
+- **Runner sessions don't author workflows** — these 6 tools are for interactive sessions; a runner executing a scheduled run uses a different tool set and must not call `create_workflow`/`update_workflow`.
+
+---
+
+## Content Plans & Playbooks
+
+The **plans board** is Marcora's content pipeline: a queue of ideas/intents (**plans**) that move through stages and get *produced* into real Content. **Playbooks** are reusable, ordered templates of plan items you can stamp out as a batch.
+
+> **Mindset:** a plan is *intent*, Content is *output*. Creating a plan doesn't write anything — `produce_plan` does. Keep the two straight: `create_content` generates a document now; `create_plan` records "we should write X" for later.
+
+### The plan stage machine
+
+`Suggested → Accepted → In_Process → Complete`, plus `Dismissed` (terminal). Transitions are enforced server-side via `update_plan target_stage:` (use the UNDERSCORE form `In_Process`). Only these are allowed: Suggested→Accepted/Dismissed · Accepted→In_Process/Dismissed · In_Process→Complete/Accepted/Dismissed · Complete→Accepted (re-open, clears produced content)/Dismissed. **There is no `delete_plan`** — dismiss with `target_stage:"Dismissed"`.
+
+The **starting stage is set automatically from `source`**, you don't control it directly: `user_added` / `cora_requested` / `playbook` → **Accepted** (actionable now); `cora_proactive` → **Suggested** (awaits user accept). Set `source:"cora_requested"` when the user explicitly asked; `source:"cora_proactive"` when you're surfacing an unprompted suggestion. **Never** pass `source:"workflow"` or `"playbook"` from an interactive session.
+
+### Visibility
+
+**Plans are `private` by default** — the creator's ideas queue, invisible to teammates (a teammate's private plans return NotFound and never appear in their `list_plans`). Assigning a plan to another member (`assigned_to`) **auto-promotes it to `team`** — assignment is a communication act, even over an explicit `private`. Only the plan's **creator** can change `visibility`; mention the change to the user before sending it. **Playbooks default to `team`;** `instantiate_playbook` **inherits** the playbook's visibility onto the plans it creates.
+
+### The 5 plan tools
+
+- **`create_plan`** — Create a plan. Only `title` is required. Optional executable params (`prompt`, `blueprint_id`, `project_id`, `category_id`, `due_date`, `reference_document_ids`, `context_collection_ids`, `targeting_dimension_ids`, `assigned_to`, `visibility`). **Dedupe first:** call `list_plans` with a `project_id` filter before creating; if a matching Accepted/Suggested plan exists, offer to `update_plan` it instead. When creating several in one turn, correlate them with `source_metadata.batch_id` and deep-link the filtered view.
+- **`get_plan`** — Fetch one plan by `plan_uuid` with all linked params. **Always call before `update_plan`** to avoid overwriting with stale values. `_produced_content` null = no content yet.
+- **`list_plans`** — Discovery + dedup. Visibility-scoped server-side (an empty result ≠ the team has no plans). Useful filters: `stage` (single-value array, UNDERSCORE form), `project_id`, `assignee_scope` (`me` default | `created_by_me` | `all_visible`). ⚠️ Known no-ops today: `due_before`/`due_after` and `search_text` are accepted but don't filter yet; multi-value `stage[]`/`source[]` honor only the first element — pass single-value arrays.
+- **`update_plan`** — Partial update; only keys you send mutate. Construct a minimal diff after `get_plan`. `reference_document_ids` / `context_collection_ids` / `targeting_dimension_ids` are **full-replace** (pass `[]` to clear). Server-managed fields (`source`, `produced_content_id`, timestamps, etc.) are rejected as immutable.
+- **`produce_plan`** — The MCP equivalent of the plans-board **Generate** button. Requires the plan in **Accepted** stage (Suggested → `update_plan target_stage:"Accepted"` first). **⚠️ Consumes AI credits and takes 1–2 min — confirm before producing a plan the user didn't explicitly ask to produce.** The plan's `prompt`, targeting, context collections, and project are used as generation inputs — set them via `update_plan` BEFORE producing.
+  - **Both paths are ASYNC now** — the tool returns immediately with a `generation_id`; **poll `get_generation_status`**. A plan **with** a blueprint → `path:"deliverable"`; **without** a blueprint → `path:"canvas"`. On completion the backend links the produced content and flips the plan to `In_Process` (then `Complete` when the deliverable reaches ready).
+
+### The 6 playbook tools
+
+- **`list_playbooks`** — All playbooks visible to the caller (team + own private). Summaries only — call `get_playbook` for items. Use before `instantiate_playbook`/`update_playbook` to find the right id.
+- **`get_playbook`** — One playbook with its full ordered item list. Inspect before instantiating/editing.
+- **`create_playbook`** — Author a reusable template from scratch: `name` + optional ordered `items` (each item becomes one plan on instantiation). Defaults `visibility:"team"`.
+- **`create_playbook_from_plans`** — Capture existing plans as a template ("save what worked"): pass `plan_ids`; their title/description/prompt/blueprint/category copy into ordered items. Use this (vs `create_playbook`) when the user liked a batch they already ran.
+- **`update_playbook`** — Rename/re-describe (patch in place) or restructure. If `items` is provided it **FULLY REPLACES** the items and their order; omit `items` to leave them. `visibility` change is creator-only.
+- **`instantiate_playbook`** — **Run** a playbook: create one Accepted plan per item, in order, as a batch (source `"playbook"`, inheriting the playbook's visibility). This is a distinct bulk action — it does NOT create/edit the playbook. Optional `project_id`, `assigned_to`, `category_id`, and **`anchor_date`**: each item's `offset_days` is applied to the anchor to compute that plan's due date (e.g. "instantiate my launch playbook anchored to next Monday").
+
+### Typical flows
+
+- **Turn a suggestion into content:** `list_plans` (find it) → `update_plan target_stage:"Accepted"` → `produce_plan` → poll `get_generation_status` → hand the user the produced content's link.
+- **Capture then reuse:** user runs a good batch of plans → `create_playbook_from_plans(plan_ids)` → later `instantiate_playbook(anchor_date=…)` to redeploy the sequence.
+- **Author a template:** `create_playbook(name, items)` → `instantiate_playbook` when ready to deploy.
+
+---
+
 ## Choosing between similar tools
 
 | If the user wants… | Call this | Not this — because… |
@@ -311,7 +412,9 @@ When things go wrong, surface the raw error to the user — don't silently retry
 - **Project brief** — A Content item pinned as a project's strategic anchor.
 - **Reference Library** — The team-wide top-level set of context items.
 - **Targeting dimension** — Categorical attribute (Persona, Industry, Buying Stage…) with selectable options.
-- **Workflow** — Reusable multi-step process. See the `marcora-workflow-builder` skill.
+- **Workflow** — Reusable multi-step process run by a background agent. See the **Workflows** chapter.
+- **Content Plan** — A tracked content intent on the plans board (Suggested → Accepted → In_Process → Complete). See the **Content Plans & Playbooks** chapter.
+- **Playbook** — A reusable, ordered template of content-plan items, instantiated as a batch. See the **Content Plans & Playbooks** chapter.
 
 ---
 
