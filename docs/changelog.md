@@ -11,6 +11,7 @@ All notable changes to the Marcora MCP server will be documented in this file.
 - **`list_content` — optional semantic `search`.** Pass a natural-language `search` query and results are ranked by semantic relevance instead of recency; each row then carries a `relevance_score` (cosine `0`–`1`, higher = more relevant). Omitting `search` is unchanged (recency-ordered, no score) — fully backward-compatible.
 - **`list_context_items` — optional semantic `search`.** Same addition: pass a natural-language `search` query to rank items by semantic relevance (by each item's best-matching chunk) instead of recency; each item then carries a `relevance_score` (cosine `0`–`1`). Omitting `search` is unchanged.
 - **Cross-tool ranking.** The `relevance_score` values from `list_content` and `list_context_items` are **cross-comparable**: call both with the same `search` query, merge the two result arrays, and take the top matches by `relevance_score` — then confirm with the user before pulling full text with `get_content` / `get_context_item`. Documented in `docs/tools.md`.
+- **Companion skill `marcora-mcp` v0.5.2 + `.skill` release.** The skill now teaches the semantic-search discovery path (a new bullet + "Steps (semantic-search path)" in Workflow 5 and a decision-table row: rank `list_content` / `list_context_items` by `relevance_score`, merge cross-tool, confirm before opening full text). Content-only — picked up automatically by Cora at `version: "latest"`, no agent change.
 
 ## 2026-07-12
 
