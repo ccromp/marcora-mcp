@@ -122,6 +122,10 @@ The skill is tagged `skill-vX.Y.Z` — see [Releases](https://github.com/ccromp/
 | Context & Resources | `list_context_items` | List context items in your library |
 | Context & Resources | `get_context_item` | Get a context item's full markdown content |
 | Context & Resources | `get_relevant_context` | Search context library by prompt |
+| Context Intelligence | `list_ci_findings` | List findings from automated context-library scans |
+| Context Intelligence | `get_ci_finding` | Get one finding in full detail by UUID |
+| Context Intelligence | `update_ci_finding_status` | Acknowledge, dismiss, or resolve a finding |
+| Context Intelligence | `trigger_health_audit_scan` | Start a library-wide context health audit |
 | Reference | `list_content_categories` | List content categories |
 | Reference | `list_targeting_dimensions` | List targeting dimensions and options |
 | Blueprints | `list_blueprints` | List all blueprints |

@@ -2,6 +2,12 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-07-13
+
+### Added
+
+- **Context Intelligence tools documented.** The four Context Intelligence tools — `list_ci_findings`, `get_ci_finding`, `update_ci_finding_status`, and `trigger_health_audit_scan` — are now documented under a new **Context Intelligence** category in `docs/tools.md` and the README tool table. These tools were already live on the customer server (`mcp.marcora.ai`); this fills a documentation gap. Context Intelligence is Marcora's automated review layer: health-audit and web-freshness scans produce **findings** (stale content, contradictions, outdated web sources, gaps) with a `pending → acknowledged / dismissed / resolved` lifecycle. `trigger_health_audit_scan` is plan-gated (Business/Command, ≥50 credits) and runs in the background; applying a finding's suggested fix is done in the Marcora web app, not through the MCP. No tool behavior changed.
+
 ## 2026-07-12
 
 ### Changed
