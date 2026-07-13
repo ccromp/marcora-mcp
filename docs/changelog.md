@@ -7,6 +7,7 @@ All notable changes to the Marcora MCP server will be documented in this file.
 ### Added
 
 - **Context Intelligence tools documented.** The four Context Intelligence tools — `list_ci_findings`, `get_ci_finding`, `update_ci_finding_status`, and `trigger_health_audit_scan` — are now documented under a new **Context Intelligence** category in `docs/tools.md` and the README tool table. These tools were already live on the customer server (`mcp.marcora.ai`); this fills a documentation gap. Context Intelligence is Marcora's automated review layer: health-audit and web-freshness scans produce **findings** (stale content, contradictions, outdated web sources, gaps) with a `pending → acknowledged / dismissed / resolved` lifecycle. `trigger_health_audit_scan` is plan-gated (Business/Command, ≥50 credits) and runs in the background; applying a finding's suggested fix is done in the Marcora web app, not through the MCP. No tool behavior changed.
+- **`get_team_info` + `set_active_team` — new Account tools.** `get_team_info` (read-only) returns every team you belong to with its full member roster — including each active member's numeric `user_id` (what `assigned_to` expects) plus pending invites — so an agent can resolve "assign this to Sarah" to a real id. `set_active_team` switches your active team and returns `previous_team_id` for a switch → work → restore loop; its description carries a global-effect warning (the change applies everywhere for your account). Excludes credits/subscription (that stays with `get_current_user_info`). Brand server tool count 54 → 56.
 
 ## 2026-07-12
 
@@ -16,7 +17,6 @@ All notable changes to the Marcora MCP server will be documented in this file.
 
 ### Added
 
-- **`get_team_info` + `set_active_team` — new Account tools.** `get_team_info` (read-only) returns every team you belong to with its full member roster — including each active member's numeric `user_id` (what `assigned_to` expects) plus pending invites — so an agent can resolve "assign this to Sarah" to a real id. `set_active_team` switches your active team and returns `previous_team_id` for a switch → work → restore loop; its description carries a global-effect warning (the change applies everywhere for your account). Excludes credits/subscription (that stays with `get_current_user_info`). Brand server tool count 54 → 56.
 - **Content Plans & Playbooks tools now on the main server** — `produce_plan` (produce a plan's content — async on both the blueprint→deliverable and no-blueprint→canvas paths; poll `get_generation_status`), plus the six playbook tools `list_playbooks`, `get_playbook`, `create_playbook`, `create_playbook_from_plans`, `update_playbook`, and `instantiate_playbook` (run a playbook into a batch of plans, optionally anchored to a date via `anchor_date` + each item's `offset_days`). Documented in `docs/tools.md` under **Plans & Playbooks**. Plans are `private` by default; playbooks default to `team` and instantiation inherits the playbook's visibility.
 
 ## 2026-07-02
