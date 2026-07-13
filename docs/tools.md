@@ -461,6 +461,143 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 
 ---
 
+## Context Intelligence
+
+Context Intelligence is Marcora's automated review layer for your reference/context library. Health-audit and web-freshness scans produce **findings** — stale content, contradictions, outdated web sources, classification gaps — each with a status lifecycle (`pending` → `acknowledged` / `dismissed` / `resolved`). These tools list and inspect findings, record your decision on them, and kick off a new health-audit sweep. (Applying a finding's suggested fix is done in the Marcora web app, not through the MCP.)
+
+### `list_ci_findings`
+
+List Context Intelligence findings for your team — issues Marcora's automated scans detected in your reference/context library (stale content, contradictions, outdated web sources, classification gaps). This is also the right **first call** before updating any finding's status, to get its UUID.
+
+Findings are returned **newest-first**. Each has a status lifecycle: `pending` (new, needs review) → `acknowledged` / `dismissed` / `resolved`.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `status` | string | No | Filter by status: `pending` (the actionable queue), `acknowledged`, `dismissed`, `resolved`. Omit for all |
+| `severity` | string | No | Filter by severity as recorded by the scan (e.g. `high`, `medium`, `low`). Omit for all |
+| `process_type` | string | No | Filter by originating scan: `health_audit` (library-wide sweep) or `web_freshness` (tracked webpage changes). Omit for all |
+| `page` | integer | No | Page number (default 1) |
+| `per_page` | integer | No | Items per page (default 20, max 100) |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `items` | array | Finding objects, each with `id` (uuid), `summary`, `recommendation`, `severity`, `status`, `process_type`, `finding_type`, `suggested_fix`, `context_item_ids`, `created_at`, `resolved_at`, `resolved_by` |
+| `itemsTotal` | integer | Total findings matching the filter |
+| `curPage` | integer | Current page number |
+| `nextPage` | integer \| null | Next page number, or `null` |
+| `prevPage` | integer \| null | Previous page number, or `null` |
+
+**Example prompts:**
+- "What did Context Intelligence find in our reference library?"
+- "Show me the open (pending) context findings"
+- "Any high-severity issues from the last health audit?"
+
+---
+
+### `get_ci_finding`
+
+Fetch one Context Intelligence finding in full detail by its UUID (from `list_ci_findings`). Use it when you want the specifics of a finding — the full recommendation, the suggested fix content, or which context items it involves — before deciding to act on it.
+
+The `suggested_fix` object (when present) contains the proposed replacement content. **Applying** that fix happens in the Marcora web app; from the MCP you can only record a decision with `update_ci_finding_status`.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `finding_id` | string (uuid) | Yes | UUID of the finding (from `list_ci_findings`) |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | string (uuid) | Finding ID |
+| `summary` | string | Short description of the finding |
+| `recommendation` | string \| null | Full recommended action |
+| `severity` | string | Severity as recorded by the scan |
+| `status` | string | `pending`, `acknowledged`, `dismissed`, or `resolved` |
+| `process_type` | string | Originating scan (`health_audit` or `web_freshness`) |
+| `finding_type` | string | The kind of issue detected |
+| `suggested_fix` | object \| null | Proposed fix: `field`, `new_value`, `context_item_id` (applied in the web app) |
+| `context_item_ids` | array \| null | Context items this finding involves |
+| `created_at` | integer | Unix timestamp of creation |
+| `resolved_at` | integer \| null | Unix timestamp when resolved, or `null` |
+| `resolved_by` | integer \| null | User ID who resolved it, or `null` |
+
+**Errors:**
+- **Finding not found** / **You do not have access to this finding** — the UUID is unknown or belongs to another team.
+
+**Example prompts:**
+- "Show me the full details of that finding"
+- "What's the suggested fix for that context issue?"
+
+---
+
+### `update_ci_finding_status`
+
+Update the status of a Context Intelligence finding — **acknowledge** it, **dismiss** it, or mark it **resolved**. Use it after the user has reviewed a finding (via `list_ci_findings` / `get_ci_finding`) and told you their decision.
+
+Status meanings:
+- `acknowledged` — seen, kept on the radar (still open).
+- `dismissed` — not relevant / won't fix — removes it from the actionable queue.
+- `resolved` — the underlying issue was fixed (records who resolved it and when). This records the resolution **only** — it does **not** apply the suggested fix to the context item; applying fixes happens in the Marcora web app.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `finding_id` | string (uuid) | Yes | UUID of the finding (from `list_ci_findings`) |
+| `status` | string | Yes | New status: `acknowledged`, `dismissed`, or `resolved` |
+
+**Output:**
+
+The updated finding row, including the new `status` (and `resolved_at` / `resolved_by` when resolved).
+
+**Authorization:** requires **admin or editor** role. Confirm with the user before dismissing or resolving a finding they haven't explicitly decided on.
+
+**Errors:**
+- **Invalid status** — must be one of `acknowledged`, `dismissed`, `resolved`.
+- **Finding not found** / **You do not have access to this finding.**
+
+**Example prompts:**
+- "Dismiss that finding — it's not relevant"
+- "Mark that one as resolved"
+- "Acknowledge those for now"
+
+---
+
+### `trigger_health_audit_scan`
+
+Start a Context Intelligence **health audit** — a library-wide AI sweep of your team's context/reference items that produces findings (stale content, contradictions, gaps) reviewable via `list_ci_findings`. Use it only when the user **explicitly** asks to check/audit their context health; do **not** trigger one unprompted.
+
+The scan runs in the **background**: the response returns immediately with a `scan_run_id`, and findings land as the scan progresses — check `list_ci_findings` afterwards.
+
+**⚠️ Cost + gating:** the scan consumes team AI credits and is gated. It requires the **Business or Command plan** (active subscription) with at least **50 credits** remaining. Only one health audit can run at a time, and a cooldown applies after each completed run. **Starting a new audit clears the previous health-audit findings.**
+
+**Parameters:** None
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `scan_run_id` | string (uuid) \| null | ID of the started scan run |
+| `status` | string | `running` |
+| `message` | string | Human-readable status message |
+
+**Errors:**
+- **`ci_not_eligible` (403)** — plan / subscription / credits gate failed (JSON error body with reason + credit numbers).
+- **A health check is already running** — wait for it to finish.
+- **Health check ran recently** — you can run it again after the cooldown (the message says when).
+
+**Example prompts:**
+- "Run a health check on our context library"
+- "Audit our reference docs for anything stale or contradictory"
+
+---
+
 ## Reference
 
 ### `list_content_categories`
