@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (the `mcp__marco
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.5.1
+  version: 0.5.2
 ---
 
 # Marcora AI Workflows
@@ -212,6 +212,7 @@ The five workflows you'll handle 80% of the time. Two more surfaces — **Workfl
 - **RAG search ("what do we have on topic X?")** → `marcora:get_relevant_context`. Returns relevance-ranked chunks. Best when the user has a question that needs *content*, not a list.
 - **Browse the catalog ("what context items do I have?", "show me my reference library")** → `marcora:list_context_items`. Returns names + intros + IDs. No RAG, just inventory. Set `reference_library_only=true` to scope to top-level Reference Library items only (i.e. items not in any project or collection).
 - **Fetch the full content of a known item ("pull the brand voice guide", "open the manager-feedback transcript")** → `marcora:get_context_item(context_item_id)`. Returns full markdown + metadata + link.
+- **Semantic ranked search ("find my most relevant docs/items on X", "which of my content is closest to this brief?")** → `marcora:list_content(search=…)` and/or `marcora:list_context_items(search=…)`. Pass a natural-language `search` query to rank by semantic relevance (each row/item gains a `relevance_score`, cosine `0`–`1`, higher = closer) instead of recency. The two tools' scores are **cross-comparable** — run both with the same query, merge, take the top by `relevance_score`, then confirm with the user before opening full text. Use this when the user wants the *right existing document/item* ranked by meaning — vs `get_relevant_context`, which returns RAG *chunks* of context for answering, not a ranked doc+item list.
 
 **Steps (RAG path).**
 1. `marcora:get_relevant_context` with a descriptive `prompt`. Optionally **broaden** with `project_id` or `collection_ids` — these are *additive* (they add that project's / those collections' items on top of the general library, they don't restrict to only them). This is the *only* legitimate use of this tool besides the narrow Workflow 1 sourcing-check.
@@ -226,6 +227,11 @@ The five workflows you'll handle 80% of the time. Two more surfaces — **Workfl
 1. `marcora:list_context_items` (default returns everything the user can see; pass `reference_library_only=true` for just orphan items in the top-level Reference Library). Items in private collections / private projects the user is not in are filtered out automatically.
 2. Optionally `marcora:list_context_collections` if the user is asking about collection-level organization, or `marcora:get_project(project_id).context_items` for one project's items.
 3. If the user wants to read the actual content of an item, `marcora:get_context_item(context_item_id)`.
+
+**Steps (semantic-search path).**
+1. `marcora:list_content(search="<natural-language query>")` and `marcora:list_context_items(search="<same query>")`. When `search` is provided, results are ordered by semantic relevance to the query instead of recency.
+2. Each returns its rows/items with a `relevance_score` (cosine `0`–`1`, higher = closer). The scores are **cross-comparable across the two tools**, so merge both arrays and sort by `relevance_score` to get the single best set. (Omit `search` for the normal recency-ordered list; `relevance_score` is present only when `search` is supplied.)
+3. Present the top matches to the user for confirmation, then fetch full text with `marcora:get_content(content_id)` / `marcora:get_context_item(context_item_id)`.
 
 **Output to user.** A summary, not a JSON dump. Offer next steps: drill into a specific item (`get_context_item`), add new context, generate something based on what was found.
 
@@ -348,6 +354,7 @@ The **starting stage is set automatically from `source`**, you don't control it 
 | To know what content already exists about a topic | `marcora:get_relevant_context` for context, OR `marcora:list_content` for a content list | `create_content` would generate something new — wrong tool for "what already exists." |
 | To browse what's in the user's context library (full inventory, not RAG) | `marcora:list_context_items` | `get_relevant_context` returns relevance-scored chunks, not item names. Use `list_context_items` for the catalog view. Pass `reference_library_only=true` to scope to just the top-level Reference Library. |
 | To read the full markdown of a specific context item | `marcora:get_context_item(context_item_id)` | `list_context_items` only returns `content_intro` (a truncation). `get_relevant_context` returns RAG chunks. Use this for the actual content. |
+| To find the *most relevant* existing content docs or context items by meaning (rank, not just list) | `marcora:list_content(search=…)` + `marcora:list_context_items(search=…)` | Pass a natural-language `search` to rank by semantic `relevance_score` (cosine `0`–`1`) instead of recency; the two tools' scores are cross-comparable, so run both with the same query and take the top by score. `get_relevant_context` returns RAG *chunks* of context for answering — not a ranked doc+item list. Confirm before opening full text with `get_content` / `get_context_item`. |
 | To read the team's Brand Foundation (company overview, brand voice, writing style, writing examples) | `marcora:get_brand_foundation` | `get_relevant_context` searches the Reference Library, not Brand Foundation. Auto-pulled into `create_content` when you pass `instructions` — don't fetch as a setup step before *generating*. (Do fetch it when you're supplying `content` yourself.) |
 | To change one of the four Brand Foundation elements | `marcora:update_brand_foundation` | Brand Foundation lives at the team level, not as Context items — `update_context` won't touch it. Always full-replace; fetch first with `get_brand_foundation` to confirm what's being replaced. |
 | To find a teammate's numeric `user_id` (to assign a plan/content to them) | `marcora:get_team_info` | `get_current_user_info` is only *you*. `get_team_info` lists every team you're in + each member's numeric `user_id` — the value `assigned_to` / `update_plan(assigned_to=…)` expects. Pending invites show `user_id: null` (can't be assigned yet). |
