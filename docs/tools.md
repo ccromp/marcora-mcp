@@ -368,10 +368,13 @@ Each returned item carries its own `collection_id` and `project_id` (both nullab
 
 **Privacy:** items in private collections (where you are not the creator) and items in private projects (where you are not a member) are filtered out — they will not appear in the response.
 
+**Semantic search:** pass a natural-language `search` query to rank items by semantic relevance (by their best-matching chunk) instead of recency; each item then carries a `relevance_score` (cosine `0`–`1`, higher = more relevant). Omit or leave `search` empty for the normal recency-ordered list. The scores are **cross-comparable with `list_content`** — call both tools with the same `search` query, merge the two arrays, and take the top matches by `relevance_score`, then present them to the user for confirmation before fetching full text with `get_context_item` / `get_content`.
+
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `search` | string | No | Optional natural-language query. When provided, items are ranked by semantic relevance to it (by their best-matching chunk) instead of recency, and each item gains a `relevance_score`. Omit or leave empty for the normal recency-ordered list. Scores are cross-comparable with `list_content` |
 | `reference_library_only` | boolean | No | When `true`, returns only items not in any project or collection. Default `false` returns everything |
 
 **Output:** An object with a single `context_items` key holding an array of context items. Each item has:
@@ -390,6 +393,7 @@ Each returned item carries its own `collection_id` and `project_id` (both nullab
 | `relevancy_processed_status` | string | RAG indexing status (`unprocessed`, `provisional`, `complete`) |
 | `collection_id` | integer \| null | Collection this item lives in, or `null` |
 | `project_id` | string (uuid) \| null | Project this item is associated with, or `null` |
+| `relevance_score` | number | Present only when a `search` query is supplied. Cosine similarity (`0`–`1`, higher = more relevant) of the item's best-matching chunk to the query. Cross-comparable with the `relevance_score` returned by `list_content` |
 
 **Other ways to discover context-item IDs:**
 - `get_project(project_id).context_items` — items attached to a specific project
@@ -1046,7 +1050,13 @@ The response always includes `status`, `generation_id`, and `flow_type`. `conten
 
 Returns all content visible to the current user as a single unified array. Content created from scratch (canvas) and from blueprints (deliverable) are merged with consistent field names. The same `content_id` can be passed to `get_content`, `update_content`, and `create_external_share`.
 
-**Parameters:** None
+**Semantic search:** pass a natural-language `search` query to rank results by semantic relevance instead of recency; each row then carries a `relevance_score` (cosine `0`–`1`, higher = more relevant). Omit or leave `search` empty for the normal recency-ordered list. The scores are **cross-comparable with `list_context_items`** — call both tools with the same `search` query, merge the two arrays, and take the top matches by `relevance_score`, then present them to the user for confirmation before fetching full text with `get_content` / `get_context_item`.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `search` | string | No | Optional natural-language query. When provided, results are ranked by semantic relevance to it (instead of recency) and each row gains a `relevance_score`. Omit or leave empty for the normal recency-ordered list. Scores are cross-comparable with `list_context_items` |
 
 **Output:** An object with a single `content` key holding an array of items.
 
@@ -1060,6 +1070,7 @@ Returns all content visible to the current user as a single unified array. Conte
 | `created_by` | string | Name of the creator |
 | `projects` | string[] | Project names this content belongs to |
 | `web_url` | string | Direct URL to view this content in Marcora |
+| `relevance_score` | number | Present only when a `search` query is supplied. Cosine similarity (`0`–`1`, higher = more relevant) of the row to the query. Cross-comparable with the `relevance_score` returned by `list_context_items` |
 
 **Example prompts:**
 - "Show me all my content"
