@@ -121,7 +121,7 @@ The skill is tagged `skill-vX.Y.Z` — see [Releases](https://github.com/ccromp/
 | Context & Resources | `create_context_collection` | Create a new context collection |
 | Context & Resources | `add_context` | Add a context item to your library |
 | Context & Resources | `update_context` | Update an existing context item |
-| Context & Resources | `list_context_items` | List context items in your library |
+| Context & Resources | `list_context_items` | List context items in your library (optional semantic `search`) |
 | Context & Resources | `get_context_item` | Get a context item's full markdown content |
 | Context & Resources | `get_relevant_context` | Search context library by prompt |
 | Context Intelligence | `list_ci_findings` | List findings from automated context-library scans |
@@ -140,7 +140,7 @@ The skill is tagged `skill-vX.Y.Z` — see [Releases](https://github.com/ccromp/
 | Community Blueprints | `import_community_blueprint` | Import a community blueprint |
 | Content | `create_content` | Generate content (with or without blueprint) |
 | Content | `get_generation_status` | Check async generation status |
-| Content | `list_content` | List all content |
+| Content | `list_content` | List all content (optional semantic `search`) |
 | Content | `get_content` | Get full content by ID |
 | Content | `update_content` | Update a content document (canvas or deliverable) |
 | Content | `ask_content_assistant` | Run the in-document Content Assistant on a document |
