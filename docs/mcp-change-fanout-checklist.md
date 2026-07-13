@@ -51,16 +51,22 @@ obligation). Release on the DoE's "promotion live — go" signal. Fingerprint pr
 - [ ] Bump versions as needed: `server.json`, `plugin/.claude-plugin/plugin.json`,
       `.claude-plugin/marketplace.json`.
 
-## 4. Cora (Marcora Agent) skills — NOTIFY APP DEVELOPER (no hot-reload)
-**Cora skills do NOT hot-reload.** Skills are baked into the Anthropic Managed Agent at
-agent-creation and pinned `version:'latest'`; nothing fetches the bundle at runtime. When a
-customer-facing skill/workflow changes:
-- [ ] MCP Server Engineer publishes the new `marcora-mcp.skill` GitHub release (step 3).
-- [ ] **Notify the App Developer** to (a) publish the skill to Anthropic's Skills API
-      (`POST /cora/agent/admin_upsert_skill_version`, action `upload`) and (b) recreate/verify the
-      managed agent (`POST /cora-agent/recreate-agent`, with `verify_agent_id`).
-- [ ] Pure tool-metadata changes (description/schema/annotations, no skill-content change) usually
-      need only steps 1–3; a skill-content change always needs this step.
+## 4. Cora (Marcora Agent) skills — CONTENT vs SET change
+Cora's skills are pinned at `version: "latest"`, so a **content-only** skill release is picked up
+automatically on the agent's next session — no agent change needed. Only a **skill-SET** change
+(adding, removing, or swapping a skill id on the agent) requires touching the managed agent.
+- [ ] **Content-only release** (a new `.skill` for an already-pinned skill id — e.g. edited workflow
+      text, a new tool row in the decision table, a usage-guidance addition): publish the
+      `marcora-mcp.skill` GitHub release (step 3) and you're done. `version: "latest"` picks it up on
+      the next session — **no** App-Developer action required.
+- [ ] **Skill-SET change** (add/remove/swap a skill id on the agent): after the GitHub release,
+      **notify the App Developer** to land the SET change on Cora via the in-place update
+      (`POST /cora-agent/recreate-agent` / `/recreate-worker-agent`, default path — same agent id,
+      versioned, no env swap; O-2387). A CONTENT-only release needs **no** agent change (see above).
+      Do the **dev** agent first, then **live with approval**. Live agent IDs are env-resolved
+      (`CORA_AGENT_ID_LIVE` / `CORA_WORKER_ID_LIVE`) — never hardcode an agent id in docs.
+- [ ] Pure tool-metadata changes (description/schema/annotations, no skill-content change) need only
+      steps 1–3 — no skill release and no Cora action.
 
 ## 5. Notify + record
 - [ ] If the change was made by a lane **other than** the MCP Server Engineer, that lane notifies
@@ -74,5 +80,6 @@ customer-facing skill/workflow changes:
 edit generated-metadata.ts (native fields, no markers)
    → staging PR (draft, CI) → prod promotion (DoE)
       → [on prod-live signal] Strapi (Content Publisher) + GitHub docs/skill release
-         → [if skill changed] notify App Developer → publish to Anthropic + recreate/verify Cora agent
+         → [if skill CONTENT changed] publish .skill GitHub release (version:"latest" auto-picks up)
+            → [if skill SET changed] notify App Developer → in-place Cora agent update (dev → live w/ approval)
 ```
