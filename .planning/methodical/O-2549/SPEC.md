@@ -54,5 +54,15 @@ enforced, then `nullableInt` → `rawCollectionId === 0 ? null : rawCollectionId
    _Verify:_ their published documentIds + HTTP 200s.
 6. Confirm published to the DoE — closes the lane.
 
-## Outcome
-(filled on completion)
+## Outcome (2026-07-14)
+- Prod verified live BEFORE publishing: `api.marcora.ai/health` → `9dd31ce`; prod brand
+  `tools/list` (minted prod token via `agent-token-exchange`, direct handshake at
+  `/x2/mcp/EbZaDl-X/mcp/stream`) → 56 tools, `update_context.collection_id`
+  `["integer","null"]`, `project_id` `["string","null"]`. Timing rule satisfied.
+- T1–T3 ✅ `docs/tools.md` (add_context + update_context) + dated `docs/changelog.md`
+  entry. Diff verified docs-only — no skill/version files touched.
+- T4 ✅ marcora-mcp **PR #13** → `main`.
+- T5 ✅ Strapi leg delegated to Content Publisher — thread **O-2590**, brief `wp/437`
+  (scope: `update_context` + `add_context` pages only).
+- T6 — confirm to DoE once Content Publisher reports published documentIds.
+- Cora: no action (no skill-content change; skill stays v0.5.3, `version:"latest"`).
