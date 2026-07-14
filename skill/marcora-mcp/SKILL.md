@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (the `mcp__marco
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.5.2
+  version: 0.5.3
 ---
 
 # Marcora AI Workflows
@@ -321,10 +321,12 @@ The **starting stage is set automatically from `source`**, you don't control it 
 
 - **`list_playbooks`** — All playbooks visible to the caller (team + own private). Summaries only — call `get_playbook` for items. Use before `instantiate_playbook`/`update_playbook` to find the right id.
 - **`get_playbook`** — One playbook with its full ordered item list. Inspect before instantiating/editing.
-- **`create_playbook`** — Author a reusable template from scratch: `name` + optional ordered `items` (each item becomes one plan on instantiation). Defaults `visibility:"team"`.
+- **`create_playbook`** — Author a reusable template from scratch: `name` + optional ordered `items` (each item becomes one plan on instantiation). Defaults `visibility:"team"`. Optionally set **`anchor_date`** (`YYYY-MM-DD`) when the template is built around a real date — it persists on the playbook and becomes the default anchor at instantiation.
 - **`create_playbook_from_plans`** — Capture existing plans as a template ("save what worked"): pass `plan_ids`; their title/description/prompt/blueprint/category copy into ordered items. Use this (vs `create_playbook`) when the user liked a batch they already ran.
-- **`update_playbook`** — Rename/re-describe (patch in place) or restructure. If `items` is provided it **FULLY REPLACES** the items and their order; omit `items` to leave them. `visibility` change is creator-only.
-- **`instantiate_playbook`** — **Run** a playbook: create one Accepted plan per item, in order, as a batch (source `"playbook"`, inheriting the playbook's visibility). This is a distinct bulk action — it does NOT create/edit the playbook. Optional `project_id`, `assigned_to`, `category_id`, and **`anchor_date`**: each item's `offset_days` is applied to the anchor to compute that plan's due date (e.g. "instantiate my launch playbook anchored to next Monday").
+- **`update_playbook`** — Rename/re-describe (patch in place) or restructure. If `items` is provided it **FULLY REPLACES** the items and their order; omit `items` to leave them. `visibility` change is creator-only. Pass **`anchor_date`** to set the reference date, or `null` to clear it.
+- **`instantiate_playbook`** — **Run** a playbook: create one Accepted plan per item, in order, as a batch (source `"playbook"`, inheriting the playbook's visibility). This is a distinct bulk action — it does NOT create/edit the playbook. Optional `project_id`, `assigned_to`, `category_id`, and **`anchor_date`**: each item's `offset_days` is applied to the anchor to compute that plan's due date (e.g. "instantiate my launch playbook anchored to next Monday"). If `anchor_date` is omitted, the playbook's persisted anchor is used.
+
+> **Playbook responses carry links — hand them to the user, not raw ids.** Every playbook read/write tool returns `anchor_date` (persisted `YYYY-MM-DD`, or `null`) and a **`link_url`** that opens the playbook in Marcora. `instantiate_playbook` returns the created **cycle** (`run`, with its own `link_url` → `app.marcora.ai/runs/{run_id}`) plus a `plans[]` array where **each plan has its own `link_url`** → `app.marcora.ai/plans/{plan_uuid}`. Share the cycle link to hand off the whole batch.
 
 ### Typical flows
 
