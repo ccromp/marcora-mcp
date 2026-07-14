@@ -284,10 +284,12 @@ Providing zero, or more than one, of `content` / `import_url` / `connected_webpa
 | `content` | string | Conditional | Markdown body (creates a `manual` item). Provide exactly one of `content` / `import_url` / `connected_webpage_url` |
 | `import_url` | string | Conditional | Public URL imported **once** as a static markdown snapshot (URL not retained, not refreshable). Provide exactly one of the three body inputs |
 | `connected_webpage_url` | string | Conditional | Public URL tracked as a live, refreshable `webpage` item (URL stored; dedupes by URL; admin/editor only). Provide exactly one of the three body inputs |
-| `collection_id` | integer | No | Collection ID to organize the item (from `list_context_collections` or `create_context_collection`). **Omit it — or pass `null` or `0` — to file the item at the top level of the Reference Library** |
-| `project_id` | string | No | Project ID to associate with (from `list_projects`). Omit (or pass `null`) to leave the item unassociated |
+| `collection_id` | integer | No | Collection ID to organize the item (from `list_context_collections` or `create_context_collection`). **Omit it — or pass `0` — to file the item at the top level of the Reference Library** |
+| `project_id` | string | No | Project ID to associate with (from `list_projects`). Omit it to leave the item unassociated |
 
-> **Filing an item in the Reference Library:** omitting `collection_id` (or passing `null` or `0`) all mean the same thing — the item lands at the top level of the **Reference Library**, where it's returned by `list_context_items`, fetchable via `get_context_item`, and eligible for semantic search. This is the normal path for team-wide reference material.
+> **Filing an item in the Reference Library:** omitting `collection_id` — or passing `0` — files the item at the top level of the **Reference Library**, where it's returned by `list_context_items`, fetchable via `get_context_item`, and eligible for semantic search. This is the normal path for team-wide reference material.
+>
+> Unlike `update_context`, this tool's `collection_id` is typed as a bare `integer` in the input schema, so a strict MCP client **cannot** send a literal `null` here. You don't need one: `collection_id` is optional on `add_context`, so simply **omitting** it is the idiomatic way to file at the top level. (The server treats an explicit `null` the same as omitted/`0`, but only clients that don't validate against the schema can send it.)
 
 **Output:**
 
