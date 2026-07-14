@@ -2,6 +2,17 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-07-14 (brand-foundation link train)
+
+### Fixed
+
+- **`update_brand_foundation` now returns a `link_url`.** `get_brand_foundation` returned a `link_url` deep-linking the Brand Foundation section; `update_brand_foundation` returned only `{ element, content }`, and its output schema promised nothing more. With a successful write but no link to hand back, agents filled the gap by inventing one — `https://app.marcora.ai/brand-foundation`, which does not exist as a route. It 404s, redirects to `/home`, and the user loses the chat they were in. The update response now carries the same `link_url` as the getter (`/context-hub?tab=brand-foundation`), declared in the output schema; both tools read it from one shared constant so they can't drift apart again. The tool description now also tells the model to use the returned link verbatim rather than construct one.
+
+### Changed
+
+- **Docs:** `docs/tools.md` documents `link_url` on both `update_brand_foundation` and `get_brand_foundation` — the getter has always returned it, but its Output table never listed it.
+- **Skill → v0.5.4:** Recipe H2 (update a Brand Foundation element) gained the "hand the user the returned `link_url`" step that every other link-returning recipe already had, plus a matching pitfall entry and decision-table note. Workflow guidance changed, so this is a skill CONTENT release — `version: "latest"` picks it up on Cora's next session; no agent change needed.
+
 ## 2026-07-14 (later train)
 
 ### Fixed

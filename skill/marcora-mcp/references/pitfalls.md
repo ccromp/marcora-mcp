@@ -96,6 +96,16 @@ Don't show the user a UUID like `7b2c4f...` as an identifier. Surface the human-
 
 ---
 
+## Linking the user to their Brand Foundation
+
+**Symptom.** You update the user's Brand Foundation, link them to it, and the link 404s — they land on `/home` and the conversation they were in is gone.
+
+**Cause.** Guessing the URL. `https://app.marcora.ai/brand-foundation` reads like the obvious route but does not exist. Brand Foundation is a tab of the Context Hub, not a page of its own.
+
+**What to do.** Use the `link_url` that `update_brand_foundation` and `get_brand_foundation` return, exactly as returned — it points at `/context-hub?tab=brand-foundation`. This holds generally: every Marcora tool that returns a `link_url` returns the correct one. Never assemble a Marcora URL from a pattern you inferred.
+
+---
+
 ## When you encounter something not in this list
 
 1. Surface the raw error to the user — don't silently retry.

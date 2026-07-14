@@ -164,6 +164,7 @@ By default returns all four elements. Pass `elements` to scope the response to a
 | `brand_voice` | string | Markdown content for Brand Voice. Empty string if not set. Only present if requested via `elements` |
 | `writing_style` | string | Markdown content for Writing Style. Empty string if not set. Only present if requested via `elements` |
 | `writing_examples` | string | Markdown content for Writing Examples. Free-form structure — whatever the user has saved. Empty string if not set. Only present if requested via `elements` |
+| `link_url` | string | Deep-link that opens the Brand Foundation section in the Marcora web app (where the user can toggle between the four elements). Always present |
 
 **Example prompts:**
 - "What's my brand foundation?"
@@ -200,6 +201,9 @@ Overwrites one of the team's four Brand Foundation elements with new content. **
 |---|---|---|
 | `element` | string | Which element was updated (echoes the input) |
 | `content` | string | Updated markdown content (echoes what was stored) |
+| `link_url` | string | Deep-link that opens the Brand Foundation section in the Marcora web app. Always present |
+
+> **Hand the user the returned `link_url`** when you point them at their updated Brand Foundation — don't construct a URL yourself. There is no `/brand-foundation` route; the real one is `/context-hub?tab=brand-foundation`, and a hand-built link 404s and bounces the user to `/home`.
 
 > **Errors:** If `content` exceeds the element's max character limit, the call returns a structured `ERROR_CODE_INPUT_ERROR` response naming both the limit and the actual length (e.g. *"company_overview content exceeds the 10000-character limit (got 12483 chars)"*). The write is rejected before any DB mutation — no partial updates.
 
