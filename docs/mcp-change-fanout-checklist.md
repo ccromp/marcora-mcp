@@ -70,11 +70,22 @@ probe is a guaranteed MISS → reads the **origin**, NOT what a customer sees.
 - [ ] **`last-modified` is the only trustworthy freshness signal** — not `age`, not
       `cache-status`. Compare it to your publish time; if it predates the publish, the page is
       stale whatever else the headers say.
-- [ ] A Strapi edit does NOT purge the edge cache, and `POST api.netlify.com/api/v1/purge`
-      (site `marcora-main` = `a97ddd13-f656-41be-b0ec-8965fdb4510c`) is **not reliably
-      sufficient** — it returns 202 and resets `age`, but the edge refills from a durable entry
-      it doesn't evict. The page self-heals ~3600s after `last-modified`. Forcing it sooner
-      needs a site redeploy (app-developer/DoE lane) — not worth it to save <1h.
+- [ ] A Strapi edit does NOT purge the edge cache. `POST api.netlify.com/api/v1/purge` (site
+      `marcora-main` = `a97ddd13-f656-41be-b0ec-8965fdb4510c`) returns 202 and resets `age`, but
+      its effect is **eventually-consistent, not immediate** — do not treat 202 as done.
+      Measured O-2549/O-2590 (2026-07-14): four purges appeared to do nothing (`last-modified`
+      stayed pinned, stale bytes returned from a durable entry the purge didn't evict), yet both
+      pages then re-rendered **~34 min before** their nominal `s-maxage=3600` expiry. So neither
+      "purge works" nor "purge never works" is a safe belief, and "it can only self-heal at
+      3600s" is wrong too.
+- [ ] **Never gate on the purge call — gate on the page.** The only trustworthy close is:
+      `last-modified` has advanced past your publish time AND stale strings are ×0 on the PLAIN
+      canonical URL. `age: 0` + `202` is the classic false green (a purge resets `age` while
+      still serving the old render).
+- [ ] Purging is safe and worth trying **once the origin is correct** — just re-verify by the
+      rule above rather than believing it. Purging BEFORE the content is right only re-caches
+      the wrong copy. A site redeploy (app-developer/DoE lane) is the only hard lever; rarely
+      worth it for <1h.
 
 ## 3. GitHub repo docs + skills bundle (`ccromp/marcora-mcp`) — POST-PROMOTION
 - [ ] Update `docs/tools.md` (the authoritative tool catalog) **and** the `README.md` "Available
