@@ -79,7 +79,7 @@ Roles: **creator** (a full team member who can create and edit content), **admin
 
 ### `get_team_info`
 
-Returns every team you belong to, each with its full member roster. Read-only, no inputs. Use it before assigning a plan or content to a teammate (to get their numeric `user_id` — the value `assigned_to` expects), or to answer questions about the team. Deliberately excludes credits/subscription — call `get_current_user_info` for those.
+**Always** use this when the user asks what team accounts they have, which teams they belong to / are on, or wants to switch teams — do **not** answer from memory or session context, which knows only the single currently-active team and will undercount (a user can belong to many teams). This tool is the only way to enumerate the full list. Returns every team you belong to, each with its full member roster. Read-only, no inputs. Also use it **before** assigning a plan or content to a teammate (to look up their numeric `user_id` — the value `assigned_to` expects), or to answer questions about the team's members and your role. Deliberately excludes credits/subscription — call `get_current_user_info` for those.
 
 **Parameters:** none.
 
@@ -1580,7 +1580,7 @@ List all content playbooks visible to the caller in the current team (team-visib
 
 **Parameters:** none.
 
-**Output:** an array of playbook summary objects (`id`, `name`, `description`, `visibility`, item count, timestamps).
+**Output:** an array of playbook summary objects (`id`, `name`, `description`, `visibility`, `anchor_date`, `link_url`, item count, timestamps). Each object's `anchor_date` is the persisted `YYYY-MM-DD` reference date (or `null`), and `link_url` opens that playbook in the Marcora web app — surface it instead of the raw id.
 
 **Example prompts:**
 - "What playbooks do I have?"
@@ -1598,7 +1598,7 @@ Fetch one content playbook by id, including its full ordered list of items.
 |---|---|---|---|
 | `playbook_id` | integer | Yes | ID of the playbook to fetch |
 
-**Output:** the playbook object with an ordered `items` array. Each item carries the plan fields it will stamp out (title, description, prompt, blueprint, category) plus an `offset_days` used by `instantiate_playbook` to compute due dates from an anchor date.
+**Output:** the playbook object — including its `anchor_date` (persisted `YYYY-MM-DD` reference date, or `null`) and `link_url` (opens the playbook in the Marcora web app) — with an ordered `items` array. Each item carries the plan fields it will stamp out (title, description, prompt, blueprint, category) plus an `offset_days` counted from the anchor date to compute each due date on instantiation.
 
 **Example prompts:**
 - "What's in my launch-week playbook?"
@@ -1616,9 +1616,10 @@ Create a reusable content playbook — an ordered template of content-plan items
 | `name` | string | Yes | Playbook name |
 | `description` | string | No | Free-text description |
 | `visibility` | string | No | `team` (default) or `private` |
+| `anchor_date` | string | No | Optional `YYYY-MM-DD` reference date the playbook is built around (a launch, event, campaign kickoff). Persisted on the playbook; each item's `offset_days` counts from it, and it becomes the default anchor when instantiating. Leave off for an evergreen/undated template |
 | `items` | array | No | Ordered playbook items (each becomes one plan on instantiation) |
 
-**Output:** the created playbook object.
+**Output:** the created playbook object, including its persisted `anchor_date` (or `null`) and a `link_url` that opens the new playbook in the Marcora web app — share it with the user.
 
 **Example prompts:**
 - "Make me a launch-week playbook"
@@ -1639,7 +1640,7 @@ Create a playbook by capturing existing content plans as reusable template items
 | `description` | string | No | Free-text description |
 | `visibility` | string | No | `team` (default) or `private` |
 
-**Output:** the created playbook object.
+**Output:** the created playbook object, including its `anchor_date` (`null` unless later set) and a `link_url` that opens the new playbook in the Marcora web app — share it with the user.
 
 **Example prompts:**
 - "Turn these plans into a playbook"
@@ -1657,11 +1658,12 @@ Edit a content playbook. Any playbook is fully editable. Pass only the fields to
 |---|---|---|---|
 | `playbook_id` | integer | Yes | ID of the playbook to update |
 | `name` | string | No | New name |
-| `description` | string | No | New description |
+| `description` | string | No | New description (pass `null` to clear) |
 | `visibility` | string | No | `team` or `private` (creator-only) |
+| `anchor_date` | string | No | Set the playbook's `YYYY-MM-DD` reference date. Omit to keep the current value; pass `null` to clear it |
 | `items` | array | No | If provided, REPLACES the full ordered item list |
 
-**Output:** the updated playbook object.
+**Output:** the updated playbook object, including its `anchor_date` (or `null`) and `link_url`.
 
 **Example prompts:**
 - "Add a follow-up email to my launch playbook"
@@ -1683,7 +1685,17 @@ Run a playbook: create one content plan per playbook item, in order, as a batch.
 | `assigned_to` | integer | No | Assign the created plans to this team member |
 | `category_id` | integer | No | Apply this content category to the created plans |
 
-**Output:** the batch of created plans.
+If `anchor_date` is omitted, the playbook's persisted `anchor_date` (if any) is used.
+
+**Output:** an object describing the run:
+
+| Field | Type | Description |
+|---|---|---|
+| `playbook_id` | integer | The instantiated playbook |
+| `run_id` | integer | ID of the cycle (run) this created — the group the plans belong to |
+| `run` | object | The created cycle: `id`, `name` (auto-named `"<playbook> — <Mon YYYY>"` unless you passed a name), `anchor_date`, and `link_url` (`https://app.marcora.ai/runs/{run_id}`) — share it to hand the user their new cycle |
+| `created_count` | integer | Number of plans created (one per playbook item) |
+| `plans` | array | The created content plans (same shape as `create_plan` / `get_plan`), each with its own `link_url` (`https://app.marcora.ai/plans/{plan_uuid}`). Stage `Accepted`, source `playbook` |
 
 **Example prompts:**
 - "Run my launch playbook"
