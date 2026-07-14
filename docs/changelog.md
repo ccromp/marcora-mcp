@@ -2,6 +2,17 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-07-14 (later train)
+
+### Fixed
+
+- **`update_context` — `collection_id` / `project_id` now accept a JSON `null`.** The tool always documented these as "REQUIRED (but nullable)" with full-replace semantics — pass `null` to move an item back to the top level of the Reference Library or detach it from a project — but the input schema typed them as a bare `integer` / `string`. Strict MCP clients validate arguments against that schema *before sending*, so `null` was rejected client-side ("Value is not a valid integer") and omitting the field returned `Missing param` — meaning the documented detach was impossible to express. The schema now types them `["integer","null"]` / `["string","null"]` (uuid `format` preserved), so `null` reaches the backend, which already handled it. No behavior change on the server — the advertised contract just matches what the tool always did.
+- **`add_context` — items created without a `collection_id` are no longer invisible.** Omitting `collection_id` (the normal "add to the Reference Library" case) wrote the item with `collection_id = 0` — a dangling reference the read layer filtered out, so the item was returned by no read path (`list_context_items` omitted it, `get_context_item` 404'd, semantic search never matched it) even though the create call succeeded and echoed the item back. Omitted, `null`, and `0` now all mean the top level of the **Reference Library**, and the item is visible everywhere. `update_context` matches: `collection_id: 0` is coerced to `null` (it previously errored "Collection not found").
+
+### Changed
+
+- **Docs:** `docs/tools.md` now spells out the Reference-Library filing rule on `add_context`, and on `update_context` documents the `null` (and `0`) detach plus the omit asymmetry — omitting `collection_id` errors, omitting `project_id` silently detaches. No companion-skill change (no workflow changed), so the skill stays at v0.5.3 and Cora needs no update.
+
 ## 2026-07-14
 
 ### Changed
