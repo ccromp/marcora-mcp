@@ -284,8 +284,10 @@ Providing zero, or more than one, of `content` / `import_url` / `connected_webpa
 | `content` | string | Conditional | Markdown body (creates a `manual` item). Provide exactly one of `content` / `import_url` / `connected_webpage_url` |
 | `import_url` | string | Conditional | Public URL imported **once** as a static markdown snapshot (URL not retained, not refreshable). Provide exactly one of the three body inputs |
 | `connected_webpage_url` | string | Conditional | Public URL tracked as a live, refreshable `webpage` item (URL stored; dedupes by URL; admin/editor only). Provide exactly one of the three body inputs |
-| `collection_id` | integer | No | Collection ID to organize the item (from `list_context_collections` or `create_context_collection`) |
-| `project_id` | string | No | Project ID to associate with (from `list_projects`) |
+| `collection_id` | integer | No | Collection ID to organize the item (from `list_context_collections` or `create_context_collection`). **Omit it — or pass `null` or `0` — to file the item at the top level of the Reference Library** |
+| `project_id` | string | No | Project ID to associate with (from `list_projects`). Omit (or pass `null`) to leave the item unassociated |
+
+> **Filing an item in the Reference Library:** omitting `collection_id` (or passing `null` or `0`) all mean the same thing — the item lands at the top level of the **Reference Library**, where it's returned by `list_context_items`, fetchable via `get_context_item`, and eligible for semantic search. This is the normal path for team-wide reference material.
 
 **Output:**
 
@@ -331,10 +333,14 @@ To **re-pull a tracked web-page item** from its stored URL — the same action a
 | `name` | string | No | If provided, updates the name. Omit to leave unchanged. Ignored when `refresh_webpage` is true |
 | `content` | string | No | New markdown body. Omit to leave unchanged. Triggers RAG re-embedding. Mutually exclusive with `import_url`. Ignored when `refresh_webpage` is true |
 | `import_url` | string | No | Public URL — backend fetches and converts to clean markdown server-side, then stores it as a fresh one-off snapshot body. Mutually exclusive with `content`. Ignored when `refresh_webpage` is true |
-| `collection_id` | integer \| null | **Yes (nullable)** | Full replace. Pass the current ID to keep the item in its collection, pass a different ID to move it, or pass `null` to remove it from any collection |
+| `collection_id` | integer \| null | **Yes (nullable)** | Full replace. Pass the current ID to keep the item in its collection, pass a different ID to move it, or pass `null` (`0` works too) to move it back to the top level of the Reference Library |
 | `project_id` | string (uuid) \| null | **Yes (nullable)** | Full replace. Pass the current ID to keep the project association, pass a different ID to move it, or pass `null` to disassociate it |
 
 > **Important:** `collection_id` and `project_id` use full-replace semantics — you must pass them on every call (even with `refresh_webpage`, pass the item's current values; the refresh does not change them). Omitting them is NOT the same as leaving them unchanged. If you don't know the current values, call `get_context_item` first or check the context item in the web app before updating.
+>
+> The two behave differently when omitted, so pass both explicitly: omitting **`collection_id`** returns a `Missing param` error, while omitting **`project_id`** silently **detaches** the item from its project.
+
+Both fields accept a JSON `null` — the tool's input schema types them as `["integer","null"]` / `["string","null"]`, so strict MCP clients can send `null` directly. Use it to move an item **out of a collection and back to the top level of the Reference Library**, or to **detach it from a project**. For `collection_id`, `0` is accepted as an alias for `null`.
 
 **Output:**
 
