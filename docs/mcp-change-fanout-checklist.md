@@ -65,6 +65,16 @@ probe is a guaranteed MISS → reads the **origin**, NOT what a customer sees.
       (content is fine — wait it out); both stale = **real content gap** (fix the content).
 - [ ] Assert the new strings are **present** AND the old strings appear **zero** times. Presence
       checks alone miss a stale string coexisting on the same page.
+- [ ] **Run a positive control before believing any absence.** "0 occurrences of the stale
+      string" is *vacuously true against an empty string* — and an empty body fails silently, so
+      the check reports a confident green having matched nothing. Prove your extractor actually
+      saw the page: assert a canary that MUST be present (e.g. `Input Schema`, `Parameters`, the
+      tool name) and abort on a suspiciously small body (<10k chars). Near-miss O-2590,
+      2026-07-14: a `subprocess.run(..., text=True)` normalized `\r\n`→`\n`, so a
+      `partition("\r\n\r\n")` header/body split returned an **empty body** and every
+      stale-absent assertion passed against `""`. It nearly shipped a false green; only a
+      header-side check caught it. Same class as the `?cb=` trap, one layer down: an assertion
+      that cannot fail is not evidence.
 - [ ] Strip `<script>`/`<style>` before matching — the page embeds a payload for ALL ~56 tools,
       so a naive grep hits another tool's wording.
 - [ ] **`last-modified` is the only trustworthy freshness signal** — not `age`, not
@@ -73,11 +83,12 @@ probe is a guaranteed MISS → reads the **origin**, NOT what a customer sees.
 - [ ] A Strapi edit does NOT purge the edge cache. `POST api.netlify.com/api/v1/purge` (site
       `marcora-main` = `a97ddd13-f656-41be-b0ec-8965fdb4510c`) returns 202 and resets `age`, but
       its effect is **eventually-consistent, not immediate** — do not treat 202 as done.
-      Measured O-2549/O-2590 (2026-07-14): four purges appeared to do nothing (`last-modified`
-      stayed pinned, stale bytes returned from a durable entry the purge didn't evict), yet both
-      pages then re-rendered **~34 min before** their nominal `s-maxage=3600` expiry. So neither
-      "purge works" nor "purge never works" is a safe belief, and "it can only self-heal at
-      3600s" is wrong too.
+      Observed O-2549/O-2590 (2026-07-14): four purges produced **no immediate eviction**
+      (`last-modified` stayed pinned, stale bytes kept serving), yet both pages then re-rendered
+      **~34 min before** their nominal `s-maxage=3600` expiry — and one page's re-render
+      *predates* the purge credited with fixing it. The mechanism is **unexplained**; don't
+      invent one. What's ruled out: "purge never works", "purge works", and "it can only
+      self-heal at 3600s" are all unsafe beliefs.
 - [ ] **Never gate on the purge call — gate on the page.** The only trustworthy close is:
       `last-modified` has advanced past your publish time AND stale strings are ×0 on the PLAIN
       canonical URL. `age: 0` + `202` is the classic false green (a purge resets `age` while
