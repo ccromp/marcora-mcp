@@ -40,6 +40,42 @@ obligation). Release on the DoE's "promotion live — go" signal. Fingerprint pr
       category; pick the right tool category otherwise.
 - [ ] Internal/admin/utility tools do not need Strapi docs.
 
+### 2a. A tool doc page has TWO render sources — update BOTH, in ONE pass
+`marcora.ai/docs/tools/<slug>` renders two independent sections from two different fields:
+- **"Parameters"** table ← the `parameters` repeatable component (markdown renders literally).
+- **"Input Schema"** raw-JSON block ← the `inputSchema` field, dumped verbatim.
+
+- [ ] Update the field in **both** places, or the page self-contradicts (this has failed vetting).
+- [ ] **`inputSchema` must mirror the LIVE PROD schema exactly** (DoE ruling, O-2549) — it is a
+      mirror, never aspirational or hand-tuned. The Parameters prose must AGREE with it. When
+      they'd conflict, the schema block is the one it's wrong to edit: fix the real schema, or
+      fix the prose — never fork them. Runtime-only contracts (e.g. an `omitted → Missing param`
+      error that the schema doesn't encode) belong in the PROSE.
+- [ ] Publish **all** fields of a page in ONE pass. Two publishes minutes apart can pin a render
+      with new `parameters` + old `inputSchema` into cache for an hour.
+
+### 2b. Verifying a published page — use the PLAIN canonical URL
+`marcora.ai` serves these pages with `cache-control: s-maxage=3600, stale-while-revalidate`
+and **`netlify-vary: query`**. Because the cache key varies by query string, a `?cb=<rand>`
+probe is a guaranteed MISS → reads the **origin**, NOT what a customer sees.
+
+- [ ] Assert on the **plain canonical URL** (no query). That is the customer's view, and the
+      only one that closes a fan-out.
+- [ ] Use both deliberately as a **diagnostic**: plain stale + `?cb=` clean = **CDN only**
+      (content is fine — wait it out); both stale = **real content gap** (fix the content).
+- [ ] Assert the new strings are **present** AND the old strings appear **zero** times. Presence
+      checks alone miss a stale string coexisting on the same page.
+- [ ] Strip `<script>`/`<style>` before matching — the page embeds a payload for ALL ~56 tools,
+      so a naive grep hits another tool's wording.
+- [ ] **`last-modified` is the only trustworthy freshness signal** — not `age`, not
+      `cache-status`. Compare it to your publish time; if it predates the publish, the page is
+      stale whatever else the headers say.
+- [ ] A Strapi edit does NOT purge the edge cache, and `POST api.netlify.com/api/v1/purge`
+      (site `marcora-main` = `a97ddd13-f656-41be-b0ec-8965fdb4510c`) is **not reliably
+      sufficient** — it returns 202 and resets `age`, but the edge refills from a durable entry
+      it doesn't evict. The page self-heals ~3600s after `last-modified`. Forcing it sooner
+      needs a site redeploy (app-developer/DoE lane) — not worth it to save <1h.
+
 ## 3. GitHub repo docs + skills bundle (`ccromp/marcora-mcp`) — POST-PROMOTION
 - [ ] Update `docs/tools.md` (the authoritative tool catalog) **and** the `README.md` "Available
       Tools" table.
