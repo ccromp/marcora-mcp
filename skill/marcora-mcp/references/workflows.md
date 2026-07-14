@@ -104,7 +104,7 @@ Call it explicitly when:
 - You're debugging "why does the content sound off?" — maybe Brand Foundation is stale.
 - The user wants to update one of the four elements — fetch first with `marcora:get_brand_foundation({elements: ["<element>"]})` so the user can confirm what's being replaced, then call `marcora:update_brand_foundation`.
 
-Returns structured JSON with per-element fields (`company_overview`, `brand_voice`, `writing_style`, `writing_examples`). Pass `elements` to scope the response; omit to return all four. Empty string is returned for any element the team has not filled out yet.
+Returns structured JSON with per-element fields (`company_overview`, `brand_voice`, `writing_style`, `writing_examples`), plus a `link_url` that opens the Brand Foundation section in Marcora. Pass `elements` to scope the response; omit to return all four. Empty string is returned for any element the team has not filled out yet.
 
 ## Recipe H2 — Update a Brand Foundation element
 
@@ -113,5 +113,6 @@ When the user wants to change one of the four Brand Foundation elements:
 1. Read the current value: `marcora:get_brand_foundation({elements: ["<element>"]})`.
 2. Confirm with the user what's being replaced (Brand Foundation shapes every generation — unintended overwrites are costly).
 3. Write: `marcora:update_brand_foundation({element: "<element>", content: "<new markdown>"})`. Always full-replace — no patch semantics.
+4. Hand the user the `link_url` from the response — it opens the Brand Foundation section in Marcora. Use it **exactly as returned**; never build a Brand Foundation URL yourself. There is no `/brand-foundation` route (a hand-built link 404s and bounces them to `/home`, losing the chat).
 
 Per-element character limits: `company_overview` 10,000; `brand_voice`, `writing_style`, `writing_examples` 20,000 each. Overflow returns a structured `ERROR_CODE_INPUT_ERROR` naming the limit; the write is rejected before any DB mutation.
