@@ -67,14 +67,18 @@ probe is a guaranteed MISS → reads the **origin**, NOT what a customer sees.
       checks alone miss a stale string coexisting on the same page.
 - [ ] **Run a positive control before believing any absence.** "0 occurrences of the stale
       string" is *vacuously true against an empty string* — and an empty body fails silently, so
-      the check reports a confident green having matched nothing. Prove your extractor actually
-      saw the page: assert a canary that MUST be present (e.g. `Input Schema`, `Parameters`, the
-      tool name) and abort on a suspiciously small body (<10k chars). Near-miss O-2590,
-      2026-07-14: a `subprocess.run(..., text=True)` normalized `\r\n`→`\n`, so a
-      `partition("\r\n\r\n")` header/body split returned an **empty body** and every
-      stale-absent assertion passed against `""`. It nearly shipped a false green; only a
-      header-side check caught it. Same class as the `?cb=` trap, one layer down: an assertion
-      that cannot fail is not evidence.
+      the check reports a confident green having matched nothing. Near-miss O-2590, 2026-07-14:
+      a `subprocess.run(..., text=True)` normalized `\r\n`→`\n`, so a `partition("\r\n\r\n")`
+      header/body split returned an **empty body** and every stale-absent assertion passed
+      against `""`. Same class as the `?cb=` trap, one layer down: **an assertion that cannot
+      fail is not evidence.**
+- [ ] Make the control **semantic, not size-based**: assert a canary that MUST be present —
+      `Input Schema`, `Parameters`, the tool name. That proves the extractor saw *this* page.
+      ⚠️ Do NOT gate on a body-length threshold. O-2549 tried "abort if <10k chars" and it
+      false-negatived on its **first real run**: `update-context`'s visible text is ~9.7k, so a
+      perfectly clean page failed the guard. A magic number is a proxy for "did I fetch
+      anything", and it is easy to miscalibrate in the direction that blocks good work; the
+      canary answers the question directly.
 - [ ] Strip `<script>`/`<style>` before matching — the page embeds a payload for ALL ~56 tools,
       so a naive grep hits another tool's wording.
 - [ ] **`last-modified` is the only trustworthy freshness signal** — not `age`, not
