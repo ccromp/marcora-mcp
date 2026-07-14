@@ -2,6 +2,14 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-07-14
+
+### Changed
+
+- **Playbook tools now return `anchor_date` + `link_url`.** Every playbook read/write tool — `list_playbooks`, `get_playbook`, `create_playbook`, `create_playbook_from_plans`, `update_playbook` — now returns the playbook's persisted `anchor_date` (`YYYY-MM-DD`, or `null`) and a `link_url` that opens it in the Marcora web app. `create_playbook` and `update_playbook` also accept `anchor_date` as an input (the reference date each item's `offset_days` counts from, and the default when instantiating). `instantiate_playbook` now returns the created **cycle** (`run` / `run_id`, with the cycle's `link_url` → `app.marcora.ai/runs/{run_id}`), a `created_count`, and a `plans[]` array in which **each plan carries its own `link_url`** → `app.marcora.ai/plans/{plan_uuid}`. Documented in `docs/tools.md`; the companion skill's **Content Plans & Playbooks** chapter now tells agents to hand these links to the user. No behavior change to what the tools do — only richer, link-carrying responses.
+- **`get_team_info` description sharpened.** The tool description now leads with the trigger — always call it when the user asks what teams they have / belong to or wants to switch teams, rather than answering from memory or session context (which knows only the single active team and undercounts). Doc copy reconciled in `docs/tools.md`. Output shape unchanged.
+- **Companion skill `marcora-mcp` v0.5.3 + rebuilt `.skill`.** Playbook-chapter guidance for the new `anchor_date` / `link_url` response fields. Content-only — picked up automatically by Cora at `version: "latest"`, no agent change.
+
 ## 2026-07-13
 
 ### Added
