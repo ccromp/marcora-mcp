@@ -34,6 +34,47 @@ obligation). Release on the DoE's "promotion live — go" signal. Fingerprint pr
       in this lane (escalate schema needs to the DoE).
 - [ ] Verify the tool end-to-end (curl through a PR env or `mcp.marcora.ai/staging`) before "ready".
 
+## 1a. Annotation + outputSchema completeness gate (HARD — every served tool)
+**No served tool ships without all five annotation hints AND a native `outputSchema`.** This applies
+to EVERY server the metadata defines — **brand, admin, AND utility** — not just the customer-facing
+brand server. (2026-07-13 / O-2451 audit found 28 admin+utility tools shipped with NO `annotations`
+object and 3 with no `outputSchema`; `update_playbook` shipped with two wrong hints. The Anthropic
+directory reviewer can pull `tools/list` on any exposed server, so all of them must be spec-perfect.)
+
+- [ ] **All 5 hints present and SEMANTICALLY chosen** (never defaulted, never omitted): `title`,
+      `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`. Pick each from what the
+      **handler actually does** — read the handler in `registry.ts` → feature route; do NOT trust
+      sibling copy-paste (that is exactly how `update_playbook` drifted).
+
+      | Handler shape | readOnly | destructive | idempotent | openWorld |
+      |---|---|---|---|---|
+      | `get_*` / `list_*` — pure read | `true` | `false` | `true` | `false` |
+      | `create_*` / add / import / instantiate — writes a new row | `false` | `false` | `false` | `false` |
+      | `update_*` / edit-in-place — may overwrite or remove | `false` | **`true`** | **`true`** | `false` |
+      | delete / destroy | `false` | `true` | `true` | `false` |
+      | web search / browse / fetch-a-URL | `true` | `false` | `true` | **`true`** |
+      | send / trigger an external webhook | `false` | `false` | `false` | **`true`** |
+      | pure transform that stores a new artifact (e.g. md→docx) | `false` | `false` | `false` | `false` |
+
+      Rules of thumb: `destructiveHint` is only meaningful when `readOnlyHint=false`.
+      `idempotentHint=true` **iff** repeating the call with identical args leaves the same end state
+      (partial-patch / full-replace updates ARE idempotent; anything that mints a new row/artifact
+      each call is NOT). `openWorldHint=true` **iff** the tool reaches an unbounded external world
+      (open web, arbitrary email/webhook target) — NOT for internal LLM generation over team context.
+- [ ] **Native `outputSchema` present and accurate to the REAL return shape.** If the handler returns
+      a **bare array**, `toolResult()` wraps it under `result`, so the schema's top level is
+      `{ "type": "object", "properties": { "result": { "type": "array", ... } } }` — never a
+      top-level array. JSON Schema allows extra properties by default, so a subset of known fields is
+      fine, but the required/known fields must match reality.
+- [ ] **Completeness scan before "ready"** — parse `generated-metadata.ts` and assert ZERO *served*
+      tools lack `annotations`, `annotations.title`, or `outputSchema`. (A *served* tool = one listed
+      in a `servers[].tools` array; hidden/internal tool defs like `signal_response_ready` that are in
+      no server list are exempt.) One-liner:
+      ```
+      node -e 'const m=require("./generated-metadata.cjs");const s={};for(const x of m.servers)for(const t of x.tools)s[t]=1;const bad=m.tools.filter(t=>s[t.name]&&(!t.annotations||!t.annotations.title||!t.outputSchema)).map(t=>t.name);console.log(bad.length?"FAIL: "+bad.join(","):"OK: all served tools complete")'
+      ```
+      (or inline-parse the `MCP_METADATA` export — the point is a mechanical zero-gap assertion, not eyeballing.)
+
 ## 2. Strapi marketing-site docs (customer-facing tools only) — POST-PROMOTION
 - [ ] Delegate to **Content Publisher**. Conventions: a "When to use" trigger sentence; set the
       `doc_page` parent relation to `mcp-tools`; put **workflow** tools under the **Workflows**
