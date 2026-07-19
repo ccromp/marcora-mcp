@@ -535,7 +535,7 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 
 ## Context Intelligence
 
-Context Intelligence is Marcora's automated review layer for your reference/context library. Health-audit and web-freshness scans produce **findings** — stale content, contradictions, outdated web sources, classification gaps — each with a status lifecycle (`pending` → `acknowledged` / `dismissed` / `resolved`). These tools list and inspect findings, record your decision on them, and kick off a new health-audit sweep. (Applying a finding's suggested fix is done in the Marcora web app, not through the MCP.)
+Context Intelligence is Marcora's automated review layer for your reference/context library. Health-audit and web-freshness scans produce **findings** — stale content, contradictions, outdated web sources, classification gaps — each with a status lifecycle (`pending` → `acknowledged` / `dismissed` / `resolved`). These tools list and inspect findings, record your decision on them, and kick off a new health-audit sweep. To **apply** a finding's suggested fix, use [`apply_grounding_fix`](#apply_grounding_fix) — it works on health-audit findings and content-grounding findings alike.
 
 ### `list_ci_findings`
 
@@ -574,7 +574,7 @@ Findings are returned **newest-first**. Each has a status lifecycle: `pending` (
 
 Fetch one Context Intelligence finding in full detail by its UUID (from `list_ci_findings`). Use it when you want the specifics of a finding — the full recommendation, the suggested fix content, or which context items it involves — before deciding to act on it.
 
-The `suggested_fix` object (when present) contains the proposed replacement content. **Applying** that fix happens in the Marcora web app; from the MCP you can only record a decision with `update_ci_finding_status`.
+The `suggested_fix` object (when present) contains the proposed replacement content. Review it with the user, then **apply** it with [`apply_grounding_fix`](#apply_grounding_fix) — or record a decision without applying anything using `update_ci_finding_status`.
 
 **Parameters:**
 
@@ -593,7 +593,7 @@ The `suggested_fix` object (when present) contains the proposed replacement cont
 | `status` | string | `pending`, `acknowledged`, `dismissed`, or `resolved` |
 | `process_type` | string | Originating scan (`health_audit` or `web_freshness`) |
 | `finding_type` | string | The kind of issue detected |
-| `suggested_fix` | object \| null | Proposed fix: `field`, `new_value`, `context_item_id` (applied in the web app) |
+| `suggested_fix` | object \| null | Proposed fix: `field`, `new_value`, `context_item_id`. Apply it with `apply_grounding_fix` |
 | `context_item_ids` | array \| null | Context items this finding involves |
 | `created_at` | integer | Unix timestamp of creation |
 | `resolved_at` | integer \| null | Unix timestamp when resolved, or `null` |
@@ -615,7 +615,7 @@ Update the status of a Context Intelligence finding — **acknowledge** it, **di
 Status meanings:
 - `acknowledged` — seen, kept on the radar (still open).
 - `dismissed` — not relevant / won't fix — removes it from the actionable queue.
-- `resolved` — the underlying issue was fixed (records who resolved it and when). This records the resolution **only** — it does **not** apply the suggested fix to the context item; applying fixes happens in the Marcora web app.
+- `resolved` — the underlying issue was fixed (records who resolved it and when). This records the resolution **only** — it does **not** apply the suggested fix. To actually apply it, use `apply_grounding_fix` (which resolves the finding for you on success).
 
 **Parameters:**
 
@@ -667,6 +667,189 @@ The scan runs in the **background**: the response returns immediately with a `sc
 **Example prompts:**
 - "Run a health check on our context library"
 - "Audit our reference docs for anything stale or contradictory"
+
+---
+
+## Content Grounding
+
+Content grounding checks a **document** against the team's context library: it extracts the document's factual claims and sorts each one into **supported** (the library backs it), **conflict** (the library says something different), or **gap** (the library has nothing on it).
+
+This closes the loop for agent-driven writing — **draft → ground → review → apply → re-ground** — without leaving the conversation.
+
+Three tools:
+
+| Tool | What it does |
+|---|---|
+| `check_content_grounding` | Runs a scan on new or existing content |
+| `get_grounding_result` | Reads a scan's result |
+| `apply_grounding_fix` | Applies a finding's recommended fix |
+
+**Two things to get right:**
+
+1. **Grounding is asynchronous.** `check_content_grounding` waits about 20 seconds inline; a fresh scan usually needs 120–150. If it comes back `running`, **poll `get_grounding_result` with the `scan_id`** — calling `check_content_grounding` again starts a *second*, redundant scan.
+2. **Review before applying.** Each finding carries its full `suggested_fix`. Show it to the user and get a decision. `apply_grounding_fix` writes to their library.
+
+Grounding requires the **Command plan** with an active subscription and available AI credits.
+
+---
+
+### `check_content_grounding`
+
+Run a grounding scan on a piece of content and get back its claims, findings, and the context items it was checked against.
+
+**When to use:** the user wants to know whether a document is accurate and consistent with what the company has already said — "check this against our context", "is this on-message", "fact-check this draft". Also the natural second step after you draft something for them.
+
+**Three entry modes:**
+
+- **`content_id` alone** — scan a document that already exists in Marcora.
+- **`content` alone** — hand over markdown; Marcora stores it as a new document and scans it. The new `content_id` comes back in the response.
+- **`content_id` + `content`** — **⚠️ replaces that document's entire body** with the markdown you pass, then re-scans. This is the revise-and-re-ground path.
+
+Passing neither is an error.
+
+> **⚠️ `content` + `content_id` is a whole-document overwrite, identical to `update_content`.**
+>
+> It is **never** a "check this part" operation. If a user asks you to ground one paragraph or section of a document that already exists, do **not** pass that fragment with its `content_id` — you would replace the entire document with the fragment and destroy the rest of it.
+>
+> To check part of an existing document: pass **`content_id` alone** and scan the document as it stands. To revise and re-check: pass the **full revised document**, not a fragment.
+
+**Timing (read before calling):** this waits up to ~20 seconds. If the scan finishes in that window you get the full result inline. Otherwise you get `status: "running"` with a `scan_id` — poll `get_grounding_result` with that `scan_id` every 15–30 seconds. Re-scanning an **unchanged** document is fast (a few seconds), because unchanged claims are reused.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `content_id` | string (uuid) | No\* | Existing document to scan. **Pass it alone** to scan the document as it stands — the safe default |
+| `content` | string | No\* | Markdown to ground. Alone, stored as a new document. **With `content_id`, replaces that document's entire body** — pass the full document, never a fragment |
+| `title` | string | No | Only meaningful with `content`. Omit and the title is taken from the first line |
+
+\* One of `content_id` or `content` is required.
+
+**Output:** the grounding envelope — see [Result envelope](#result-envelope) below.
+
+**Errors:**
+- **Provide either 'content_id' or 'content'** (400) — neither was supplied.
+- **Not a valid UUID** (400) — malformed `content_id`.
+- **Content not found** (404) — no such document in your team.
+- **ci_not_eligible** (403) — the team is not on the Command plan, has no active subscription, or is out of AI credits.
+
+**Example prompts:**
+- "Ground this draft against our context library"
+- "Does this blog post contradict anything we've published?"
+- "Rewrite the pricing section and re-check it"
+
+---
+
+### `get_grounding_result`
+
+Read the result of a grounding scan. The poll companion to `check_content_grounding`. It never starts a scan and never charges credits.
+
+**When to use:** `check_content_grounding` returned `running`, or you want to re-read a document's last grounding result without paying for a new scan.
+
+**Which id to pass — this matters:**
+
+- **`scan_id`** — reads that exact scan, whatever its status. **This is what you want when polling**: it always reports the run you started.
+- **`content_id`** (no `scan_id`) — reads the latest **completed** grounding for that document. Good for "what's this document's grounding state right now". It deliberately **skips a scan that is still running**, so it is the wrong call for polling: you would get the *previous* result back marked `complete`.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `scan_id` | string (uuid) | No\* | The scan to read. Use this when polling |
+| `content_id` | string (uuid) | No\* | Read the latest completed grounding for this document |
+
+\* One of `scan_id` or `content_id` is required.
+
+**Output:** identical to `check_content_grounding` — the same handling works for both.
+
+**Errors:**
+- **Provide 'scan_id' or 'content_id'** (400) — neither was supplied.
+- **Scan not found** (404) — no such grounding scan in your team.
+- **scan_id and content_id refer to different content** (400) — pass `scan_id` alone.
+
+**Example prompts:**
+- "Is that check done yet?"
+- "What did the last grounding pass find on this doc?"
+
+---
+
+### `apply_grounding_fix`
+
+Apply Marcora's recommended fix for one or more findings — "yes, do recommendation `<id>`".
+
+**When to use:** the user has reviewed findings (from `check_content_grounding`, `get_grounding_result`, or `list_ci_findings`) and wants them acted on. **Read the finding's `suggested_fix` and confirm with the user first** — this writes to their library.
+
+You never compose the fix yourself. Every finding already stores its recommended update, so applying is purely a reference by `finding_id`. This is the same action as the Apply button in the Marcora app: same permissions, same billing, same result.
+
+**Works on both finding families** — content-grounding findings and Context Intelligence health-audit recommendations.
+
+**Where each fix lands:** by default the context item named in that finding's `context_item_id`. A `null` `context_item_id` means the fix targets the document itself. Pass `context_item_overrides` to send a specific fix somewhere else.
+
+**Asynchronous.** Returns immediately with one job per finding. To follow one to completion, poll `get_generation_status` with its `generation_id` — **an integer**, not a UUID. The honest outcome is the **`document_updated`** field there: `true` means the document was actually changed, `false` means the recommendation was already covered and nothing was written. Report that distinction rather than assuming every applied fix changed something.
+
+**Partial success is normal:** findings that could not be started come back in `errors[]` with a reason while the rest still run. Check **both** `jobs[]` and `errors[]`.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `finding_ids` | array of uuid | Yes | The findings to apply. One or many |
+| `context_item_overrides` | object | No | Map of `finding_id` → `context_item_id` to redirect specific fixes. Every key must also appear in `finding_ids` |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `requested` | integer | How many findings were submitted |
+| `queued` | integer | How many runs actually started |
+| `skipped` | integer | How many could not start — see `errors[]` |
+| `jobs` | array | Per finding: `finding_id`, `status`, `generation_id` (integer), `document_uuid`, `context_item_id` |
+| `errors` | array | Per finding: `finding_id`, `error` |
+
+**Errors:**
+- **Missing param: finding_ids** (400) — pass `finding_id` values from a prior findings response.
+- **finding_ids must be finding_id UUIDs** (400).
+- **context_item_overrides names a finding not in finding_ids** (400) — the override would be ignored, so it is rejected rather than silently dropped.
+- **You are not authorized to perform this action** (403) — applying requires an admin or editor role.
+- Per-finding failures (already resolved, not a grounding finding) arrive in `errors[]`, not as a thrown error.
+
+**Example prompts:**
+- "Fix the pricing conflict it found"
+- "Apply all three of those recommendations"
+- "Add that gap to our positioning doc instead"
+
+---
+
+### Result envelope
+
+`check_content_grounding` and `get_grounding_result` return the same shape:
+
+| Field | Type | Description |
+|---|---|---|
+| `content_id` | string (uuid) | The document that was scanned |
+| `scan_id` | string (uuid) \| null | The scan run. Poll with this |
+| `status` | string | `running`, `complete`, `failed`, or `none` |
+| `link_url` | string | Opens the document with its grounding panel open — hand this to the user |
+| `summary` | object | `supported`, `conflicts`, `gaps`, `total_claims`, plus `corpus_freshness` |
+| `findings` | array | See below |
+| `claims` | array | Each extracted claim: `claim_text`, `subject`, `value`, `bucket` (`supported`/`conflict`/`gap`), `refs[]`, `confidence` (a **string**) |
+| `corpus_items` | array | The context items the scan was checked against: `context_item_id`, `name`, `source`, `content_category`, `link_url` |
+| `details_visible` | boolean | `false` when you are not the document's creator — you get counts only |
+
+Each entry in `findings[]`:
+
+| Field | Type | Description |
+|---|---|---|
+| `finding_id` | string (uuid) | Pass to `apply_grounding_fix` |
+| `type` | string | `conflict` or `gap` |
+| `subject` | string \| null | What the finding is about |
+| `statement` | string \| null | What the document says versus what the library says |
+| `recommendation` | string \| null | What Marcora suggests doing |
+| `severity` | string \| null | How serious |
+| `status` | string \| null | `pending`, `acknowledged`, `dismissed`, `resolved` |
+| `suggested_fix` | object \| null | The **full** recommended update — review this before applying |
+| `context_item_id` | string (uuid) \| null | Where applying would write. `null` = the document itself |
+| `link_url` | string \| null | Opens the finding |
 
 ---
 
