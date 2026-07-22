@@ -48,12 +48,14 @@ artifacts + a ready-to-fire promotion checklist only.
 8. **`produce_plan`** — description + **`path` enum: `deliverable`/`canvas` →
    `blueprint`/`freeform`** (+ neutralized path message).
 
-Scope discipline: mirror #294 EXACTLY. Do NOT rewrite pre-existing
-canvas/deliverable mentions in OTHER tools' docs (e.g. `list_content`,
-`content_type` enum values `canvas`/`deliverable` which are legitimate public
-API enums, `get_project` brief, `update_project`). Those were not in #294 and
-are "unrelated doc drift" (hard gate). Residuals get flagged in the handback,
-not silently swept.
+Scope discipline (refined by DoE 2026-07-22 ruling): mirror #294's changed
+surfaces exactly, AND additionally remove *avoidable explanatory* canvas/
+deliverable prose leakage from the held package (`list_content`, `get_project`
+brief — both already clean on the backend served surface; `pitfalls.md` E1;
+`update_project` note). KEEP only *literal current wire-contract* values docs
+must name — `content_type` enum values `canvas`/`deliverable`, `/canvas/` URL
+routes — and INVENTORY those as a separate required follow-up (wp/609) since
+changing them needs backend/MCP-definition + frontend work. Do NOT broaden #298.
 
 ## Deliverables (ALL held / unpublished)
 
