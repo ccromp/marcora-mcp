@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (the `mcp__marco
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.5.4
+  version: 0.6.0
 ---
 
 # Marcora AI Workflows
@@ -234,6 +234,27 @@ The five workflows you'll handle 80% of the time. Two more surfaces — **Workfl
 3. Present the top matches to the user for confirmation, then fetch full text with `marcora:get_content(content_id)` / `marcora:get_context_item(context_item_id)`.
 
 **Output to user.** A summary, not a JSON dump. Offer next steps: drill into a specific item (`get_context_item`), add new context, generate something based on what was found.
+
+---
+
+### Workflow 6 — Ground a document against the library
+
+**Goal.** Check whether a document's factual claims hold up against the team's own context library, and fix the ones that don't.
+
+**Preconditions.** Command plan with credits. A document to check — either already in Marcora, or markdown you're holding.
+
+**When to reach for it.** After drafting anything factual, or when the user asks "is this accurate", "does this contradict anything we've said", "check this against our context". It is the natural second beat after Workflow 1.
+
+**Steps.**
+1. `marcora:check_content_grounding` — `content_id` alone to scan an existing document, `content` alone to store-and-scan new markdown.
+2. If it returns `status: "running"`, poll `marcora:get_grounding_result({scan_id})` every 15–30s. **Poll with `scan_id`.** Polling with `content_id` returns the last *completed* scan, which during your run is the previous one — you'd report stale findings as fresh. Never re-call `check_content_grounding` to check progress.
+3. Review `findings[]` with the user. Each carries the full `suggested_fix` and the `context_item_id` it would write to. Hand over `link_url`.
+4. `marcora:apply_grounding_fix({finding_ids: [...]})` for what they approve. Use `context_item_overrides` to redirect a fix.
+5. Poll `marcora:get_generation_status({generation_id})` (integer id from each job). **`document_updated`** is the honest outcome: `false` means the recommendation was already covered and nothing was written. Report that distinction.
+
+**⚠️ The one way to lose data here.** `content` + `content_id` replaces the document's **entire body**, exactly like `update_content`. To ground part of an existing document, pass `content_id` **alone**. Never pass a paragraph alongside a `content_id` — the rest of the document is gone.
+
+`apply_grounding_fix` also applies Context Intelligence health-audit recommendations from `list_ci_findings`. Full recipe: `references/workflows.md` Recipe I.
 
 ---
 

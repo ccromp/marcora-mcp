@@ -128,6 +128,9 @@ The skill is tagged `skill-vX.Y.Z` — see [Releases](https://github.com/ccromp/
 | Context Intelligence | `get_ci_finding` | Get one finding in full detail by UUID |
 | Context Intelligence | `update_ci_finding_status` | Acknowledge, dismiss, or resolve a finding |
 | Context Intelligence | `trigger_health_audit_scan` | Start a library-wide context health audit |
+| Content Grounding | `check_content_grounding` | Check a document's claims against your context library |
+| Content Grounding | `get_grounding_result` | Read a grounding scan's result (poll with `scan_id`) |
+| Content Grounding | `apply_grounding_fix` | Apply a finding's recommended fix by id |
 | Reference | `list_content_categories` | List content categories |
 | Reference | `list_targeting_dimensions` | List targeting dimensions and options |
 | Blueprints | `list_blueprints` | List all blueprints |
