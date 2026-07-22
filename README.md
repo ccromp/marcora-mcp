@@ -145,7 +145,7 @@ The skill is tagged `skill-vX.Y.Z` — see [Releases](https://github.com/ccromp/
 | Content | `get_generation_status` | Check async generation status |
 | Content | `list_content` | List all content (optional semantic `search`) |
 | Content | `get_content` | Get full content by ID |
-| Content | `update_content` | Update a content document (canvas or deliverable) |
+| Content | `update_content` | Update a content document |
 | Content | `ask_content_assistant` | Run the in-document Content Assistant on a document |
 | Sharing & Export | `create_external_share` | Create a public share link |
 | Sharing & Export | `convert_markdown_to_word_doc` | Export markdown as Word doc |

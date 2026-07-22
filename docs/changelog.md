@@ -2,6 +2,22 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-07-22 (content/document language normalization)
+
+### Changed
+
+- **Tool descriptions and schemas normalized to content/document terminology.** Wording across `ask_content_assistant`, `get_generation_status`, `update_content`, `update_context`, and `produce_plan` now refers uniformly to a "content document". This is a wording change on the served surface, not a behavior change.
+- **`produce_plan` output `path` values are now `blueprint` and `freeform`.** The two async paths are unchanged — generated from a blueprint vs. no blueprint; the legacy value names were retired in favor of these. Poll `get_generation_status` exactly as before.
+
+### Fixed
+
+- **`get_generation_status` no longer returns a storage-specific `document_type` field** on the Content Assistant flow. It has been removed from both the response and the output schema. Read `document_updated` to tell whether the run changed the document.
+- **`create_content` output `generation_id` is a `string` (UUID), not an `integer`.** The value has always been a UUID at runtime — only the advertised type label was wrong; what you poll `get_generation_status` with is unchanged. (Mirrors the earlier `apply_grounding_fix` fix.)
+
+### Skill → v0.7.0
+
+- `produce_plan` guidance updated to the new `path` values, and content/document terminology applied across the `update_content` / `ask_content_assistant` / `produce_plan` guidance. Workflow guidance changed, so this is a skill CONTENT release — `version: "latest"` picks it up on Cora's next session; no agent change needed.
+
 ## 2026-07-21 (content grounding)
 
 ### Added
