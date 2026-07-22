@@ -1242,7 +1242,7 @@ The response always includes `status`, `generation_id`, and `flow_type`. `conten
 
 ### `list_content`
 
-Returns all content visible to the current user as a single unified array. Content created from scratch (canvas) and from blueprints (deliverable) are merged with consistent field names. The same `content_id` can be passed to `get_content`, `update_content`, and `create_external_share`.
+Returns all content visible to the current user as a single unified array. Content created from scratch and from blueprints are merged with consistent field names. The same `content_id` can be passed to `get_content`, `update_content`, and `create_external_share`.
 
 **Semantic search:** pass a natural-language `search` query to rank results by semantic relevance instead of recency; each row then carries a `relevance_score` (cosine `0`–`1`, higher = more relevant). Omit or leave `search` empty for the normal recency-ordered list. The scores are **cross-comparable with `list_context_items`** — call both tools with the same `search` query, merge the two arrays, and take the top matches by `relevance_score`, then present them to the user for confirmation before fetching full text with `get_content` / `get_context_item`.
 
@@ -1526,7 +1526,7 @@ Create a new project for organizing content and context into a workstream. Optio
 | `project_id` | string (uuid) | Project identifier |
 | `name` | string | Project name |
 | `link_url` | string | Direct URL to view this project in Marcora |
-| `project_brief` | object \| null | Present (non-null) only when `project_brief_details` was supplied. `{name, content_id}`. `content_id` is the canvas UUID — pass it to `update_content` / `get_content` to edit or read the brief. `name` may be empty immediately after creation while AI generation is in flight |
+| `project_brief` | object \| null | Present (non-null) only when `project_brief_details` was supplied. `{name, content_id}`. `content_id` is the brief document's UUID — pass it to `update_content` / `get_content` to edit or read the brief. `name` may be empty immediately after creation while AI generation is in flight |
 
 **Example prompts:**
 - "Create a project for our Q3 product launch"
