@@ -2,6 +2,22 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-07-22 (content/document language sweep)
+
+### Changed
+
+- **Canvas/deliverable storage wording removed from agent-visible surfaces — unified as "content document".** The internal distinction between the two ways a content document is stored was leaking into tool descriptions and schemas. `ask_content_assistant`, `get_generation_status`, `update_content`, `update_context`, and `produce_plan` now describe everything in content/document terms. Internal identifiers, `canvas_type`, and `/canvas/` URLs are unchanged — this is a language change on the served surface, not a behavior change.
+- **`produce_plan` output `path` enum renamed:** `deliverable` → `blueprint`, `canvas` → `freeform`. Same two async paths (generated-from-a-blueprint vs. no-blueprint); the values just drop the storage-form words while keeping the blueprint-vs-freeform signal. Poll `get_generation_status` exactly as before.
+
+### Fixed
+
+- **`get_generation_status` no longer returns `content.document_type`.** The Content Assistant flow previously exposed a `document_type` field (`"canvas"` / `"deliverable"`); it has been removed from both the response and the output schema. Read `document_updated` to tell whether the run changed the document.
+- **`create_content` output `generation_id` is a `string` (UUID), not an `integer`.** The blueprint path has always returned a `randomUUID()` — the schema label was simply wrong. The value you poll `get_generation_status` with is unchanged at runtime; only the advertised type is corrected. (Mirrors the earlier `apply_grounding_fix` fix.)
+
+### Skill → v0.7.0
+
+- `produce_plan` guidance updated (`path:"blueprint"` / `path:"freeform"`) and content/document wording swept through the `update_content` / `ask_content_assistant` / `produce_plan` guidance. Workflow guidance changed, so this is a skill CONTENT release — `version: "latest"` picks it up on Cora's next session; no agent change needed.
+
 ## 2026-07-21 (content grounding)
 
 ### Added

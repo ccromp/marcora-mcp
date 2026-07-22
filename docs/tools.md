@@ -322,7 +322,7 @@ Providing zero, or more than one, of `content` / `import_url` / `connected_webpa
 
 ### `update_context`
 
-Update an existing context item — change its name, content, or move it between collections / projects. If the item has a linked editing canvas open in the Marcora sidebar, its title and content stay in sync automatically.
+Update an existing context item — change its name, content, or move it between collections / projects. If the item has a linked editing document open in the Marcora sidebar, its title and content stay in sync automatically.
 
 Like `add_context`, you can supply a new body either as inline `content` or as an `import_url` the backend fetches and converts to markdown server-side. Pass at most one — providing both returns a 400. Omit both to leave the body untouched (e.g. when you're only renaming the item or moving it between collections).
 
@@ -1172,7 +1172,7 @@ You must provide either `content` or `instructions` (not both).
 
 | Field | Type | Description |
 |---|---|---|
-| `generation_id` | integer | ID to track async generation — pass to `get_generation_status` |
+| `generation_id` | string (uuid) | ID to track async generation — pass to `get_generation_status` |
 
 **Example prompts:**
 - "Save this document to Marcora" (with `content`)
@@ -1215,7 +1215,7 @@ The response always includes `status`, `generation_id`, and `flow_type`. `conten
 
 | Field | Type | Description |
 |---|---|---|
-| `content_id` | string (uuid) | The generated deliverable's ID. Pass to `get_content` if you need the body |
+| `content_id` | string (uuid) | The generated document's ID. Pass to `get_content` if you need the body |
 | `name` | string | Document name |
 | `blueprint_id` | integer | Blueprint used to generate |
 | `link_url` | string | Direct URL to view/open in Marcora |
@@ -1226,9 +1226,8 @@ The response always includes `status`, `generation_id`, and `flow_type`. `conten
 
 | Field | Type | Description |
 |---|---|---|
-| `content_id` | string (uuid) | The canvas/deliverable the assistant acted on |
+| `content_id` | string (uuid) | The content document the assistant acted on |
 | `name` | string \| null | Document name |
-| `document_type` | string | `canvas` or `deliverable` |
 | `assistant_summary` | string \| null | The most recent assistant reply shown in the document's sidebar thread |
 | `document_updated` | boolean | Whether the most recent interaction changed the document body (false for a reply-only / chat-only response) |
 | `current_content` | string \| null | The document's current markdown |
@@ -1304,7 +1303,7 @@ Retrieves the full content of a specific document by its `content_id` (UUID).
 
 ### `update_content`
 
-Update a content document (canvas or deliverable) by `content_id`. Partial-update semantics — every field besides `content_id` is optional and only the fields you supply are changed; everything else is left untouched. At least one mutable field must be supplied.
+Update a content document by `content_id`. Partial-update semantics — every field besides `content_id` is optional and only the fields you supply are changed; everything else is left untouched. At least one mutable field must be supplied.
 
 > **Use this to revise an existing document — edit it in place; don't create a new one.** Edits are safe: Marcora keeps a full version history and the user can revert any change from the app.
 
@@ -1312,7 +1311,7 @@ Update a content document (canvas or deliverable) by `content_id`. Partial-updat
 
 > **Name behavior:** by default a document's name auto-syncs from the first markdown header in its body. Set `name_override` to lock a custom name; once locked, the title stays even when the body is edited. There is no un-lock path in this tool.
 
-> **Stage:** writing `stage` also keeps the internal `is_ready` bool in sync. For deliverables linked to a content plan, transitioning to `ready` moves the plan to `Complete` as a side-effect (non-blocking on failure).
+> **Stage:** writing `stage` also keeps the internal `is_ready` bool in sync. For documents linked to a content plan, transitioning to `ready` moves the plan to `Complete` as a side-effect (non-blocking on failure).
 
 > **Project association:** pass `project_id` to set the document's project. If the document is already in a different project the old association is replaced; if already in the supplied project this is a no-op. Omit `project_id` to leave projects untouched. There's no way to remove a doc from all projects via this tool — use the Marcora app for that.
 
@@ -1345,7 +1344,7 @@ Update a content document (canvas or deliverable) by `content_id`. Partial-updat
 
 **Errors:**
 - `notfound` — `content_id` doesn't match any content document
-- `inputerror` — no mutable field supplied; invalid `category_id`; invalid `project_id`; or the document is a non-editable canvas type (e.g. a context-item editor canvas, which is managed by a separate sync flow)
+- `inputerror` — no mutable field supplied; invalid `category_id`; invalid `project_id`; or the document is a non-editable document type (e.g. a context-item editor document, which is managed by a separate sync flow)
 - `accessdenied` — you don't have write access to the document
 
 **Example prompts:**
@@ -1358,7 +1357,7 @@ Update a content document (canvas or deliverable) by `content_id`. Partial-updat
 
 ### `ask_content_assistant`
 
-Send a natural-language request to Marcora's in-document **Content Assistant** for an existing document (a canvas or deliverable). The request can ask for an edit ("add an intro paragraph", "tighten paragraph two"), an extension, or pure ideation / a question ("give me three headline ideas") — the assistant decides whether to change the document or just reply.
+Send a natural-language request to Marcora's in-document **Content Assistant** for an existing content document. The request can ask for an edit ("add an intro paragraph", "tighten paragraph two"), an extension, or pure ideation / a question ("give me three headline ideas") — the assistant decides whether to change the document or just reply.
 
 > This is the in-editor Content Assistant that operates on one specific document — not the general Marcora Agent.
 
@@ -1373,7 +1372,7 @@ Send a natural-language request to Marcora's in-document **Content Assistant** f
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `content_id` | string (uuid) | Yes | The canvas or deliverable to act on (from `list_content`, `get_content`, or `get_project`). Canvas vs. deliverable is detected automatically |
+| `content_id` | string (uuid) | Yes | The content document to act on (from `list_content`, `get_content`, or `get_project`) |
 | `prompt` | string | Yes | The request, in natural language |
 | `selected_text` | string | No | Text the user has highlighted in the document, to focus the request on |
 | `thinking_mode` | boolean | No | Enable extended reasoning for harder requests |
@@ -1395,7 +1394,7 @@ Send a natural-language request to Marcora's in-document **Content Assistant** f
 - "Tighten the second paragraph and fix the tone"
 
 **Errors:**
-- `notfound` — `content_id` matches no canvas or deliverable
+- `notfound` — `content_id` matches no content document
 
 ---
 
@@ -1747,7 +1746,7 @@ Partial update of a plan: mutable fields and stage transitions. All fields are o
 
 Produce (generate) the actual content a plan describes — the MCP equivalent of the **Generate** button on the plans board. The plan must be in the `Accepted` stage (transition a `Suggested` plan first with `update_plan` `target_stage: "Accepted"`). Consumes team AI credits and typically takes 1–2 minutes; confirm with the user before producing a plan they didn't explicitly ask to produce. The plan's `prompt`, targeting dimensions, context collections, and project association are used as generation inputs — set them via `update_plan` before producing.
 
-**Both paths are asynchronous** — the call returns immediately with a `generation_id`; poll `get_generation_status`. On completion the backend links the produced content and moves the plan to `In_Process` (then `Complete` when a deliverable reaches ready).
+**Both paths are asynchronous** — the call returns immediately with a `generation_id`; poll `get_generation_status`. On completion the backend links the produced content and moves the plan to `In_Process` (then `Complete` when the content reaches ready).
 
 **Parameters:**
 
@@ -1759,7 +1758,7 @@ Produce (generate) the actual content a plan describes — the MCP equivalent of
 
 | Field | Type | Description |
 |---|---|---|
-| `path` | string | `deliverable` (plan has a blueprint) or `canvas` (no blueprint) |
+| `path` | string | `blueprint` (plan has a blueprint) or `freeform` (no blueprint) |
 | `generation_id` | string | Poll `get_generation_status` with this until complete |
 | `plan_uuid` | string (uuid) | The plan being produced |
 
