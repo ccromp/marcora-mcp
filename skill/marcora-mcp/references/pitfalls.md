@@ -96,6 +96,26 @@ Don't show the user a UUID like `7b2c4f...` as an identifier. Surface the human-
 
 ---
 
+## E12 — `check_content_grounding` with `content` + `content_id` overwrites the whole document
+
+**Symptom.** You ground "just this paragraph" of an existing document, and the rest of the document is gone.
+
+**Cause.** `content` combined with `content_id` is a **full-body replacement**, identical to `update_content`. It is not a partial or fragment check. Whatever you pass in `content` becomes the entire document.
+
+**What to do.** To check part of an existing document, pass **`content_id` alone** — the scan reads the document as it currently stands. Only pass `content` alongside `content_id` when you genuinely intend to replace the document, and then pass the **full revised document**, never an excerpt.
+
+---
+
+## E13 — Polling grounding with `content_id` returns the previous scan
+
+**Symptom.** `check_content_grounding` returned `running`; you poll with the `content_id` and immediately get `status: "complete"` — but the findings are from an earlier scan.
+
+**Cause.** `get_grounding_result` with a `content_id` and no `scan_id` returns the latest **completed** grounding, deliberately skipping a scan that is still in flight. During your scan, the latest completed one is the *previous* result.
+
+**What to do.** Poll with the **`scan_id`** that `check_content_grounding` returned. That reads the exact run you started, whatever its status. Reserve the `content_id` form for "what is this document's grounding state right now", when nothing is running.
+
+---
+
 ## Linking the user to their Brand Foundation
 
 **Symptom.** You update the user's Brand Foundation, link them to it, and the link 404s — they land on `/home` and the conversation they were in is gone.

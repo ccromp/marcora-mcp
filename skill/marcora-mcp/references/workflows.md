@@ -116,3 +116,25 @@ When the user wants to change one of the four Brand Foundation elements:
 4. Hand the user the `link_url` from the response — it opens the Brand Foundation section in Marcora. Use it **exactly as returned**; never build a Brand Foundation URL yourself. There is no `/brand-foundation` route (a hand-built link 404s and bounces them to `/home`, losing the chat).
 
 Per-element character limits: `company_overview` 10,000; `brand_voice`, `writing_style`, `writing_examples` 20,000 each. Overflow returns a structured `ERROR_CODE_INPUT_ERROR` naming the limit; the write is rejected before any DB mutation.
+
+---
+
+## Recipe I — Ground a document against the context library
+
+Grounding checks a document's factual claims against the team's own context library and sorts each into **supported**, **conflict**, or **gap**. Use it after drafting, or whenever the user asks whether something is accurate / on-message / consistent with what the company has already said.
+
+**The loop: draft → ground → review → apply → re-ground.**
+
+1. **Scan.** `marcora:check_content_grounding(...)` in one of three modes:
+   - `content_id` alone — scan a document that already exists. **This is the safe default.**
+   - `content` alone — hand over markdown; Marcora stores it as a new document and scans it.
+   - `content_id` + `content` — **replaces that document's entire body**, then re-scans. See the warning below.
+2. **Poll if needed.** It waits ~20 seconds. If you get `status: "running"`, poll `marcora:get_grounding_result({scan_id})` every 15–30 seconds — a fresh scan usually takes 120–150 seconds. **Poll with the `scan_id`, not the `content_id`.** Never call `check_content_grounding` again to check progress; that starts a second scan.
+3. **Review with the user.** Walk them through `findings[]`. Each carries the **full** `suggested_fix` and the `context_item_id` applying would write to. Hand them the `link_url` so they can see it in Marcora.
+4. **Apply what they approve.** `marcora:apply_grounding_fix({finding_ids: [...]})`. You never write the fix yourself — you reference the recommendation by id. Redirect a specific fix with `context_item_overrides`.
+5. **Report honestly.** Applying is async: poll `marcora:get_generation_status({generation_id})` using the integer `generation_id` from each job. The `document_updated` field is the honest outcome — `true` means the document changed, `false` means the recommendation was already covered and nothing was written. Say which; don't imply every applied fix changed something.
+6. **Re-ground** if they revised the document. Re-scanning an unchanged document is fast, because unchanged claims are reused.
+
+`apply_grounding_fix` also applies **Context Intelligence health-audit** recommendations from `list_ci_findings` — same tool, same shape.
+
+> **⚠️ Never pass a fragment with a `content_id`.** `content` + `content_id` replaces the document's **entire body**, exactly like `update_content`. If the user asks you to ground one paragraph of an existing document, pass `content_id` **alone** — passing just that paragraph would destroy the rest of the document.

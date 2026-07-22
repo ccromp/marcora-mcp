@@ -2,6 +2,21 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-07-21 (content grounding)
+
+### Added
+
+- **Content grounding — three new tools (`check_content_grounding`, `get_grounding_result`, `apply_grounding_fix`).** Grounding checks a document's factual claims against the team's own context library and sorts each into supported, conflict, or gap. Together the three close the agent-writing loop — draft, ground, review, apply, re-ground — without leaving the conversation. Requires the Command plan.
+  - `check_content_grounding` scans new or existing content. Three entry modes: an existing document by id, fresh markdown (stored then scanned), or both (revise then re-scan). It waits ~20 seconds inline and hands off to polling if the scan is still running.
+  - `get_grounding_result` reads a result and never starts a scan. **Poll it with `scan_id`** — that reads the exact run you started. Passing `content_id` alone returns the latest *completed* grounding and deliberately skips an in-flight scan, so it is the wrong call for polling.
+  - `apply_grounding_fix` applies a finding's stored recommendation by id — the agent never composes the fix itself. It serves **both** content-grounding findings and Context Intelligence health-audit recommendations, and returns one job per finding. Poll `get_generation_status` with a job's `generation_id` (a UUID); the `document_updated` field there tells you whether the document actually changed or the recommendation was already covered.
+
+### Changed
+
+- **Findings now carry their full `suggested_fix`, not a presence flag,** plus the `context_item_id` that applying would write to — so a fix can be reviewed with the user before it is applied.
+- **Context Intelligence docs corrected:** applying a finding's suggested fix no longer "happens in the Marcora web app only". `apply_grounding_fix` does it from the MCP, for health-audit findings as well as grounding ones.
+- **`list_ci_findings` / `get_ci_finding` return a `link_url`,** so every finding-bearing tool links consistently.
+
 ## 2026-07-14 (brand-foundation link train)
 
 ### Fixed
