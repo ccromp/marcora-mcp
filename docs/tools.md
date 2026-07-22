@@ -785,7 +785,7 @@ You never compose the fix yourself. Every finding already stores its recommended
 
 **Where each fix lands:** by default the context item named in that finding's `context_item_id`. A `null` `context_item_id` means the fix targets the document itself. Pass `context_item_overrides` to send a specific fix somewhere else.
 
-**Asynchronous.** Returns immediately with one job per finding. To follow one to completion, poll `get_generation_status` with its `generation_id` — **an integer**, not a UUID. The honest outcome is the **`document_updated`** field there: `true` means the document was actually changed, `false` means the recommendation was already covered and nothing was written. Report that distinction rather than assuming every applied fix changed something.
+**Asynchronous.** Returns immediately with one job per finding. To follow one to completion, poll `get_generation_status` with its `generation_id` — a **UUID** (the response hands you the UUID poll key `get_generation_status` expects). The honest outcome is the **`document_updated`** field on that response's `content` object: `true` means the document was actually changed, `false` means the recommendation was already covered and nothing was written. Report that distinction rather than assuming every applied fix changed something.
 
 **Partial success is normal:** findings that could not be started come back in `errors[]` with a reason while the rest still run. Check **both** `jobs[]` and `errors[]`.
 
@@ -803,7 +803,7 @@ You never compose the fix yourself. Every finding already stores its recommended
 | `requested` | integer | How many findings were submitted |
 | `queued` | integer | How many runs actually started |
 | `skipped` | integer | How many could not start — see `errors[]` |
-| `jobs` | array | Per finding: `finding_id`, `status`, `generation_id` (integer), `document_uuid`, `context_item_id` |
+| `jobs` | array | Per finding: `finding_id`, `status`, `generation_id` (uuid — poll `get_generation_status` with it), `document_uuid`, `context_item_id` |
 | `errors` | array | Per finding: `finding_id`, `error` |
 
 **Errors:**
