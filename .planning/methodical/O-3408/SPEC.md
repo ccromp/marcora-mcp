@@ -97,13 +97,13 @@ customer-visible change until DoE posts the exact live prod SHA + "promotion
 live — go". Do not touch backend MCP defs/runtime. No unrelated doc drift. Keep
 the canvas/deliverable implementation distinction off customer/agent surfaces.
 
-## Task list
-- [ ] T1 — B: `docs/tools.md` 8-section edits (both prose + inputSchema where present). Verify: grep new strings present, `document_type` row gone, `path` enum = blueprint/freeform, create_content generation_id = uuid.
-- [ ] T2 — B: `README.md` update_content row. Verify: grep.
-- [ ] T3 — B: `docs/changelog.md` new #294 entry. Verify: dated entry present, history untouched (git diff).
-- [ ] T4 — B: `SKILL.md` path leak + in-scope wording + version bump. Verify: `path:"deliverable"` ×0, `blueprint/freeform` present, version 0.7.0.
-- [ ] T5 — B: `references/workflows.md` + `pitfalls.md` in-scope leaks. Verify: grep.
-- [ ] T6 — B: rebuild `.skill` zip + version bumps. Verify: unzip lists updated SKILL.md; byte count noted.
-- [ ] T7 — C: Cora system-prompt prose grep audit. Verify: zero-result evidence or flagged hits.
-- [ ] T8 — A: Strapi per-page change-set + Content Publisher brief (held work-product). Verify: page existence confirmed, both render sources covered.
-- [ ] T9 — D: commit held branch, push, draft PR; promotion-live checklist + handback work-product; thread → ready_for_review (DoE). Verify: PR is DRAFT, nothing published/uploaded.
+## Task list (all complete — held)
+- [x] T1 — `docs/tools.md`: get_generation_status (document_type row removed), ask_content_assistant, update_content, update_context, produce_plan (path enum), create_content generation_id→uuid. Verified: stale strings ×0 in scope; list_content residual intact.
+- [x] T2 — `README.md` update_content row. Verified: grep.
+- [x] T3 — `docs/changelog.md` 2026-07-22 entry (history untouched). Verified: git diff.
+- [x] T4 — `SKILL.md` path leak → blueprint/freeform + in-scope wording + version 0.7.0. Verified: `path:"deliverable"` ×0.
+- [x] T5 — `references/`: workflows.md zero leaks; pitfalls.md E1 internal note flagged as residual.
+- [x] T6 — rebuilt `.skill` zip (26960 bytes); SKILL.md v0.7.0 confirmed inside. plugin/marketplace/server left (repo convention; release tag line independent).
+- [x] T7 — Cora audit: zero code branches on path/document_type; SKILL prose leak fixed; system-prompt (DB-stored, App-Dev-owned) flagged for go-time grep.
+- [x] T8 — Strapi change-set + Content Publisher brief (wp/607), all 7 pages confirmed live, both render sources specified.
+- [x] T9 — committed + pushed branch, **draft** PR #23; handback + promotion-live checklist (wp/608). Nothing merged/published/uploaded.
