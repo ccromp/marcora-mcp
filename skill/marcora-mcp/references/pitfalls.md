@@ -116,6 +116,16 @@ Don't show the user a UUID like `7b2c4f...` as an identifier. Surface the human-
 
 ---
 
+## E14 — A brand-new account holds every tool call
+
+**Symptom.** Every tool you call — any tool — comes back with "Your Marcora account setup is still underway. We are importing your top web pages right now to build your context. Please try again in a few minutes.", sometimes with a progress suffix like `(3 of 7 setup steps complete.)`. Nothing errors; the server lists all its tools normally.
+
+**Cause.** The account was created recently and its context is still being built. Until setup completes (or 72 hours pass), the server intercepts `tools/call` and returns this message *as a successful result* instead of running the tool. `initialize` and `tools/list` are unaffected, which is why the integration looks perfectly healthy.
+
+**What to do.** Tell the user setup is still running and try again in a few minutes — the progress suffix advances, so re-calling is a reasonable way to watch it. Do **not** treat it as a tool failure, do **not** retry in a tight loop, and do **not** suggest reconnecting the server or signing up again — a second signup splits their context across two accounts. If it persists beyond about an hour, setup has stalled rather than being slow: tell them to contact support.
+
+---
+
 ## Linking the user to their Brand Foundation
 
 **Symptom.** You update the user's Brand Foundation, link them to it, and the link 404s — they land on `/home` and the conversation they were in is gone.

@@ -66,6 +66,22 @@
 - Use `list_content_categories` to get valid category IDs
 - Use `list_targeting_dimensions` to get valid dimension option IDs
 
+## Account Setup
+
+### "Your Marcora account setup is still underway"
+
+**Cause:** The account is brand new and Marcora is still building its context — importing the team's top web pages, writing the brand foundation, and preparing a first document. While that is running, every tool call returns this message instead of its normal result.
+
+This is expected, not a fault. The connection is fine: the server still lists all its tools and authentication has succeeded. Only the *calls* are held.
+
+**Solutions:**
+- Wait a few minutes and try the call again. Setup usually finishes well inside that.
+- The message includes progress when it is available — e.g. `(3 of 7 setup steps complete.)` — so repeating the call is a reasonable way to watch it advance.
+- Do not re-run signup or reconnect the server. Neither speeds this up, and creating a second account splits the team's context across two places.
+- The hold releases automatically as soon as setup finishes, and in any case stops applying 72 hours after the account was created.
+
+**Still seeing it after an hour?** Setup has likely stalled rather than being slow. Contact support with the account's email address — the import can be re-run from our side.
+
 ## Rate Limits
 
 The Marcora MCP server applies reasonable rate limits to prevent abuse. Under normal usage, you are unlikely to hit these limits. If you receive a rate limit error (HTTP 429), wait a moment before retrying.
