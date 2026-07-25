@@ -2,6 +2,12 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-07-25 (new-account setup hold documented)
+
+### Documented
+
+- **A brand-new account holds tool calls until its setup finishes.** For up to 72 hours after an account is created, and only until Marcora has finished building its context, every `tools/call` returns "Your Marcora account setup is still underway…" as a *successful result* rather than running the tool. `initialize` and `tools/list` are unaffected, so the connection looks healthy throughout. This shipped with MCP-first signup; it was previously undocumented. See [Errors & Troubleshooting → Account Setup](./errors.md#account-setup).
+
 ## 2026-07-22 (content/document language normalization)
 
 ### Changed
