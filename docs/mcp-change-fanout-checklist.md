@@ -204,6 +204,38 @@ automatically on the agent's next session — no agent change needed. Only a **s
       the MCP Server Engineer, who owns the fan-out.
 - [ ] Record held (staged-but-unpromoted) doc obligations with the DoE for the promotion ledger.
 
+### 5a. Completion is asserted from artifacts that MOVE — never from a PR title
+A held item's status must be answerable from things that change when the work ships. Two do:
+the **Skills-API version `created_at`** and the **GitHub release tag**. A merged PR does not prove
+a fan-out completed, and a PR *title* proves nothing at all — titles are immutable in practice,
+because nobody retitles a PR after merging it.
+
+- [ ] **Close a held item against the artifacts, in this order:** the release tag exists →
+      the Skills-API `created_at` for the newest version post-dates that release (step 4's upload
+      actually happened) → the Strapi page's `last-modified` has advanced past your publish
+      (§2b) → prod `tools/list` serves the new schema. Each is independently checkable by anyone
+      later, with no access to your memory of the evening.
+- [ ] **Never record a hold marker ONLY in a PR title.** Put it on the **ledger line** — that is
+      the durable record and the thing a later audit reads. A `[HELD until prod]` title is a
+      convenience label, not state.
+
+      > **O-2589 / O-3672 (2026-07-14 → 07-24).** The `update_brand_foundation` link_url fan-out
+      > ran in full and on time: docs PR merged `20:01Z`, release `marcora-v1.5.3` cut `20:02Z`,
+      > Skills-API upload `20:03Z` — 56 seconds after the release. But the only "held" marker was
+      > `[HELD until prod]` in the PR title, and nothing cleared it. Ten days later the promotion
+      > ledger still read HELD and a verify-and-release task was raised against work that had been
+      > live for over a week. Every real artifact said shipped; one stale string outvoted them all.
+
+### 5b. Clearing the marker is the closing step — do it, don't remember it
+A fan-out is not finished when the artifacts land. It is finished when nothing left behind still
+claims it is pending. An uncleared marker **is** a defect: it costs a future audit cycle.
+
+- [ ] **Retitle the PR** — drop `[HELD until prod]` (or strike it) once released.
+- [ ] **Update the ledger line** to released, and stamp it with the Skills-API upload timestamp /
+      release tag from 5a, so the next reader sees the evidence and not just a claim.
+- [ ] **Tell the DoE the hold is cleared** in the same message that reports the release. The
+      promotion ledger is theirs to close; releasing without saying so recreates the O-2589 gap.
+
 ---
 
 ### Quick reference — the pipeline
@@ -216,4 +248,8 @@ edit generated-metadata.ts (native fields, no markers)
                                                         reach Cora. version:"latest" tracks the
                                                         Skills API, not GitHub. (O-2531)
             → [if skill SET changed] notify App Developer → in-place Cora agent update (dev → live w/ approval)
+   → CLOSE: assert from artifacts (release tag + Skills-API created_at + Strapi last-modified
+            + prod tools/list) → CLEAR the hold marker (retitle PR, stamp the ledger line)
+            → tell the DoE it's cleared            ← §5a/§5b; skipping this is how a shipped
+                                                     fan-out reads as HELD ten days later (O-2589)
 ```
