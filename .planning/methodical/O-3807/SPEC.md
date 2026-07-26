@@ -76,18 +76,31 @@ since May. Attestation: Chris requested these changes (O-3756).
   `inputSchema` were not touched (neither carried the string, so §2a's
   two-render-source agreement is preserved).
 
-**Close status — origin correct, edge cache trailing (§2b diagnostic):**
+**CLOSED 2026-07-26 03:50:42Z — verified on the PLAIN canonical URL.**
 
-| probe | `last-modified` | standalone `Cora` | new string |
-|---|---|---|---|
-| `?cb=` (origin) | 02:53:58Z | **0** | present |
-| plain canonical (customer view) | 02:44:36Z, `age: 564` | 1 | absent |
+The edge cache trailed the publish by ~57 min and rotated on its own at nominal
+TTL. Three probes of `https://marcora.ai/docs/tools/set-active-team`:
 
-Plain stale + `?cb=` clean is precisely the checklist's **"CDN only — content is
-fine, wait it out"** signature. No Netlify credential in this lane, and the
-checklist rates purge unreliable and a redeploy not worth it for <1h, so the close
-gates on the page: re-probe the plain canonical until `last-modified` > 02:53:29Z
-**and** standalone "Cora" ×0, with the semantic canary present.
+| # | time | probe | `last-modified` | `age` | standalone `Cora` | new string |
+|---|---|---|---|---|---|---|
+| 1 | 02:54Z | plain | 02:44:36Z | 564 | 1 | absent |
+| 1 | 02:54Z | `?cb=` (origin) | 02:53:58Z | 4 | **0** | present |
+| 2 | 03:31Z | plain | 02:44:36Z | 2777 | 1 | absent |
+| 2 | 03:31Z | `?cb=` (origin) | 03:31:08Z | 8 | **0** | present |
+| 3 | **03:50Z** | **plain** | **03:50:42Z** | 5 | **0** | **present** |
+
+Probe 3 satisfies all three §2b criteria: `last-modified` **03:50:42Z > 02:53:29Z**
+(the publish), standalone "Cora" **×0** after stripping `<script>`/`<style>`, and
+all three semantic canaries (`set_active_team`, `Input Schema`, `Parameters`)
+present — so the zero is not vacuous. Live text confirmed reading
+"…app tabs, running **Marcora agent** sessions, and every other connected MCP
+client…".
+
+**Lesson worth keeping:** plain-stale + `?cb=`-clean held for ~57 minutes with
+`last-modified` pinned the entire time. No purge was issued (no Netlify credential
+in this lane) and none was needed. The checklist's guidance is confirmed — gate on
+the page, never on a purge call, and treat `?cb=` strictly as a diagnostic that
+says "origin is fine, keep waiting", never as the close.
 
 ---
 
