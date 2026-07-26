@@ -1,2 +1,9 @@
 # Internal scratch / dev tooling — never commit
 skill/marcora-mcp-workspace/
+
+# Methodical planning specs are INTERNAL work-planning artifacts, not documentation.
+# This repository is PUBLIC, so anything committed here is published. Four specs were
+# tracked here until 2026-07-26 (O-3807) and had leaked a live Anthropic skill ID and
+# internal admin endpoint names before being removed from history. Specs belong in the
+# private Orchestra repo.
+.planning/
