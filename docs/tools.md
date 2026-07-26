@@ -109,7 +109,7 @@ Roles: **creator** (a full team member who can create and edit content), **admin
 
 Sets your active team — the team all subsequent Marcora tool calls operate against. Input: `team_id` (from `get_team_info`).
 
-> **⚠️ Global effect.** Switching your active team changes it **everywhere** for your account — open Marcora app tabs, running Cora sessions, and every other connected MCP client — because it writes the same active-team setting the in-app switcher uses. Tell the user before switching, and don't switch while other work is mid-flight for them. The response returns `previous_team_id` so you can restore their original team when done: switch → do the work → `set_active_team` back to `previous_team_id`.
+> **⚠️ Global effect.** Switching your active team changes it **everywhere** for your account — open Marcora app tabs, running Marcora agent sessions, and every other connected MCP client — because it writes the same active-team setting the in-app switcher uses. Tell the user before switching, and don't switch while other work is mid-flight for them. The response returns `previous_team_id` so you can restore their original team when done: switch → do the work → `set_active_team` back to `previous_team_id`.
 
 **Parameters:**
 
