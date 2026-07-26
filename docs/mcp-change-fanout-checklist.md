@@ -81,6 +81,17 @@ directory reviewer can pull `tools/list` on any exposed server, so all of them m
       category; pick the right tool category otherwise.
 - [ ] Internal/admin/utility tools do not need Strapi docs.
 
+### 2c. On a SKILL release, update the `mcp-overview` page's version reference
+The `mcp-overview` doc-page (documentId `iwzhpqpsxrf6tlzir71k5txp`) names the companion skill's
+version inline — *"**Marcora AI Workflows** (`marcora-mcp`, vX.Y.Z)"*. **Nothing updates it
+automatically**, and no other step in this checklist touches it, so it silently rots one release at
+a time. Found stale at **v0.5.0 while v0.7.2 was live** — four releases behind (O-3807, 2026-07-26).
+
+- [ ] Whenever step 3 bumps `SKILL.md` `metadata.version`, update that string in the same pass.
+- [ ] Verify: `GET /api/doc-pages?filters[slug][$eq]=mcp-overview` and assert the version in
+      `content` equals the `metadata.version` you just shipped. Assert on the number, not on
+      "I edited the page".
+
 ### 2a. A tool doc page has TWO render sources — update BOTH, in ONE pass
 `marcora.ai/docs/tools/<slug>` renders two independent sections from two different fields:
 - **"Parameters"** table ← the `parameters` repeatable component (markdown renders literally).
@@ -235,6 +246,40 @@ claims it is pending. An uncleared marker **is** a defect: it costs a future aud
       release tag from 5a, so the next reader sees the evidence and not just a claim.
 - [ ] **Tell the DoE the hold is cleared** in the same message that reports the release. The
       promotion ledger is theirs to close; releasing without saying so recreates the O-2589 gap.
+
+---
+
+## 6. Audit discipline — when a grep proves nothing
+Several steps above close on an absence ("zero occurrences of the stale string"). An absence is
+only evidence if the instrument could have found the thing. **Three separate audits in one day
+(2026-07-26) returned a confident all-clear that was false**, each for a different reason:
+
+1. **The tool lied.** `grep -E '(^|[^A-Za-z])Cora'` returns a silent **0** on BSD/macOS grep — it
+   mishandles a `^` anchor inside an ERE alternation. No error, no warning. It reported an entire
+   16-workspace agent fleet clean of a string that four copies plainly contained.
+   ```
+   $ echo "hello Cora there" > /tmp/t
+   $ grep -cE '(^|[^A-Za-z])Cora' /tmp/t   # → 0   ← WRONG, silently
+   $ grep -cE '[^A-Za-z]Cora'      /tmp/t   # → 1
+   ```
+   `LC_ALL=C` does not help; the locale is not the issue. Use `perl -ne 'print if
+   /(?<![A-Za-z])X(?![a-z])/'`, Python `re`, or `git grep` — git's own engine handles it.
+2. **The output was truncated.** An audit grep piped through `head -20` looked clean because the
+   hits were on line 21+. **Never `head` an audit grep.** Count first, then page.
+3. **The claim was paraphrasable.** A false marketing claim was swept for with two independent
+   keyword nets, both of which missed the nearest real instance — it was found only by *reading the
+   file*. A claim that can be reworded cannot be bounded by a word list.
+
+- [ ] **Pair every zero with a positive control.** Assert that something which MUST be present IS
+      present, in the same pass — e.g. "`Marcora` ×93" alongside "standalone `Cora` ×0". A zero next
+      to a zero is indistinguishable from having matched nothing at all (empty body, wrong path,
+      broken regex). This is the same trap as §2b's `?cb=` and empty-body cases, one layer down.
+- [ ] **Prove the pattern on a known-positive input before trusting its zero.** One `echo` into a
+      temp file costs nothing and catches failure mode 1 outright.
+- [ ] **For semantic claims — positioning, security posture, capability assertions — READ the
+      files.** Greps are for tokens. Meaning is not a token, and the surfaces that carry positioning
+      claims (`README.md`, `docs/overview.md`, `docs/security.md`, the Strapi `mcp-overview` page)
+      are short enough to read in full. Do that instead of widening the regex.
 
 ---
 

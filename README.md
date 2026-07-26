@@ -106,7 +106,7 @@ The unbundled skill source lives under [`skill/`](skill/).
 
 ### Releases
 
-The skill is tagged `skill-vX.Y.Z` — see [Releases](https://github.com/ccromp/marcora-mcp/releases). The current version is in the `metadata.version` field of its `SKILL.md`.
+Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccromp/marcora-mcp/releases). Each release attaches the bundled skill as `marcora-mcp.skill`. The skill's own version is the `metadata.version` field in its `SKILL.md`, and it moves independently of the release tag.
 
 ## Available Tools
 
