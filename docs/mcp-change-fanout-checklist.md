@@ -81,6 +81,17 @@ directory reviewer can pull `tools/list` on any exposed server, so all of them m
       category; pick the right tool category otherwise.
 - [ ] Internal/admin/utility tools do not need Strapi docs.
 
+### 2c. On a SKILL release, update the `mcp-overview` page's version reference
+The `mcp-overview` doc-page (documentId `iwzhpqpsxrf6tlzir71k5txp`) names the companion skill's
+version inline — *"**Marcora AI Workflows** (`marcora-mcp`, vX.Y.Z)"*. **Nothing updates it
+automatically**, and no other step in this checklist touches it, so it silently rots one release at
+a time. Found stale at **v0.5.0 while v0.7.2 was live** — four releases behind (O-3807, 2026-07-26).
+
+- [ ] Whenever step 3 bumps `SKILL.md` `metadata.version`, update that string in the same pass.
+- [ ] Verify: `GET /api/doc-pages?filters[slug][$eq]=mcp-overview` and assert the version in
+      `content` equals the `metadata.version` you just shipped. Assert on the number, not on
+      "I edited the page".
+
 ### 2a. A tool doc page has TWO render sources — update BOTH, in ONE pass
 `marcora.ai/docs/tools/<slug>` renders two independent sections from two different fields:
 - **"Parameters"** table ← the `parameters` repeatable component (markdown renders literally).
