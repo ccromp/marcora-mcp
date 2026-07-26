@@ -58,16 +58,30 @@ next fan-out cannot silently re-introduce the retired name.
 | D5 | Pronoun "she" in `create_webhook_deep_link`'s example is left alone | Rename-only diff; changing product voice is a separate editorial call |
 | D6 | `docs/changelog.md` historical entries **do** get the rename | They describe an ongoing mechanism ("picked up on X's next session") in a customer-facing changelog, and refer to the same live entity under its current name |
 
-## Open fork for the DoE (does not block anything else)
+## Strapi timing — resolved as HELD (promotion-ledger obligation)
 
-**F1 — Strapi `set_active_team` timing.** The standing rule is "doc changes tied
-to tool-metadata text publish when the metadata change is LIVE on prod." This
-page's stale string is a *rename*, not a behaviour claim — publishing it early
-creates no contradiction, only an earlier correction.
-**Recommendation:** publish now via Content Publisher; do not hold it behind the
-backend promotion. If the DoE prefers strict rule adherence, it becomes a
-promotion-ledger obligation instead. Either way the edit is delegated to Content
-Publisher (Strapi is their surface).
+The brief is explicit: doc changes tied to tool-metadata text publish when the
+metadata change is LIVE on prod; anything staged-but-unpromoted is reported back
+as a promotion-ledger obligation. `set_active_team`'s Strapi `instructions` mirror
+the tool description changed in PR #326, so it **holds**.
+
+(Noted for the record, not acted on: this particular string is a *rename*, not a
+behaviour claim, so publishing early would have created no contradiction. The rule
+was followed as written.)
+
+**The obligation, executable by anyone:**
+
+- Collection `mcp-tools`, `documentId` **`w4g6o64qkdtnu8xquyhu6sbo`** (`set_active_team`)
+- Field `instructions`; replace
+  `open Marcora app tabs, running Cora sessions, and every other connected MCP client`
+  with
+  `open Marcora app tabs, running Marcora agent sessions, and every other connected MCP client`
+- Present in **both** the published and draft versions → `PUT ?status=draft`, then
+  `PUT` with no status (auto-publishes). Delegate to **Content Publisher**.
+- Close per §2b: plain canonical `https://marcora.ai/docs/tools/set-active-team`
+  (no `?cb=`), semantic canary present (`Input Schema` / `Parameters` /
+  `set_active_team`), standalone "Cora" ×0, `last-modified` advanced past publish.
+- Trigger: the DoE's "promotion live — go" on marcora-backend PR #326.
 
 ---
 
@@ -121,6 +135,47 @@ Publisher (Strapi is their surface).
 | D4 | Strapi article `marketcore-is-becoming-marcora-heres-why`: "Cora now lives where you already work." is stale. **The two etymology mentions must stay.** | Content Publisher / DoM |
 | D5 | Fleet `marcora-mcp` SKILL.md drift: 12 workspaces on **v0.4.1**, 2 on **v0.7.0** (ops-patched, clean), 2 on **v0.7.1** (`director-of-marketing`, `qa-engineer` — still carry "Cora sessions"). After A1/A2 land, all 16 should be re-synced from source | ops (O-3782 lane) |
 | D6 | No shipped tool identifier contains "cora" — no alias-and-migration plan is owed | — |
+
+---
+
+## Results (2026-07-25)
+
+**A — `ccromp/marcora-mcp` → PR [#26](https://github.com/ccromp/marcora-mcp/pull/26)** (branch `fix/O-3807-cora-to-marcora`, commit `2073e01`).
+A1–A9 all done. `SKILL.md` v0.7.1 → **0.7.2**; zip rebuilt 27410 → **27415 bytes**.
+A8 assertion: zero standalone "Cora" across every tracked file outside `.planning/`,
+and zero inside every member of the rebuilt zip — the sole survivor is the changelog
+heading that names the rename itself.
+
+**B — `marcora-backend` → draft PR [#326](https://github.com/ccromp/marcora-backend/pull/326)** (branch `fix/O-3807-mcp-metadata-cora-to-marcora`, commit `3bce249`).
+B1–B12 all done. **Typecheck clean. 1458 tests pass, 0 fail** (111 files, 26 skipped).
+**CI green** (4m43s), Railway api + worker both deployed.
+
+B9 identifier parity (before → after, all unchanged): `cora_requested` 9→9,
+`cora_proactive` 9→9, `cora_session_id` 2→2, `cora_message_snippet` 2→2,
+`coraProgressQueue` 2→2, `sendCoraProgressForMcp` 4→4, `cora_agent` 2→2,
+`CoraProgress*` 6→6.
+
+B12 live `tools/list` through PR env 326 (`/health` → `{"version":"3bce249"}`),
+**all three servers**:
+
+| server | tools | `Marcora` (positive control) | standalone `Cora` |
+|---|---|---|---|
+| brand `EbZaDl-X` | 59 | 93 | **0** |
+| utility `nqeZnt9_` | 12 | 3 | **0** |
+| admin `p3YtBWFc` | 18 | 8 | **0** |
+
+All six edited strings confirmed present in the served payloads; the four `cora_*`
+enums/keys confirmed still served. The `Marcora` column is a deliberate positive
+control — a zero-hit assertion against an empty payload passes vacuously, so the
+zero only counts alongside proof the extractor saw real content.
+
+**Correction to B5:** the tool carrying the webhook example is
+`prepare_webhook_registration`, on the **utility** server — not
+`create_webhook_deep_link` on brand, as first written. Caught because the brand
+`tools/list` had no such tool; PR body corrected.
+
+**C — Strapi.** C2 done (58 mcp-tools + 8 doc-pages, published *and* draft →
+exactly one hit). C1 **held** per the rule above.
 
 ---
 
