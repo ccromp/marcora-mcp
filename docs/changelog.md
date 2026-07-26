@@ -2,6 +2,16 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-07-26 (wording)
+
+### Changed
+
+- **The `import_url` / `content_url` examples no longer name a specific integration vendor.** The "where a presigned link might come from" example now reads "a Google Doc, or a connected-app sandbox". Wording only — no behaviour, parameter, or schema change.
+
+### Skill → v0.7.3
+
+- Same wording change in the `import_url` guidance. Content-only release.
+
 ## 2026-07-26 (doc accuracy)
 
 ### Fixed
@@ -259,7 +269,7 @@ All notable changes to the Marcora MCP server will be documented in this file.
 
 ### Enhanced
 
-- `add_context` and `update_context` — new optional `content_url` parameter. Pass a public URL and the backend fetches it and converts the page to clean markdown server-side using a headless browser + Mozilla Readability, then stores the result as the context item body. Use this when the body is large, comes from a presigned-link export (Google Doc, Composio sandbox), or you'd otherwise have to pull the page into the conversation just to forward it. Mutually exclusive with `content` — exactly one of `content` / `content_url` is required on `add_context`; on `update_context` you may also omit both to leave the body unchanged.
+- `add_context` and `update_context` — new optional `content_url` parameter. Pass a public URL and the backend fetches it and converts the page to clean markdown server-side using a headless browser + Mozilla Readability, then stores the result as the context item body. Use this when the body is large, comes from a presigned-link export (a Google Doc, or a connected-app sandbox), or you'd otherwise have to pull the page into the conversation just to forward it. Mutually exclusive with `content` — exactly one of `content` / `content_url` is required on `add_context`; on `update_context` you may also omit both to leave the body unchanged.
 
 ## 2026-05-02
 
