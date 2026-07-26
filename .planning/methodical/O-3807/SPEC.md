@@ -58,30 +58,36 @@ next fan-out cannot silently re-introduce the retired name.
 | D5 | Pronoun "she" in `create_webhook_deep_link`'s example is left alone | Rename-only diff; changing product voice is a separate editorial call |
 | D6 | `docs/changelog.md` historical entries **do** get the rename | They describe an ongoing mechanism ("picked up on X's next session") in a customer-facing changelog, and refer to the same live entity under its current name |
 
-## Strapi timing — resolved as HELD (promotion-ledger obligation)
+## Strapi timing — HELD, then released by DoE ruling (2026-07-26 02:52Z)
 
-The brief is explicit: doc changes tied to tool-metadata text publish when the
-metadata change is LIVE on prod; anything staged-but-unpromoted is reported back
-as a promotion-ledger obligation. `set_active_team`'s Strapi `instructions` mirror
-the tool description changed in PR #326, so it **holds**.
+Initially held per the brief ("doc changes tied to tool-metadata text publish when
+the metadata change is LIVE on prod"). **The DoE overruled the hold and approved
+publishing immediately**, on the reasoning the spec had already flagged: the
+publish-on-prod-live rule exists so docs never describe behaviour that isn't live,
+and a *name correction describes nothing behavioural* — "Marcora" has been true
+since May. Attestation: Chris requested these changes (O-3756).
 
-(Noted for the record, not acted on: this particular string is a *rename*, not a
-behaviour claim, so publishing early would have created no contradiction. The rule
-was followed as written.)
+**Executed:**
 
-**The obligation, executable by anyone:**
+- Collection `mcp-tools`, `documentId` `w4g6o64qkdtnu8xquyhu6sbo` (`set_active_team`)
+- `instructions`: `…running Cora sessions…` → `…running Marcora agent sessions…`
+- `PUT ?status=draft` → 200, then `PUT` with no status → 200, `publishedAt`
+  **2026-07-26T02:53:29.752Z**. Minimal single-field payload, so `parameters` /
+  `inputSchema` were not touched (neither carried the string, so §2a's
+  two-render-source agreement is preserved).
 
-- Collection `mcp-tools`, `documentId` **`w4g6o64qkdtnu8xquyhu6sbo`** (`set_active_team`)
-- Field `instructions`; replace
-  `open Marcora app tabs, running Cora sessions, and every other connected MCP client`
-  with
-  `open Marcora app tabs, running Marcora agent sessions, and every other connected MCP client`
-- Present in **both** the published and draft versions → `PUT ?status=draft`, then
-  `PUT` with no status (auto-publishes). Delegate to **Content Publisher**.
-- Close per §2b: plain canonical `https://marcora.ai/docs/tools/set-active-team`
-  (no `?cb=`), semantic canary present (`Input Schema` / `Parameters` /
-  `set_active_team`), standalone "Cora" ×0, `last-modified` advanced past publish.
-- Trigger: the DoE's "promotion live — go" on marcora-backend PR #326.
+**Close status — origin correct, edge cache trailing (§2b diagnostic):**
+
+| probe | `last-modified` | standalone `Cora` | new string |
+|---|---|---|---|
+| `?cb=` (origin) | 02:53:58Z | **0** | present |
+| plain canonical (customer view) | 02:44:36Z, `age: 564` | 1 | absent |
+
+Plain stale + `?cb=` clean is precisely the checklist's **"CDN only — content is
+fine, wait it out"** signature. No Netlify credential in this lane, and the
+checklist rates purge unreliable and a redeploy not worth it for <1h, so the close
+gates on the page: re-probe the plain canonical until `last-modified` > 02:53:29Z
+**and** standalone "Cora" ×0, with the semantic canary present.
 
 ---
 
