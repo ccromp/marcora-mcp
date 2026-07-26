@@ -167,6 +167,13 @@ probe is a guaranteed MISS → reads the **origin**, NOT what a customer sees.
       step 4.**
 - [ ] Bump versions as needed: `server.json`, `plugin/.claude-plugin/plugin.json`,
       `.claude-plugin/marketplace.json`.
+- [ ] **Immediately after cutting the release, assert §2c actually happened** — fetch the
+      `mcp-overview` page and check the advertised skill version equals the version you just
+      released. §2c says "in the same pass", but a release and a docs edit often land in
+      separate sittings and the step then silently doesn't fire — that is exactly how the page
+      reached **v0.5.0 while v0.7.2 was live**, and it recurred once more within the hour of
+      §2c being written (O-3807, 2026-07-26: released v0.7.3, page still said v0.7.2). Check it
+      here, at the release, where the drift is observable — not from memory.
 
 ## 4. Marcora agent skills — CONTENT vs SET change
 The Marcora agent's skills are pinned at `version: "latest"`, so a **content-only** skill release is picked up
