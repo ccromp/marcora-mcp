@@ -152,26 +152,26 @@ probe is a guaranteed MISS → reads the **origin**, NOT what a customer sees.
 - [ ] Rebuild the `marcora-mcp.skill` zip (`cd skill && zip -r -X -q ../marcora-mcp.skill marcora-mcp`)
       and publish a **GitHub release**, tagged **`marcora-vX.Y.Z`** (the repo's actual convention —
       NOT `skill-vX.Y.Z`), with the zip attached as an asset named exactly `marcora-mcp.skill`.
-      **The GitHub release alone does NOT reach Cora — you must also do the Skills-API upload in
+      **The GitHub release alone does NOT reach the Marcora agent — you must also do the Skills-API upload in
       step 4.**
 - [ ] Bump versions as needed: `server.json`, `plugin/.claude-plugin/plugin.json`,
       `.claude-plugin/marketplace.json`.
 
-## 4. Cora (Marcora Agent) skills — CONTENT vs SET change
-Cora's skills are pinned at `version: "latest"`, so a **content-only** skill release is picked up
+## 4. Marcora agent skills — CONTENT vs SET change
+The Marcora agent's skills are pinned at `version: "latest"`, so a **content-only** skill release is picked up
 automatically on the agent's next session — no agent change needed. Only a **skill-SET** change
 (adding, removing, or swapping a skill id on the agent) requires touching the managed agent.
 - [ ] **Content-only release** (a new `.skill` for an already-pinned skill id — e.g. edited workflow
       text, a new tool row in the decision table, a usage-guidance addition):
       **1)** publish the `marcora-mcp.skill` GitHub release (step 3), **then 2) upload it to the
-      Anthropic Skills API** (below). `version: "latest"` then resolves it on Cora's next session —
+      Anthropic Skills API** (below). `version: "latest"` then resolves it on the Marcora agent's next session —
       **no** App-Developer action and no agent change required.
 
   🚨 **A GitHub release does NOT update the live skill. The Skills-API upload is a REQUIRED,
   SEPARATE step every single time.** `version: "latest"` resolves the newest version *uploaded to
-  the Skills API* — it does not watch GitHub. Skipping this leaves Cora serving the stale skill
+  the Skills API* — it does not watch GitHub. Skipping this leaves the Marcora agent serving the stale skill
   while every artifact looks shipped. This has already bitten us once: **O-2531 (2026-07-14)** found
-  live Cora still on a stale version a full train after the releases existed.
+  the live Marcora agent still on a stale version a full train after the releases existed.
 
   **Upload:** `POST https://api.marcora.ai/api:V2eJloU_/cora/agent/admin_upsert_skill_version`
   (auth: any prod user token — mint via `POST /api:rFjIObWc/agent-token-exchange` with the prod
@@ -191,13 +191,13 @@ automatically on the agent's next session — no agent change needed. Only a **s
   - [ ] **Anthropic frontmatter limits (hard — 400 at upload, not caught in git):** SKILL.md
         `description` ≤ **1024 chars** and **no angle-bracket/XML tags** in it.
 - [ ] **Skill-SET change** (add/remove/swap a skill id on the agent): after the GitHub release,
-      **notify the App Developer** to land the SET change on Cora via the in-place update
+      **notify the App Developer** to land the SET change on the Marcora agent via the in-place update
       (`POST /cora-agent/recreate-agent` / `/recreate-worker-agent`, default path — same agent id,
       versioned, no env swap; O-2387). A CONTENT-only release needs **no** agent change (see above).
       Do the **dev** agent first, then **live with approval**. Live agent IDs are env-resolved
       (`CORA_AGENT_ID_LIVE` / `CORA_WORKER_ID_LIVE`) — never hardcode an agent id in docs.
 - [ ] Pure tool-metadata changes (description/schema/annotations, no skill-content change) need only
-      steps 1–3 — no skill release and no Cora action.
+      steps 1–3 — no skill release and no Marcora-agent action.
 
 ## 5. Notify + record
 - [ ] If the change was made by a lane **other than** the MCP Server Engineer, that lane notifies
@@ -245,9 +245,9 @@ edit generated-metadata.ts (native fields, no markers)
       → [on prod-live signal] Strapi (Content Publisher) + GitHub docs/skill release
          → [if skill CONTENT changed] GitHub release (tag marcora-vX.Y.Z)
               → ⚠️ admin_upsert_skill_version UPLOAD  ← REQUIRED; the release alone does NOT
-                                                        reach Cora. version:"latest" tracks the
+                                                        reach the agent. version:"latest" tracks
                                                         Skills API, not GitHub. (O-2531)
-            → [if skill SET changed] notify App Developer → in-place Cora agent update (dev → live w/ approval)
+            → [if skill SET changed] notify App Developer → in-place Marcora agent update (dev → live w/ approval)
    → CLOSE: assert from artifacts (release tag + Skills-API created_at + Strapi last-modified
             + prod tools/list) → CLEAR the hold marker (retitle PR, stamp the ledger line)
             → tell the DoE it's cleared            ← §5a/§5b; skipping this is how a shipped
