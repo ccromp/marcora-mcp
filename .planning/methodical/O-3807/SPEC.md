@@ -221,3 +221,116 @@ word-boundary assertion in this task. Every count recorded in this spec was take
 with one of those three. A rename audit is exactly the shape of task where a
 false "0 remaining" is indistinguishable from success — so the tool has to be
 proven on a positive control before its zero is believed.
+
+---
+
+# Addendum — 2026-07-26 PM: doc-accuracy fixes + a confidentiality leak
+
+## Parity-claim audit (DoE request) — CLEAN
+
+Swept for "the public tool surface is the internal tool surface" / "there is no
+privileged internal API". Method: a concept net, a second net matching equivalence
+verbs near capability nouns, **and a full read of every positioning file** — the
+last is what mattered; both nets missed the nearest real instance
+(`docs/security.md`). Result: **no such claim on any surface.** DoE accepted as
+verified-clean and ruled `security.md`'s narrowing assurance stays (it claims the
+opposite direction — MCP ≤ web app — and is accurate).
+
+## Three doc defects — FIXED and VERIFIED LIVE
+
+Found by the full read, unrelated to the parity claim. Verified on the **plain
+canonical URL** (`last-modified` 20:52:30Z > publish 20:37:35Z, canary
+"Marcora MCP Server" present):
+
+| # | defect | before | after |
+|---|---|---|---|
+| 1 | release tag convention (highest customer impact — a dead format) | `skill-vX.Y.Z` | `marcora-vX.Y.Z` |
+| 2 | advertised skill version, 4 releases stale | v0.5.0 | v0.7.2 |
+| 3 | canvas/deliverable term leak | "generate deliverables" | "generate content" |
+
+Root cause of #2 was a missing process step, so **checklist §2c** now makes a skill
+release update that string in the same pass, asserting on the *number*.
+
+## ⚠️ Confidentiality leak — a confidential vendor named in published docs
+
+Found by the Vetting Verifier while checking this work. **Not** introduced by
+O-3807 — present since **2026-05-14**.
+
+The `import_url` / `content_url` guidance used a confidential integration vendor
+as its "where a presigned link comes from" example, in three files of the
+**public** `marcora-mcp` repo. Two of my own actions earlier the same day had
+propagated it further: the **Skills-API upload** put it in the live production
+agent's context, and the **fleet re-sync** copied it into 16 agent workspaces.
+
+**Scope, each checked rather than assumed:**
+
+| surface | result |
+|---|---|
+| `marcora-mcp` repo | 3 files — fixed on PR #27; skill 0.7.2 → **0.7.3** |
+| 16 fleet skill copies | **purged immediately** (internal propagation vector), 0/48 files |
+| Strapi doc-pages + tool pages, published **and** draft | clean, 0 hits |
+| Prod customer (brand) `tools/list` | clean, 0 hits |
+| Backend admin server | ⚠️ ships one admin tool whose **name** embeds the vendor — see below |
+
+Fleet copies were fixed **ahead of** the upstream merge on purpose: an agent
+reading the skill could repeat the name in customer-facing copy, which is close to
+how the original incident surfaced. Waiting for the merge would have left the
+propagation path open for hours.
+
+**Reported, deliberately NOT actioned:** the backend ships one admin tool whose
+name embeds the vendor (plus matching annotation title and description) on the
+**admin** server (`p3YtBWFc`), live on prod. The exact identifier is recorded in
+`workspaces/mcp-engineer/CLAUDE.md` (private), not here. It is not on the customer brand server, and the admin
+server is global-admin gated (`adminGate` wraps the stream path in
+`mcp/routes.ts`), so it is not customer-visible. But a tool *name* is a stable
+identifier — renaming it is a breaking change for connected clients, not a docs
+edit. That is a DoE/Chris decision.
+
+**Still owed on merge of PR #27:** release `marcora-v1.7.3` + Skills-API upload —
+that upload is what actually purges the name from the live agent, since the release
+alone does not reach it (§4). And per §2c, the Strapi `mcp-overview` page will need
+v0.7.2 → v0.7.3 in the same pass.
+
+## Where the audit-discipline lesson landed
+
+Checklist **§6**, adopted by the DoE: *an absence is only evidence if the
+instrument could have found the thing.* Three same-day false all-clears —
+BSD-grep's silent zero, a `head -20` truncation, and a paraphrasable claim that
+slipped two nets. **This leak is a fourth instance of the same family:** the name
+sat in a public repo for ten weeks and no sweep found it, because nobody was
+grepping for that word. Only a targeted search for the *right* term found it — which
+is the argument for the positive control and for reading, not for a wider regex.
+
+## ⚠️ `.planning/` IN THIS REPO IS PUBLIC — do not write internal detail here
+
+`.planning/methodical/*/SPEC.md` is **tracked and published** in `ccromp/marcora-mcp`,
+which is a **PUBLIC** repo. `.gitignore` excludes only `skill/marcora-mcp-workspace/`.
+Four specs are already on `main` (O-2549, O-3408, O-3672, O-3807).
+
+**I got this wrong in this very task.** The addendum above originally named the
+confidential vendor twice — in the same PR whose whole purpose was removing that
+name from this repo. I applied the destination-visibility check to
+`docs/mcp-change-fanout-checklist.md` and then failed to apply it one directory
+over, to my own spec, in the same repo. Caught by the Vetting Gate before merge;
+the commit was rewritten so no commit on the branch ever carried it.
+
+**The lesson is narrower and more useful than "check visibility":** I checked the
+destination I was *thinking about* and missed the one I was *habitually* writing to.
+A spec file feels like scratch space — it isn't; here it is a published artifact.
+
+- Anything confidential (vendor names, secrets, private endpoint paths, agent IDs)
+  goes in `workspaces/mcp-engineer/CLAUDE.md` (private Orchestra repo), never here.
+- Before pushing to this repo, assert on the **whole tracked tree including
+  `.planning/`** — the earlier check that passed had been scoped to `docs/` + `skill/`,
+  which is exactly why it missed.
+
+## Note on destination visibility
+
+The DoE's instruction to record the confidentiality rule pointed at
+`docs/mcp-change-fanout-checklist.md`. **That file is in a PUBLIC repo**, so
+following it literally would have published the secret in the document meant to
+protect it. Verified with `gh repo view --json visibility` (marcora-mcp PUBLIC,
+orchestra PRIVATE), put the note in `workspaces/mcp-engineer/CLAUDE.md` instead,
+and diffed the public branch for the term before pushing. Generalised rule the DoE
+adopted: **before writing a confidentiality note anywhere, check whether the
+destination is public.**
