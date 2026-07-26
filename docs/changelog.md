@@ -2,6 +2,16 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-07-25 (agent name: Cora → Marcora)
+
+### Changed
+
+- **The agent is called Marcora.** The retired pre-rebrand name has been removed from every user-visible string in this repo's docs and companion skill — most visibly the `set_active_team` warning, which now reads "app tabs, Marcora agent sessions, other clients". No behavior change and **no tool, field, or enum was renamed**: `cora_requested` / `cora_proactive` sources and the `cora_session_id` / `cora_message_snippet` metadata keys are unchanged stable identifiers and will stay as they are.
+
+### Skill → v0.7.2
+
+- Agent-name wording only, in the `set_active_team` decision-table row. Content-only release — `version: "latest"` picks it up on the Marcora agent's next session; no agent change needed.
+
 ## 2026-07-25 (new-account setup hold documented)
 
 ### Documented
@@ -22,7 +32,7 @@ All notable changes to the Marcora MCP server will be documented in this file.
 
 ### Skill → v0.7.0
 
-- `produce_plan` guidance updated to the new `path` values, and content/document terminology applied across the `update_content` / `ask_content_assistant` / `produce_plan` guidance. Workflow guidance changed, so this is a skill CONTENT release — `version: "latest"` picks it up on Cora's next session; no agent change needed.
+- `produce_plan` guidance updated to the new `path` values, and content/document terminology applied across the `update_content` / `ask_content_assistant` / `produce_plan` guidance. Workflow guidance changed, so this is a skill CONTENT release — `version: "latest"` picks it up on the Marcora agent's next session; no agent change needed.
 
 ## 2026-07-21 (content grounding)
 
@@ -48,7 +58,7 @@ All notable changes to the Marcora MCP server will be documented in this file.
 ### Changed
 
 - **Docs:** `docs/tools.md` documents `link_url` on both `update_brand_foundation` and `get_brand_foundation` — the getter has always returned it, but its Output table never listed it.
-- **Skill → v0.5.4:** Recipe H2 (update a Brand Foundation element) gained the "hand the user the returned `link_url`" step that every other link-returning recipe already had, plus a matching pitfall entry and decision-table note. Workflow guidance changed, so this is a skill CONTENT release — `version: "latest"` picks it up on Cora's next session; no agent change needed.
+- **Skill → v0.5.4:** Recipe H2 (update a Brand Foundation element) gained the "hand the user the returned `link_url`" step that every other link-returning recipe already had, plus a matching pitfall entry and decision-table note. Workflow guidance changed, so this is a skill CONTENT release — `version: "latest"` picks it up on the Marcora agent's next session; no agent change needed.
 
 ## 2026-07-14 (later train)
 
@@ -61,7 +71,7 @@ All notable changes to the Marcora MCP server will be documented in this file.
 
 ### Changed
 
-- **Docs:** `docs/tools.md` now spells out the Reference-Library filing rule on `add_context`, and on `update_context` documents the `null` (and `0`) detach plus the omit asymmetry — omitting `collection_id` errors, omitting `project_id` silently detaches. No companion-skill change (no workflow changed), so the skill stays at v0.5.3 and Cora needs no update.
+- **Docs:** `docs/tools.md` now spells out the Reference-Library filing rule on `add_context`, and on `update_context` documents the `null` (and `0`) detach plus the omit asymmetry — omitting `collection_id` errors, omitting `project_id` silently detaches. No companion-skill change (no workflow changed), so the skill stays at v0.5.3 and the Marcora agent needs no update.
 
 ## 2026-07-14
 
@@ -69,7 +79,7 @@ All notable changes to the Marcora MCP server will be documented in this file.
 
 - **Playbook tools now return `anchor_date` + `link_url`.** Every playbook read/write tool — `list_playbooks`, `get_playbook`, `create_playbook`, `create_playbook_from_plans`, `update_playbook` — now returns the playbook's persisted `anchor_date` (`YYYY-MM-DD`, or `null`) and a `link_url` that opens it in the Marcora web app. `create_playbook` and `update_playbook` also accept `anchor_date` as an input (the reference date each item's `offset_days` counts from, and the default when instantiating). `instantiate_playbook` now returns the created **cycle** (`run` / `run_id`, with the cycle's `link_url` → `app.marcora.ai/runs/{run_id}`), a `created_count`, and a `plans[]` array in which **each plan carries its own `link_url`** → `app.marcora.ai/plans/{plan_uuid}`. Documented in `docs/tools.md`; the companion skill's **Content Plans & Playbooks** chapter now tells agents to hand these links to the user. No behavior change to what the tools do — only richer, link-carrying responses.
 - **`get_team_info` description sharpened.** The tool description now leads with the trigger — always call it when the user asks what teams they have / belong to or wants to switch teams, rather than answering from memory or session context (which knows only the single active team and undercounts). Doc copy reconciled in `docs/tools.md`. Output shape unchanged.
-- **Companion skill `marcora-mcp` v0.5.3 + rebuilt `.skill`.** Playbook-chapter guidance for the new `anchor_date` / `link_url` response fields. Content-only — picked up automatically by Cora at `version: "latest"`, no agent change.
+- **Companion skill `marcora-mcp` v0.5.3 + rebuilt `.skill`.** Playbook-chapter guidance for the new `anchor_date` / `link_url` response fields. Content-only — picked up automatically by the Marcora agent at `version: "latest"`, no agent change.
 
 ## 2026-07-13
 
@@ -80,7 +90,7 @@ All notable changes to the Marcora MCP server will be documented in this file.
 - **`list_content` — optional semantic `search`.** Pass a natural-language `search` query and results are ranked by semantic relevance instead of recency; each row then carries a `relevance_score` (cosine `0`–`1`, higher = more relevant). Omitting `search` is unchanged (recency-ordered, no score) — fully backward-compatible.
 - **`list_context_items` — optional semantic `search`.** Same addition: pass a natural-language `search` query to rank items by semantic relevance (by each item's best-matching chunk) instead of recency; each item then carries a `relevance_score` (cosine `0`–`1`). Omitting `search` is unchanged.
 - **Cross-tool ranking.** The `relevance_score` values from `list_content` and `list_context_items` are **cross-comparable**: call both with the same `search` query, merge the two result arrays, and take the top matches by `relevance_score` — then confirm with the user before pulling full text with `get_content` / `get_context_item`. Documented in `docs/tools.md`.
-- **Companion skill `marcora-mcp` v0.5.2 + `.skill` release.** The skill now teaches the semantic-search discovery path (a new bullet + "Steps (semantic-search path)" in Workflow 5 and a decision-table row: rank `list_content` / `list_context_items` by `relevance_score`, merge cross-tool, confirm before opening full text). Content-only — picked up automatically by Cora at `version: "latest"`, no agent change.
+- **Companion skill `marcora-mcp` v0.5.2 + `.skill` release.** The skill now teaches the semantic-search discovery path (a new bullet + "Steps (semantic-search path)" in Workflow 5 and a decision-table row: rank `list_content` / `list_context_items` by `relevance_score`, merge cross-tool, confirm before opening full text). Content-only — picked up automatically by the Marcora agent at `version: "latest"`, no agent change.
 
 ## 2026-07-12
 
