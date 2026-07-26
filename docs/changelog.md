@@ -2,6 +2,12 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-07-26 (doc accuracy)
+
+### Fixed
+
+- **Release tag convention corrected in the README.** It said releases are tagged `skill-vX.Y.Z`; the actual convention has been `marcora-vX.Y.Z` since v0.2.3, so anyone following it was looking for a tag format that no longer exists. The README now also notes that the skill's own `metadata.version` moves independently of the release tag.
+
 ## 2026-07-25 (agent name: Cora → Marcora)
 
 ### Changed
