@@ -166,7 +166,33 @@ probe is a guaranteed MISS → reads the **origin**, NOT what a customer sees.
       **The GitHub release alone does NOT reach the Marcora agent — you must also do the Skills-API upload in
       step 4.**
 - [ ] Bump versions as needed: `server.json`, `plugin/.claude-plugin/plugin.json`,
-      `.claude-plugin/marketplace.json`.
+      `.claude-plugin/marketplace.json`. (A wording-only release does **not** touch these —
+      see what `marcora-v1.7.3` actually changed.)
+
+### 3a. TWO version numbers are in play, and they are not the same number
+This reads like a mistake every time someone new runs the fan-out, and it isn't. Raised as a
+possible slip by the DoE on O-4183 (2026-07-27); recorded here so the next reader doesn't have
+to re-derive it.
+
+| Number | Lives in | Form | Example |
+|---|---|---|---|
+| **Release tag** | the GitHub release / git tag | `marcora-v1.<minor>.<patch>` | `marcora-v1.7.3` |
+| **Skill version** | `SKILL.md` `metadata.version` | `0.<minor>.<patch>` | `0.7.3` |
+
+They are two different things: the tag versions the **repo bundle**, `metadata.version` versions
+the **skill**. By convention their `minor.patch` track each other, so a release pairs
+`marcora-v1.7.4` with skill `0.7.4` — verified across v1.6.0↔0.6.0, v1.7.0↔0.7.0, v1.7.1↔0.7.1,
+v1.7.2↔0.7.2, v1.7.3↔0.7.3.
+
+- [ ] **The lockstep is a convention, not an invariant — it has already slipped once.**
+      `marcora-v1.5.3` ships `SKILL.md` `0.5.4`. So do NOT infer one number from the other:
+      read `metadata.version` out of the file you are about to zip.
+- [ ] **§2c's `mcp-overview` page advertises the SKILL version (`0.x.y`), not the release tag.**
+      Confirmed against the live page on 2026-07-27: it read `v0.7.3` while the newest tag was
+      `marcora-v1.7.3`. Writing `1.7.4` there would be wrong.
+- [ ] **The Skills-API `release_url` uses the TAG**
+      (`.../releases/download/marcora-v1.7.4/marcora-mcp.skill`), because that is what GitHub
+      names the asset path. The skill version never appears in the URL.
 - [ ] **Immediately after cutting the release, assert §2c actually happened** — fetch the
       `mcp-overview` page and check the advertised skill version equals the version you just
       released. §2c says "in the same pass", but a release and a docs edit often land in
