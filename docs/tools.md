@@ -25,8 +25,8 @@ Returns profile and subscription information for the currently authenticated use
 | `plan_name` | string | Subscription plan display name |
 | `plan_slug` | string | Subscription plan identifier |
 | `subscription_status` | string | Current subscription status |
-| `ai_credits_available` | integer | AI credits remaining this billing period (limit minus used) |
-| `ai_credits_max` | integer | AI credit limit for this billing period |
+| `ai_credits_available` | integer | Studio Credits remaining this billing period (limit minus used) |
+| `ai_credits_max` | integer | Studio Credit limit for this billing period |
 
 **Example prompts:**
 - "What plan am I on?"
@@ -647,7 +647,7 @@ Start a Context Intelligence **health audit** — a library-wide AI sweep of you
 
 The scan runs in the **background**: the response returns immediately with a `scan_run_id`, and findings land as the scan progresses — check `list_ci_findings` afterwards.
 
-**⚠️ Cost + gating:** the scan consumes team AI credits and is gated. It requires the **Business or Command plan** (active subscription) with at least **50 credits** remaining. Only one health audit can run at a time, and a cooldown applies after each completed run. **Starting a new audit clears the previous health-audit findings.**
+**⚠️ Cost + gating:** the scan consumes team Studio Credits and is gated. It requires the **Command plan** (active subscription) with at least **50 credits** remaining. Only one health audit can run at a time, and a cooldown applies after each completed run. **Starting a new audit clears the previous health-audit findings.**
 
 **Parameters:** None
 
@@ -689,7 +689,7 @@ Three tools:
 1. **Grounding is asynchronous.** `check_content_grounding` waits about 20 seconds inline; a fresh scan usually needs 120–150. If it comes back `running`, **poll `get_grounding_result` with the `scan_id`** — calling `check_content_grounding` again starts a *second*, redundant scan.
 2. **Review before applying.** Each finding carries its full `suggested_fix`. Show it to the user and get a decision. `apply_grounding_fix` writes to their library.
 
-Grounding requires the **Command plan** with an active subscription and available AI credits.
+Grounding requires the **Command plan** with an active subscription and available Studio Credits.
 
 ---
 
@@ -731,7 +731,7 @@ Passing neither is an error.
 - **Provide either 'content_id' or 'content'** (400) — neither was supplied.
 - **Not a valid UUID** (400) — malformed `content_id`.
 - **Content not found** (404) — no such document in your team.
-- **ci_not_eligible** (403) — the team is not on the Command plan, has no active subscription, or is out of AI credits.
+- **ci_not_eligible** (403) — the team is not on the Command plan, has no active subscription, or is out of Studio Credits.
 
 **Example prompts:**
 - "Ground this draft against our context library"
@@ -1744,7 +1744,7 @@ Partial update of a plan: mutable fields and stage transitions. All fields are o
 
 ### `produce_plan`
 
-Produce (generate) the actual content a plan describes — the MCP equivalent of the **Generate** button on the plans board. The plan must be in the `Accepted` stage (transition a `Suggested` plan first with `update_plan` `target_stage: "Accepted"`). Consumes team AI credits and typically takes 1–2 minutes; confirm with the user before producing a plan they didn't explicitly ask to produce. The plan's `prompt`, targeting dimensions, context collections, and project association are used as generation inputs — set them via `update_plan` before producing.
+Produce (generate) the actual content a plan describes — the MCP equivalent of the **Generate** button on the plans board. The plan must be in the `Accepted` stage (transition a `Suggested` plan first with `update_plan` `target_stage: "Accepted"`). Consumes team Studio Credits and typically takes 1–2 minutes; confirm with the user before producing a plan they didn't explicitly ask to produce. The plan's `prompt`, targeting dimensions, context collections, and project association are used as generation inputs — set them via `update_plan` before producing.
 
 **Both paths are asynchronous** — the call returns immediately with a `generation_id`; poll `get_generation_status`. On completion the backend links the produced content and moves the plan to `In_Process` (then `Complete` when the content reaches ready).
 

@@ -2,6 +2,18 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-07-27 (wording)
+
+### Changed
+
+- **"AI credits" is now "Studio Credits".** The credit balance a team spends on generation is named Studio Credits everywhere it is *read* — tool descriptions, field descriptions, and error messages. **No field or parameter name changed:** `ai_credits_available` and `ai_credits_max` keep their exact names and meanings, so no integration needs updating.
+- **The Context Intelligence health audit is described as requiring the Command plan**, matching the eligibility message the API actually returns. The previous text said "Business or Command plan". Wording only — **eligibility is unchanged**, and teams that have the feature today keep it.
+- **`check_content_grounding`'s error list says "Context Intelligence"**, which is the product's name. It previously read "Content Intelligence".
+
+### Skill → v0.7.4
+
+- `produce_plan`'s cost warning now reads "Consumes Studio Credits". Content-only release.
+
 ## 2026-07-26 (wording)
 
 ### Changed
