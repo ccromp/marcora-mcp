@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (the `mcp__marco
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.7.3
+  version: 0.7.4
 ---
 
 # Marcora AI Workflows
@@ -335,7 +335,7 @@ The **starting stage is set automatically from `source`**, you don't control it 
 - **`get_plan`** — Fetch one plan by `plan_uuid` with all linked params. **Always call before `update_plan`** to avoid overwriting with stale values. `_produced_content` null = no content yet.
 - **`list_plans`** — Discovery + dedup. Visibility-scoped server-side (an empty result ≠ the team has no plans). Useful filters: `stage` (single-value array, UNDERSCORE form), `project_id`, `assignee_scope` (`me` default | `created_by_me` | `all_visible`). ⚠️ Known no-ops today: `due_before`/`due_after` and `search_text` are accepted but don't filter yet; multi-value `stage[]`/`source[]` honor only the first element — pass single-value arrays.
 - **`update_plan`** — Partial update; only keys you send mutate. Construct a minimal diff after `get_plan`. `reference_document_ids` / `context_collection_ids` / `targeting_dimension_ids` are **full-replace** (pass `[]` to clear). Server-managed fields (`source`, `produced_content_id`, timestamps, etc.) are rejected as immutable.
-- **`produce_plan`** — The MCP equivalent of the plans-board **Generate** button. Requires the plan in **Accepted** stage (Suggested → `update_plan target_stage:"Accepted"` first). **⚠️ Consumes AI credits and takes 1–2 min — confirm before producing a plan the user didn't explicitly ask to produce.** The plan's `prompt`, targeting, context collections, and project are used as generation inputs — set them via `update_plan` BEFORE producing.
+- **`produce_plan`** — The MCP equivalent of the plans-board **Generate** button. Requires the plan in **Accepted** stage (Suggested → `update_plan target_stage:"Accepted"` first). **⚠️ Consumes Studio Credits and takes 1–2 min — confirm before producing a plan the user didn't explicitly ask to produce.** The plan's `prompt`, targeting, context collections, and project are used as generation inputs — set them via `update_plan` BEFORE producing.
   - **Both paths are ASYNC now** — the tool returns immediately with a `generation_id`; **poll `get_generation_status`**. A plan **with** a blueprint → `path:"blueprint"`; **without** a blueprint → `path:"freeform"`. On completion the backend links the produced content and flips the plan to `In_Process` (then `Complete` when the content reaches ready).
 
 ### The 6 playbook tools
