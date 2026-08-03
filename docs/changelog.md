@@ -2,6 +2,17 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-08-01 (`update_context` — honest `project_id` / `collection_id` contract)
+
+### Changed
+
+- **`update_context` now lists `collection_id` in the input schema's `required` array.** The served schema is `["context_item_id", "collection_id"]`. The server has always rejected a missing `collection_id` with `Missing param: collection_id`; the published schema was simply looser than the server. No behaviour change — the schema now matches what the tool already did.
+- **`project_id` is documented as destructive-on-omission, and is deliberately NOT in `required`.** There is no "leave unchanged" option for this field: omitting the key does exactly what passing `null` does — it writes `NULL` and **detaches** the item from its project, while the call still returns 200 so nothing warns you. To keep an item in its project, read the current value with `get_context_item` and pass it back on every call. The tool description and the `project_id` property description now agree on this; previously the top-level text called the field "REQUIRED" while the property text described the detach, and only the second was true.
+
+### Fixed
+
+- **The `refresh_webpage` documentation was wrong about `collection_id` / `project_id`.** It previously said you must still pass both on a refresh. That branch re-pulls the page and **reads neither field** — `collection_id` is not required there, and a refresh never moves an item between projects or collections.
+
 ## 2026-07-26 (wording)
 
 ### Changed
