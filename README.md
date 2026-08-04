@@ -57,9 +57,9 @@ Add to your MCP client config:
 
 See [docs/quickstart.md](docs/quickstart.md) for setup instructions for Claude, ChatGPT, Claude Desktop, Cursor, and VS Code.
 
-## Companion Anthropic Skill (recommended)
+## The Marcora AI Workflows Skill (recommended)
 
-One companion **Anthropic Skill** ships alongside this server. It teaches your AI client Marcora's mental model, the right tool sequencing, the questions to ask the user before acting, and the pitfalls to avoid — so the agent stops misfiring on tasks that look ambiguous from tool descriptions alone.
+The **Marcora AI Workflows** Anthropic Skill ships alongside this server. It teaches your AI client Marcora's mental model, the right tool sequencing, the questions to ask the user before acting, and the pitfalls to avoid — so the agent stops misfiring on tasks that look ambiguous from tool descriptions alone.
 
 | Skill | What it covers | Source |
 |---|---|---|
