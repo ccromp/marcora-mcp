@@ -2,6 +2,15 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-08-03 (Claude connection instructions)
+
+### Fixed
+
+- **Connecting in Claude now starts from Anthropic's connector directory**, where Marcora has been listed since 2026-07-29 — there is no URL or token to paste. The old instructions sent people to `claude.ai/settings/connectors`, which has moved to **Customize → Connectors**, and told them to enable Marcora from the composer, which is not a step a directory connector needs: it is already switched on in every new conversation.
+- **Documented the per-tool permission prompt**, which was missing entirely. The first time Claude reaches for each Marcora tool it stops on *"Claude wants to use … from Marcora"* with **Always allow** / **Deny**, and nothing reaches the MCP server until that click. Users who completed OAuth and then saw no tool calls were almost certainly stopped here.
+
+Adding Marcora by URL is unchanged and still documented — it remains the route for a Team or Enterprise workspace, and the MCP Server URL and token instructions are still correct for ChatGPT, Claude Code, Cursor, and VS Code. Documentation only; no tool, schema, or behaviour change.
+
 ## 2026-07-26 (wording)
 
 ### Changed
