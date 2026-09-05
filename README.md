@@ -2,9 +2,9 @@
 
 > The context layer for GTM teams — one source of truth for brand and company context, so your whole team produces consistent, on-brand content in any AI tool. Connect your AI tools to [Marcora](https://marcora.ai) through the Model Context Protocol.
 
-[![smithery badge](https://smithery.ai/badge/chris-2acp/marcora)](https://smithery.ai/servers/chris-2acp/marcora)
+[![LightNow MCP capabilities](https://lightnow.ai/badge/ai.marketcore/mcp)](https://lightnow.ai/servers/ai.marketcore/mcp)
 
-**Learn more:** [marcora.ai](https://marcora.ai) · **Smithery:** [smithery.ai/servers/chris-2acp/marcora](https://smithery.ai/servers/chris-2acp/marcora)
+**Learn more:** [marcora.ai](https://marcora.ai) · **LightNow:** [lightnow.ai/servers/ai.marketcore/mcp](https://lightnow.ai/servers/ai.marketcore/mcp)
 
 ## About
 
