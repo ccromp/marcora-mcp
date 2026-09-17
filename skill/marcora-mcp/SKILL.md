@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (the `mcp__marco
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.7.3
+  version: 0.7.5
 ---
 
 # Marcora AI Workflows
@@ -55,6 +55,7 @@ Before naming a backend in any report or diagnosis, **fingerprint the lane**: `<
 These are Marcora's core nouns. Internalize them before calling any tool.
 
 - **Content** — A document. The unit of output. Created by `marcora:create_content`. Two creation modes that share one tool: pass `instructions` only for freeform AI generation (sync, 1–3 min), pass `instructions + blueprint_uuid` for blueprint-driven generation (async, 3–5 min, returns a `generation_id` to poll), or pass `content` only to save the user's own pre-written text directly.
+  **A document's title comes from its first heading — there is no title parameter.** On the `content` path, start the markdown with `# <Title>` on the first line. On the `instructions` path, state the wanted title inside the instructions text. Never send `content` and `instructions` together (that is rejected), not even to carry a title. The title keeps following the first heading unless someone locks it with `update_content name_override`.
 
 - **Blueprint** — A reusable AI template that defines structure, tone, and instructions for a content type (case study, launch one-pager, weekly newsletter, etc.). Has Blueprint DNA — a structural/tonal analysis Marcora uses to guide generation. Multi-format blueprints can produce a coordinated *campaign* (blog + email + in-app) in a single generation.
 
@@ -294,7 +295,12 @@ If intent is ambiguous, ask: *"Do you want to run this once, or set it up as a r
 3. **Translate steps into plain-language `{name, description}` entries** specific enough that a fresh agent can act without follow-up. Add `agent_hint` for non-obvious guidance. Tool names in step descriptions render as chips — write them in canonical `SCREAMING_SNAKE_CASE`.
 4. **Set `allowed_tools` narrowly** (3–6 tools). An empty list is rejected by the backend (`allowed_tools_required`) — even summary-only workflows need read tools spelled out (e.g. `web_search`, `web_browse`).
 5. **Always create as `status="draft"` first;** activate with `update_workflow status:"active"` only once the user confirms.
-6. **Scheduling is optional.** For clocked workflows: `schedule_config: {"frequency": "daily"|"weekly"|"hourly", "interval_hours": N, "timezone": "UTC"}`. The trigger is created `is_enabled=false`; the user enables it in the UI. Cron expressions are not supported in v1. **Skip `schedule_config` entirely for manual/on-demand workflows.**
+6. **Scheduling is optional — and a schedule is ALWAYS saved switched OFF.** Skip `schedule_config` entirely for manual/on-demand workflows.
+   - **Preferred (calendar) shape:** `{"frequency": "daily"|"weekly", "hour": <0-23 UTC>, "days_of_week": [<0=Sun…6=Sat, UTC>], "timezone": "<the user's IANA zone>"}`. `days_of_week` takes 1–7 distinct days, so "3 times a week" is ONE schedule (`[1,3,5]`) — use it rather than approximating with an interval. (The older single `day_of_week` is still read when the array is absent.) Convert the user's local time and weekdays to UTC yourself; `timezone` is display-only. This is the shape the app's schedule editor shows and edits.
+   - **Interval shape:** omit `hour` and pass `interval_hours` (or rely on the 1h / 24h / 168h default for hourly / daily / weekly). It runs every N hours with no fixed time of day, the first run landing one interval after the user switches the schedule on. The app's editor cannot display or edit it — use it only when the calendar shape can't express the need.
+   - **No MCP tool can switch a schedule on.** `update_workflow` silently ignores `schedule_config` and still returns success. Tell the user the schedule is off, hand them the workflow's `link_url` exactly as returned, and ask them to review it and click **Resume schedule**.
+   - **Never say the schedule is running, on, or "active".** `status: "active"` is a separate label on the workflow, not the schedule.
+   - **The app's editor offers:** Daily at a set time, or Weekly on one or more days at a set time (it has a weekday picker). It cannot hold a second time of day or an every-N-hours interval, and cron expressions are not supported. If the user asks for something it genuinely can't express ("twice a day"), say exactly what you saved and that it is an approximation.
 7. **For workflows that process entities over time** ("summarize new content each week"), be explicit about dedup BEFORE creating: use a `since_last_run` input binding (the scheduler/resolver compute the window from the trigger's `last_successful_run_at` — don't compute it yourself), match schedule cadence to lookback, and write source entity IDs into downstream artifacts so a future run can tell what it already processed. Raise this proactively if the user doesn't.
 
 ### What the runner writes to its run summary
@@ -386,6 +392,8 @@ The **starting stage is set automatically from `source`**, you don't control it 
 ---
 
 ## Pitfalls and conventions
+
+- **Hand over links exactly as returned.** When a tool returns `link_url` (or any URL field), copy it character for character into your reply. Never retype an id, shorten a URL, or rebuild one from a pattern — a single wrong character in a UUID gives the user a dead link that still looks right.
 
 - **Don't duplicate Content to "add it" to a project.** Attachment is a relationship (a `project_item` row), not a copy. Use `update_project(project_brief_id=...)` — it auto-attaches.
 
