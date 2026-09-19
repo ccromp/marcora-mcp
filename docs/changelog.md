@@ -2,6 +2,27 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-09-19 (workflow status and schedules)
+
+### Changed
+
+- **A workflow is now Active or Inactive, and its schedule is On or Paused.** The workflow status `draft` is now `inactive`; `update_workflow` and `list_workflows` take `active`, `inactive` or `archived`, and any other status is refused without saving (a legacy `draft` is still accepted and stored as `inactive`). An Inactive workflow never runs, by any route. Setting a workflow Inactive, or archiving it, keeps its schedule.
+- **Scheduled runs need both switches:** the workflow Active and the schedule On. New workflows are saved Inactive and every schedule is saved Paused; the user turns a schedule On in the Marcora app with **Resume schedule**.
+- **`create_workflow`, `update_workflow` and `get_workflow` now say what will run.** `create_workflow` always returns `next_step`; `update_workflow` returns it when the call sets the workflow Active or Inactive; `get_workflow` returns `run_state`. Each also returns a `schedule` read-back with a plain-language `summary` when the workflow has a schedule.
+- **Weekly schedules take several days.** `schedule_config.days_of_week` accepts 1–7 days, so "Monday, Wednesday and Friday" is one schedule.
+- **`create_content` titles come from the first heading.** There is no title parameter: start `content` with `# <Title>`, or state the title in `instructions`.
+- **Every tool that returns a `link_url` now asks the client to copy it exactly.**
+
+### Fixed
+
+- `docs/tools.md` said `update_workflow` rejects `schedule_config` with an error. It is silently ignored and the call still succeeds.
+
+### Skill → v0.7.4
+
+- The Workflows chapter teaches the two-switch model: Active / Inactive for the workflow, On / Paused for the schedule, never mixed, and always stated together. It follows the tools' `next_step` / `run_state`, allows setting a workflow Active when the user asks, and says when that starts scheduled runs.
+- Kept from the previous draft of this guidance: one multi-day schedule via `days_of_week`, document titles from the first heading, and `link_url` copied exactly.
+- New pitfall E15: telling the user a workflow is running when its schedule is Paused.
+
 ## 2026-08-03 (Claude connection instructions)
 
 ### Fixed

@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (the `mcp__marco
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.7.5
+  version: 0.7.4
 ---
 
 # Marcora AI Workflows
@@ -279,11 +279,11 @@ If intent is ambiguous, ask: *"Do you want to run this once, or set it up as a r
 
 ### The 6 workflow tools
 
-- **`create_workflow`** — Create a template. Inputs: `name`, `steps`, `description`, `inputs`, `allowed_tools`, `tags`, optional `schedule_config`. Always creates as `status="draft"`.
-- **`get_workflow`** — Fetch one workflow with triggers + latest run. Call before `update_workflow` to avoid clobbering unknown fields.
-- **`list_workflows`** — List the user's workflows (`status`, `search`, pagination). Call with `search:` before creating to spot duplicate names.
-- **`update_workflow`** — Partial update; send only keys you want to change. `status: "active"` to activate, `status: "archived"` to soft-delete.
-- **`run_workflow`** — Manually dispatch a run. Inspect `.status`: `"running"` = success, `"failed"` = check `.error_reason`.
+- **`create_workflow`** — Create a template. Inputs: `name`, `steps`, `description`, `inputs`, `allowed_tools`, `tags`, optional `schedule_config`. Saves the workflow **Inactive** and any schedule **Paused**; the response carries a `next_step` saying what will and won't run.
+- **`get_workflow`** — Fetch one workflow with triggers + latest run, plus `run_state` (one sentence covering both switches) and `schedule` (its read-back, when it has one). Call before `update_workflow` to avoid clobbering unknown fields, and before saying whether a workflow runs.
+- **`list_workflows`** — List the user's workflows (`status`, `search`, pagination). Call with `search:` before creating to spot duplicate names. The list does not show schedules — `status: "active"` in it does not mean a workflow is running.
+- **`update_workflow`** — Partial update; send only keys you want to change. `status` accepts `"active"`, `"inactive"` or `"archived"` (soft-delete); anything else is refused and nothing is saved. It cannot edit a schedule or switch one On. When the call changes the status to Active or Inactive, the response carries a `next_step`.
+- **`run_workflow`** — Manually dispatch a run. Only an **Active** workflow runs; the schedule plays no part in a manual run. Inspect `.status`: `"running"` = success, `"failed"` = check `.error_reason`.
 - **`get_workflow_runs`** — Run history. Pass `run_id` for single-run detail (step logs + tool-call logs); omit for a paginated list.
 
 ### Building well
@@ -294,12 +294,15 @@ If intent is ambiguous, ask: *"Do you want to run this once, or set it up as a r
    - **(b) Run summary only** — the user just reads the result on the run-detail page. Legitimate for "look something up / summarize / find me" workflows. Restate it back so they know where to look.
 3. **Translate steps into plain-language `{name, description}` entries** specific enough that a fresh agent can act without follow-up. Add `agent_hint` for non-obvious guidance. Tool names in step descriptions render as chips — write them in canonical `SCREAMING_SNAKE_CASE`.
 4. **Set `allowed_tools` narrowly** (3–6 tools). An empty list is rejected by the backend (`allowed_tools_required`) — even summary-only workflows need read tools spelled out (e.g. `web_search`, `web_browse`).
-5. **Always create as `status="draft"` first;** activate with `update_workflow status:"active"` only once the user confirms.
-6. **Scheduling is optional — and a schedule is ALWAYS saved switched OFF.** Skip `schedule_config` entirely for manual/on-demand workflows.
+5. **Two switches, two vocabularies — never mix them.** The workflow is **Active** or **Inactive** (or Archived). Its schedule, if it has one, is **On** or **Paused**. Never call a schedule "active" or "inactive", and never call a workflow "paused" or "on". Whenever you say a workflow is Active, say in the same sentence whether its schedule is On, Paused, or absent — "Active" alone only means the workflow is *allowed* to run.
+   - **What runs needs both switches:** a scheduled run needs the workflow Active **and** the schedule On. A manual run (`run_workflow`) needs only Active.
+   - Inactive → nothing runs, by any route (manual runs are refused too). Active with no schedule → runs only when started manually. Active with the schedule Paused → manual runs work, but it won't run on its schedule until the user clicks **Resume schedule** in the app. Active with the schedule On → runs on its schedule. Inactive with the schedule On → nothing runs until the workflow is set Active.
+   - **`create_workflow` saves the workflow Inactive** and any schedule Paused. Setting it Active is fine once the user has asked for that — call `update_workflow status:"active"` and describe the state after *that* call (its `next_step`), not the state `create_workflow` reported.
+   - **Lead your reply with the tool's `next_step` / `run_state`.** They are computed from what was actually saved, so they are the authority on what will and won't run. If the schedule is already On, activating the workflow starts its scheduled runs — say so before you do it, and after.
+6. **Scheduling is optional — and a schedule is always saved Paused.** Skip `schedule_config` entirely for manual/on-demand workflows.
    - **Preferred (calendar) shape:** `{"frequency": "daily"|"weekly", "hour": <0-23 UTC>, "days_of_week": [<0=Sun…6=Sat, UTC>], "timezone": "<the user's IANA zone>"}`. `days_of_week` takes 1–7 distinct days, so "3 times a week" is ONE schedule (`[1,3,5]`) — use it rather than approximating with an interval. (The older single `day_of_week` is still read when the array is absent.) Convert the user's local time and weekdays to UTC yourself; `timezone` is display-only. This is the shape the app's schedule editor shows and edits.
-   - **Interval shape:** omit `hour` and pass `interval_hours` (or rely on the 1h / 24h / 168h default for hourly / daily / weekly). It runs every N hours with no fixed time of day, the first run landing one interval after the user switches the schedule on. The app's editor cannot display or edit it — use it only when the calendar shape can't express the need.
-   - **No MCP tool can switch a schedule on.** `update_workflow` silently ignores `schedule_config` and still returns success. Tell the user the schedule is off, hand them the workflow's `link_url` exactly as returned, and ask them to review it and click **Resume schedule**.
-   - **Never say the schedule is running, on, or "active".** `status: "active"` is a separate label on the workflow, not the schedule.
+   - **Interval shape:** omit `hour` and pass `interval_hours` (or rely on the 1h / 24h / 168h default for hourly / daily / weekly). It runs every N hours with no fixed time of day, the first run landing one interval after the user switches the schedule On. The app's editor cannot display or edit it — use it only when the calendar shape can't express the need.
+   - **No MCP tool can switch a schedule On.** `update_workflow` silently ignores `schedule_config` and still returns success. Tell the user the schedule is Paused, hand them the workflow's `link_url` exactly as returned, and ask them to review it and click **Resume schedule**. Quote `schedule.summary` when you describe what was saved.
    - **The app's editor offers:** Daily at a set time, or Weekly on one or more days at a set time (it has a weekday picker). It cannot hold a second time of day or an every-N-hours interval, and cron expressions are not supported. If the user asks for something it genuinely can't express ("twice a day"), say exactly what you saved and that it is an approximation.
 7. **For workflows that process entities over time** ("summarize new content each week"), be explicit about dedup BEFORE creating: use a `since_last_run` input binding (the scheduler/resolver compute the window from the trigger's `last_successful_run_at` — don't compute it yourself), match schedule cadence to lookback, and write source entity IDs into downstream artifacts so a future run can tell what it already processed. Raise this proactively if the user doesn't.
 
@@ -311,10 +314,11 @@ The runner agent's FINAL message becomes the run's `result_summary` (rendered as
 
 ### Risk warnings
 
-- **Never activate a scheduled workflow without an explicit "yes"** — it's long-lived state. On-demand workflows can stay in draft until the user says "make it active."
-- **Hard-delete isn't exposed** — use `update_workflow status:"archived"` (restorable via `status:"draft"`/`"active"`).
+- **Set a workflow Active when the user has asked for it, and tell them what that does.** Activating is not the risk; an inaccurate reply is. With the schedule On, activating starts scheduled runs — say so. With it Paused, the workflow can be run manually but still won't run on its schedule. Never tell the user a workflow will run on its own unless it is Active and its schedule is On.
+- **Setting a workflow Inactive keeps its schedule exactly as it was.** A schedule that was On is still On and fires again as soon as the workflow is Active. To stop scheduled runs but keep manual runs, the user pauses the schedule in the app — there is no `"paused"` workflow status.
+- **Hard-delete isn't exposed** — use `update_workflow status:"archived"`. Restore with `status:"inactive"` or `status:"active"`.
 - **Duplicate names aren't DB-prevented** — `list_workflows search:"<name>"` first if re-creating is possible.
-- **Schedule edits via MCP are NOT supported in v1** — direct the user to the workflow's settings UI.
+- **Schedule edits via MCP are NOT supported** — changing a schedule, and switching it On or Paused, happen in the app. Direct the user there with the workflow's `link_url`.
 - **Runner sessions don't author workflows** — these 6 tools are for interactive sessions; a runner executing a scheduled run uses a different tool set and must not call `create_workflow`/`update_workflow`.
 
 ---

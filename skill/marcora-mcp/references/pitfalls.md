@@ -126,6 +126,16 @@ Don't show the user a UUID like `7b2c4f...` as an identifier. Surface the human-
 
 ---
 
+## E15 — Telling the user a workflow "is running" when it isn't
+
+**Symptom.** You create a workflow, set it Active, and tell the user it's live — and nothing ever runs on its schedule. Or the user asks to "pause" a workflow and `update_workflow status:"paused"` is refused.
+
+**Cause.** A workflow has two independent switches. The workflow is **Active** or **Inactive**; its schedule is **On** or **Paused**. Scheduled runs need both — Active **and** On. `create_workflow` saves the workflow Inactive and every schedule Paused, and no MCP tool can turn a schedule On: only the user can, in the app, with **Resume schedule**. There is no `paused` workflow status; `status` accepts only `active`, `inactive` and `archived`.
+
+**What to do.** Read `next_step` (from `create_workflow` / `update_workflow`) or `run_state` (from `get_workflow`) and lead your reply with it — it is computed from what was actually saved. Whenever you say a workflow is Active, say in the same sentence whether its schedule is On, Paused, or absent. If the schedule is Paused, hand the user the workflow's `link_url` exactly as returned and ask them to click **Resume schedule**. To stop scheduled runs but keep manual runs, the user pauses the schedule in the app; to stop everything, set the workflow `inactive`.
+
+---
+
 ## Linking the user to their Brand Foundation
 
 **Symptom.** You update the user's Brand Foundation, link them to it, and the link 404s — they land on `/home` and the conversation they were in is gone.

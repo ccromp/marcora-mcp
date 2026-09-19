@@ -1135,6 +1135,8 @@ Create content by supplying your own text directly, generating from an AI prompt
 
 You must provide either `content` or `instructions` (not both).
 
+> **Document title — there is no title parameter.** The title is taken from the document's first heading. With `content`, start the markdown with `# <Title>` on the first line; with `instructions`, state the wanted title in the instructions text. Never send both `content` and `instructions` to carry a title — that call is rejected.
+
 - **With `content`** (synchronous): Saves your supplied text directly as a document — no AI generation. Returns immediately.
 - **With `instructions`** (synchronous): Creates a freeform document from an AI prompt. Takes 1–3 minutes.
 - **With `instructions` + `blueprint_uuid`** (asynchronous): Generates content from a blueprint template. Returns a `generation_id` to poll via `get_generation_status`. Takes 3–5 minutes.
@@ -1899,7 +1901,9 @@ If `anchor_date` is omitted, the playbook's persisted `anchor_date` (if any) is 
 
 ## Workflows
 
-Workflows are reusable, multi-step automations that a Managed Agents session executes on demand or on a schedule. Build them with `create_workflow`, activate and edit them with `update_workflow`, trigger them with `run_workflow`, and inspect run history with `get_workflow_runs`. The companion **`marcora-mcp`** skill documents authoring patterns (step design, scheduling, deduplication, runner-summary conventions) in its Workflows chapter.
+Workflows are reusable, multi-step automations that a Managed Agents session executes on demand or on a schedule. Build them with `create_workflow`, set them Active or Inactive and edit them with `update_workflow`, trigger them with `run_workflow`, and inspect run history with `get_workflow_runs`.
+
+> **Two switches, two vocabularies.** A workflow is **Active** or **Inactive** (or Archived). Its schedule, if it has one, is **On** or **Paused**. A scheduled run needs both: the workflow Active **and** the schedule On. A manual run needs only Active. New workflows are saved Inactive and every schedule is saved Paused; no MCP tool can turn a schedule On — the user does that in the Marcora app with **Resume schedule**. When describing a workflow as Active, always say whether its schedule is On, Paused, or absent. The companion **`marcora-mcp`** skill documents authoring patterns (step design, scheduling, deduplication, runner-summary conventions) in its Workflows chapter.
 
 ### `list_workflows`
 
@@ -1909,7 +1913,7 @@ List workflows for your active team. Supports an optional status filter and a na
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `status` | string | No | Filter by status: `draft`, `active`, or `archived`. Omit to return all |
+| `status` | string | No | Filter by status: `active`, `inactive`, or `archived`. Omit to return all. Active means allowed to run, not running — the list does not show schedules |
 | `search` | string | No | Substring match against workflow name |
 | `page` | integer | No | Page number (default 1) |
 | `per_page` | integer | No | Items per page (default 20, max 100) |
@@ -1921,7 +1925,7 @@ List workflows for your active team. Supports an optional status filter and a na
 | `items` | array | Array of workflow summaries |
 | `items[].id` | string (uuid) | Workflow ID. Use as `workflow_id` in `get_workflow`, `update_workflow`, `run_workflow`, and `get_workflow_runs` |
 | `items[].name` | string | Workflow name |
-| `items[].status` | string | `draft`, `active`, or `archived` |
+| `items[].status` | string | `active`, `inactive`, or `archived` |
 | `items[].link_url` | string (uri) | Direct URL to view the workflow in Marcora |
 | `itemsTotal` | integer | Total number of matching workflows |
 | `curPage` | integer | Current page |
@@ -1951,11 +1955,13 @@ Fetch one workflow's full definition plus its triggers and latest run. Always ca
 |---|---|---|
 | `workflow.id` | string (uuid) | Workflow ID |
 | `workflow.name` | string | Workflow name |
-| `workflow.status` | string | `draft`, `active`, or `archived` |
+| `workflow.status` | string | `active`, `inactive`, or `archived` |
 | `workflow.steps` | array | Ordered step definitions |
 | `workflow.inputs` | object | Declared input schema |
 | `workflow.allowed_tools` | array | Tool allowlist for the runner |
-| `workflow._triggers` | array | Schedule/trigger configs (inspect `_triggers[0].schedule_config` and `.is_enabled`) |
+| `workflow._triggers` | array | Raw schedule/trigger configs |
+| `workflow.schedule` | object | Present only when the workflow has a schedule: `trigger_id`, `is_enabled` (`true` = On, `false` = Paused), `summary` (plain language, times in UTC), `schedule_config` |
+| `workflow.run_state` | string | One sentence stating what will and won't run, across both switches. Follow it when describing the workflow |
 | `workflow._latest_run` | object/null | Most recent run (carries its own `link_url`), or null if never run |
 | `workflow.link_url` | string (uri) | Direct URL to view the workflow in Marcora |
 
@@ -1968,7 +1974,7 @@ Fetch one workflow's full definition plus its triggers and latest run. Always ca
 
 ### `create_workflow`
 
-Create a new workflow template for your active team. Workflows start as `draft` — activate them with `update_workflow` once the user confirms. Check `list_workflows` with a `search` filter for duplicate names first.
+Create a new workflow template for your active team. New workflows are saved **Inactive**, and any schedule is saved **Paused** — set the workflow Active with `update_workflow` once the user asks for it. Check `list_workflows` with a `search` filter for duplicate names first.
 
 > **Scheduling:** include `schedule_config` ONLY if the user explicitly wants the workflow scheduled. Otherwise omit it and the workflow runs on demand via `run_workflow`.
 
@@ -1982,9 +1988,9 @@ Create a new workflow template for your active team. Workflows start as `draft` 
 | `inputs` | object | No | Declares what the workflow needs (e.g. `topic`, `date_range`); resolved from trigger bindings on scheduled runs |
 | `allowed_tools` | array | **Yes** | **Required, non-empty.** The exact set of tools the workflow runner is permitted to use. A workflow cannot be created without an explicit allowlist — an empty list would let the runner inherit the full tool set. Prefer tight allowlists, especially for scheduled runs |
 | `tags` | string[] | No | Optional tags |
-| `schedule_config` | object | No | Scheduling config. Shape: `{ "frequency": "daily"\|"weekly"\|"hourly", "interval_hours": N, "timezone": "UTC" }`. Omit unless scheduling is requested |
+| `schedule_config` | object | No | Omit unless scheduling is requested. **Calendar mode (preferred):** `{ "frequency": "daily"\|"weekly", "hour": 0-23, "days_of_week": [0-6], "timezone": "<IANA zone>" }` — `hour` and `days_of_week` are UTC (0 = Sunday); `days_of_week` takes 1–7 distinct days, so "3 times a week" is one schedule. **Interval mode** (no `hour`): runs every `interval_hours` hours. `timezone` is display-only. Always saved Paused |
 
-**Output:** The created workflow object — `id`, `team_id`, `created_by_user_id`, `name`, `description`, `status` (`draft`), `inputs`, `steps`, `allowed_tools`, `tags`, `created_at`, `updated_at`, `link_url`. Use `id` as `workflow_id` in the other workflow tools.
+**Output:** The created workflow object — `id`, `team_id`, `created_by_user_id`, `name`, `description`, `status` (`inactive`), `inputs`, `steps`, `allowed_tools`, `tags`, `created_at`, `updated_at`, `link_url` — plus `next_step` (always present: what will and won't run, computed from what was saved — lead your reply with it) and, when a schedule was saved, `schedule` (`is_enabled: false`, and a plain-language `summary` to quote to the user). Use `id` as `workflow_id` in the other workflow tools.
 
 **Example prompts:**
 - "Create a workflow that drafts a weekly LinkedIn post from our latest content"
@@ -1996,9 +2002,9 @@ Create a new workflow template for your active team. Workflows start as `draft` 
 
 Partial update of a workflow template — only the keys you send mutate; unspecified keys are preserved. Call `get_workflow` first to read the current values, then send the minimal diff.
 
-> **Activate / soft-delete:** `{ workflow_id, status: "active" }` activates; `{ workflow_id, status: "archived" }` soft-deletes.
+> **Status:** `{ workflow_id, status: "active" }` sets it Active; `{ workflow_id, status: "inactive" }` sets it Inactive (its schedule is kept exactly as it was); `{ workflow_id, status: "archived" }` soft-deletes. Any other value is refused and nothing is saved — there is no `paused` workflow status. Setting a workflow Active does not turn its schedule On.
 
-> **Do NOT send `schedule_config`** — it is rejected with an InputError on update. Schedule edits happen in the Marcora UI.
+> **Do NOT send `schedule_config`** — it is silently ignored and the call still returns success. Editing a schedule and turning it On or Paused happen in the Marcora app.
 
 **Parameters:**
 
@@ -2007,13 +2013,13 @@ Partial update of a workflow template — only the keys you send mutate; unspeci
 | `workflow_id` | string (uuid) | Yes | UUID of the workflow to update |
 | `name` | string | No | New name |
 | `description` | string | No | New description |
-| `status` | string | No | `draft`, `active`, or `archived` (use `archived` as soft-delete) |
+| `status` | string | No | `active`, `inactive`, or `archived` (use `archived` as soft-delete; restore with `inactive` or `active`) |
 | `steps` | array | No | Replacement step definitions |
 | `inputs` | object | No | Replacement input schema |
 | `allowed_tools` | array | No | Replacement tool allowlist |
 | `tags` | string[] | No | Replacement tags |
 
-**Output:** The updated workflow object — `id`, `name`, `status`, `steps`, `inputs`, `allowed_tools`, `tags`, `updated_at`, `link_url`.
+**Output:** The updated workflow object — `id`, `name`, `status`, `steps`, `inputs`, `allowed_tools`, `tags`, `updated_at`, `link_url` — plus `schedule` whenever the workflow has one, and `next_step` when this call set the status to Active or Inactive (what will and won't run afterwards; follow it).
 
 **Example prompts:**
 - "Activate that workflow"
@@ -2024,7 +2030,7 @@ Partial update of a workflow template — only the keys you send mutate; unspeci
 
 ### `run_workflow`
 
-Manually run a workflow now. Creates a workflow run and dispatches a Managed Agents session. Inspect the returned `status` to know what happened.
+Manually run a workflow now. Creates a workflow run and dispatches a Managed Agents session. Inspect the returned `status` to know what happened. Only an **Active** workflow can run; an Inactive or archived one is refused. The schedule plays no part in a manual run.
 
 > **Check `status`:** `running` → dispatch succeeded, a session is live; `failed` → dispatch failed, read `error_reason` for the cause; `skipped` → the runner decided no work was needed (rare for manual runs).
 
