@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (the `mcp__marco
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.7.4
+  version: 0.7.5
 ---
 
 # Marcora AI Workflows
@@ -39,14 +39,6 @@ If the user hands you a Marcora URL, the UUID in the path **is** the object id �
 ## Connection
 
 The Marcora MCP server is hosted; the user's MCP client connects directly. You do nothing for setup. Every tool call runs as the authenticated user against their active team — auth is implicit. If a call returns an auth error, tell the user to reconnect in Marcora's integration settings; don't try to recover.
-
----
-
-## Backend — don't misread the lane
-
-The Marcora backend is **Railway** (`marcora-backend`) in every environment — production, staging, previews, PR envs. `/x/api:…`-shaped URLs are **legacy-format compatibility paths served BY the Railway backend — NOT evidence of Xano.** The `api:<hash>` segment is Xano's old URL convention, so models reflexively pattern-match it to Xano; that prior is wrong here. The migration preserved the URL shape deliberately so no per-URL repointing was needed.
-
-Before naming a backend in any report or diagnosis, **fingerprint the lane**: `<host>/x/health` returns `{"service":"marcora-backend","version":<commit>}`. If you see that, it's Railway — don't call it Xano. (Xano is decommissioned; a read-only legacy reference probe exists for developers until ~2026-08-07.)
 
 ---
 
@@ -308,9 +300,9 @@ If intent is ambiguous, ask: *"Do you want to run this once, or set it up as a r
 
 ### What the runner writes to its run summary
 
-The runner agent's FINAL message becomes the run's `result_summary` (rendered as markdown on the detail page). Instruct it to: format in markdown, lead with a one-line conclusion, and **link back to anything created** (most Marcora tools return a `url`/`link` — include it). For summary-only workflows, the summary IS the deliverable — make it complete.
+The runner agent's FINAL message becomes the run's summary (rendered as markdown on the run-detail page). Instruct it to: format in markdown, lead with a one-line conclusion, and **link back to anything created** (most Marcora tools return a `url`/`link` — include it). For summary-only workflows, the summary IS the deliverable — make it complete.
 
-**Marker prefixes** the relay parses from the runner's final message to set run status: `Workflow complete: <md>` → succeeded · `Partial completion: <md>` → succeeded (partial) · `SKIP: <reason>` → skipped · `FAIL: <reason>` → failed. No prefix → the final message becomes `result_summary` as-is.
+**Setting the run's status:** tell the runner to start its final message with one of these prefixes — `Workflow complete: <md>` → succeeded · `Partial completion: <md>` → succeeded (partial) · `SKIP: <reason>` → skipped · `FAIL: <reason>` → failed. With no prefix, the final message is used as the run summary as-is.
 
 ### Risk warnings
 

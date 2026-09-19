@@ -17,11 +17,12 @@ All notable changes to the Marcora MCP server will be documented in this file.
 
 - `docs/tools.md` said `update_workflow` rejects `schedule_config` with an error. It is silently ignored and the call still succeeds.
 
-### Skill → v0.7.4
+### Skill → v0.7.5
 
 - The Workflows chapter teaches the two-switch model: Active / Inactive for the workflow, On / Paused for the schedule, never mixed, and always stated together. It follows the tools' `next_step` / `run_state`, allows setting a workflow Active when the user asks, and says when that starts scheduled runs.
 - Kept from the previous draft of this guidance: one multi-day schedule via `days_of_week`, document titles from the first heading, and `link_url` copied exactly.
 - New pitfall E15: telling the user a workflow is running when its schedule is Paused.
+- Clarified how a workflow's final message sets the run's status, and removed implementation details that don't help when using the tools.
 
 ## 2026-08-03 (Claude connection instructions)
 
