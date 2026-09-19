@@ -53,7 +53,7 @@ These are Marcora's core nouns. Internalize them before calling any tool.
 
 - **Project** — A workstream container. Groups related content + project-scoped context items + (optionally) a project brief. One project per initiative (a launch, a campaign, a positioning exercise). Projects have **members** (`owner` / `editor` / `viewer`) and a separate **Collaborator** role for project-only stakeholders.
 
-- **Project brief** — A piece of Content pinned inside a project as its strategic anchor. Surfaced prominently in the project UI. Set at project creation via `create_project(project_brief_details)` (auto-generates a brief from a description) or on an existing project via `update_project(project_brief_id=<content uuid>)`. The latter handles attachment automatically: if the content isn't yet in the project, the tool attaches it AND sets it as the brief in one call.
+- **Project brief** — A piece of Content pinned inside a project as its strategic anchor. Surfaced prominently in the project UI. Set at project creation via `create_project` — `project_brief_instructions` (Marcora writes the brief from your prompt) or `project_brief_content` (your finished text, saved as-is) — or on an existing project via `update_project(project_brief_id=<content uuid>)`. The latter handles attachment automatically: if the content isn't yet in the project, the tool attaches it AND sets it as the brief in one call.
 
 - **Context item** — A reference document (brand guidelines, persona research, competitor analysis, product spec, customer interview) that informs AI generation. Lives in one of three places:
   - **Reference Library** — top-level, team-wide. Created by `add_context` with no `project_id`. Filtered by relevancy at generation time.
@@ -79,7 +79,7 @@ These are Marcora's core nouns. Internalize them before calling any tool.
 - A **Project** contains many **Content** items and many **Context items**, plus optionally one **Project brief** (which is itself a Content item, pinned).
 - A **Content** item may belong to a Project (`project_id`) and may be generated from a **Blueprint** (`blueprint_uuid`).
 - A **Context item** lives at the team level (Reference Library) OR at the project level — never both at once.
-- The **Project brief** is a Content item, attached to the project as a `project_item`, then "pinned" via `project.project_brief_id`. It is NOT a context item — different model, different tool.
+- The **Project brief** is a Content item, attached to the project and pinned as its brief. It is NOT a context item — different model, different tool.
 
 ### Lifecycle states worth knowing
 
@@ -142,7 +142,7 @@ The five workflows you'll handle 80% of the time. Two more surfaces — **Workfl
 1. If you don't already know the project's UUID: `marcora:list_projects` to resolve it from the name.
 2. If the user said "the doc I just made" and you don't already know the Content UUID: `marcora:list_content` and disambiguate with the user.
 3. **State your plan** ("I'll set the brief on \[project] to '\[doc title]'.").
-4. `marcora:update_project(project_id, project_brief_id=<content_uuid>)`. **The tool handles BOTH cases automatically:** if the content is already in the project's documents → uses the existing wrapper; if not → attaches it AND sets it as the brief in one call.
+4. `marcora:update_project(project_id, project_brief_id=<content_uuid>)`. **The tool handles BOTH cases automatically:** if the content is already in the project's documents → pins it as the brief; if not → attaches it AND sets it as the brief in one call.
 
 **Validation.** None required after the call — the tool returns `success: true` with the updated project record.
 
@@ -172,7 +172,7 @@ The five workflows you'll handle 80% of the time. Two more surfaces — **Workfl
 2. If top-level + the user wants it organized: `marcora:list_context_collections`. Use existing collection if a fit; otherwise `marcora:create_context_collection`.
 3. `marcora:add_context` with `name` and the body, plus optional `collection_id` (top-level) or `project_id` (project-scoped). Pick the body argument based on what you have — provide **exactly one** of these three (zero or more than one → 400):
    - **`content`** — paste markdown directly. Best for short or hand-authored material.
-   - **`import_url`** — pass a public URL imported **once**: the backend fetches it and converts the page to clean markdown server-side, stored as a **static snapshot** (the URL is not retained, the item is not refreshable). Use for one-off sources — a blog post, a presigned-link export from Google Docs or a connected-app sandbox, etc. Don't `web_browse`/`web_fetch` it into your conversation first just to forward the bytes.
+   - **`import_url`** — pass a public URL imported **once**: Marcora fetches it and converts the page to clean markdown, stored as a **static snapshot** (the URL is not retained, the item is not refreshable). Use for one-off sources — a blog post, a presigned-link export from Google Docs or a connected-app sandbox, etc. Don't `web_browse`/`web_fetch` it into your conversation first just to forward the bytes.
    - **`connected_webpage_url`** — pass a URL to track as a live, refreshable **web page** (`content_type: "webpage"`): the URL is stored so it can be re-pulled later via `update_context(refresh_webpage=true)` or the app's refresh button. Use this for the customer's own pages and anything you'll want to keep current. Dedupes by URL (re-adding updates in place). **Admin/editor only** — collaborators are rejected.
 
 **Output to user.** "Added: [link]. Want to use this in a content generation now?"
@@ -186,9 +186,9 @@ The five workflows you'll handle 80% of the time. Two more surfaces — **Workfl
 **Preconditions.** None hard-required. If you don't already know the user's projects: `marcora:list_projects` to avoid duplicates.
 
 **Steps.**
-1. Ask the user whether to seed the brief now (auto-generated from a description via `project_brief_details`) or set up empty (and add a brief later via Workflow 2). Both paths are fine.
+1. Ask the user whether to seed the brief now (written by Marcora from a prompt via `project_brief_instructions`, or their own finished text via `project_brief_content`) or set up empty (and add a brief later via Workflow 2). Both paths are fine.
 2. **State your plan.**
-3. `marcora:create_project` with `name`, optional `visibility` (`team` default | `private`), optional `project_brief_details`. When `project_brief_details` is supplied, the response includes `project_brief: {name, content_id}` — save the `content_id` so the user can edit the brief later via `update_content`.
+3. `marcora:create_project` with `name`, optional `visibility` (`team` default | `private`), optional `project_brief_instructions` or `project_brief_content` (if both are sent, `project_brief_content` wins; `project_brief_instructions` uses Studio Credits). When a brief is created, the response includes `project_brief: {name, content_id}` — save the `content_id` so the user can edit the brief later via `update_content`.
 4. Offer to add project context items next ("Want to add research / competitor materials to this project's context?").
 
 **Output to user.** "Project created: [link]."
@@ -285,7 +285,7 @@ If intent is ambiguous, ask: *"Do you want to run this once, or set it up as a r
    - **(a) An external destination** — depending on the user's connected integrations: `create_content`, `add_context`, `create_project`, `update_context`, `create_external_share`, or connected toolkits (GMAIL_SEND_EMAIL / Slack / Teams / Discord, GOOGLETASKS_INSERT_TASK / Asana / Linear, Google Docs / Sheets / Notion).
    - **(b) Run summary only** — the user just reads the result on the run-detail page. Legitimate for "look something up / summarize / find me" workflows. Restate it back so they know where to look.
 3. **Translate steps into plain-language `{name, description}` entries** specific enough that a fresh agent can act without follow-up. Add `agent_hint` for non-obvious guidance. Tool names in step descriptions render as chips — write them in canonical `SCREAMING_SNAKE_CASE`.
-4. **Set `allowed_tools` narrowly** (3–6 tools). An empty list is rejected by the backend (`allowed_tools_required`) — even summary-only workflows need read tools spelled out (e.g. `web_search`, `web_browse`).
+4. **Set `allowed_tools` narrowly** (3–6 tools). The call is rejected if `allowed_tools` is missing or empty — even summary-only workflows need read tools spelled out (e.g. `web_search`, `web_browse`).
 5. **Two switches, two vocabularies — never mix them.** The workflow is **Active** or **Inactive** (or Archived). Its schedule, if it has one, is **On** or **Paused**. Never call a schedule "active" or "inactive", and never call a workflow "paused" or "on". Whenever you say a workflow is Active, say in the same sentence whether its schedule is On, Paused, or absent — "Active" alone only means the workflow is *allowed* to run.
    - **What runs needs both switches:** a scheduled run needs the workflow Active **and** the schedule On. A manual run (`run_workflow`) needs only Active.
    - Inactive → nothing runs, by any route (manual runs are refused too). Active with no schedule → runs only when started manually. Active with the schedule Paused → manual runs work, but it won't run on its schedule until the user clicks **Resume schedule** in the app. Active with the schedule On → runs on its schedule. Inactive with the schedule On → nothing runs until the workflow is set Active.
@@ -296,7 +296,7 @@ If intent is ambiguous, ask: *"Do you want to run this once, or set it up as a r
    - **Interval shape:** omit `hour` and pass `interval_hours` (or rely on the 1h / 24h / 168h default for hourly / daily / weekly). It runs every N hours with no fixed time of day, the first run landing one interval after the user switches the schedule On. The app's editor cannot display or edit it — use it only when the calendar shape can't express the need.
    - **No MCP tool can switch a schedule On.** `update_workflow` silently ignores `schedule_config` and still returns success. Tell the user the schedule is Paused, hand them the workflow's `link_url` exactly as returned, and ask them to review it and click **Resume schedule**. Quote `schedule.summary` when you describe what was saved.
    - **The app's editor offers:** Daily at a set time, or Weekly on one or more days at a set time (it has a weekday picker). It cannot hold a second time of day or an every-N-hours interval, and cron expressions are not supported. If the user asks for something it genuinely can't express ("twice a day"), say exactly what you saved and that it is an approximation.
-7. **For workflows that process entities over time** ("summarize new content each week"), be explicit about dedup BEFORE creating: use a `since_last_run` input binding (the scheduler/resolver compute the window from the trigger's `last_successful_run_at` — don't compute it yourself), match schedule cadence to lookback, and write source entity IDs into downstream artifacts so a future run can tell what it already processed. Raise this proactively if the user doesn't.
+7. **For workflows that process entities over time** ("summarize new content each week"), be explicit about dedup BEFORE creating: use a `since_last_run` input binding (Marcora computes the window from the last successful run — don't compute it yourself), match schedule cadence to lookback, and write source entity IDs into downstream artifacts so a future run can tell what it already processed. Raise this proactively if the user doesn't.
 
 ### What the runner writes to its run summary
 
@@ -309,7 +309,7 @@ The runner agent's FINAL message becomes the run's summary (rendered as markdown
 - **Set a workflow Active when the user has asked for it, and tell them what that does.** Activating is not the risk; an inaccurate reply is. With the schedule On, activating starts scheduled runs — say so. With it Paused, the workflow can be run manually but still won't run on its schedule. Never tell the user a workflow will run on its own unless it is Active and its schedule is On.
 - **Setting a workflow Inactive keeps its schedule exactly as it was.** A schedule that was On is still On and fires again as soon as the workflow is Active. To stop scheduled runs but keep manual runs, the user pauses the schedule in the app — there is no `"paused"` workflow status.
 - **Hard-delete isn't exposed** — use `update_workflow status:"archived"`. Restore with `status:"inactive"` or `status:"active"`.
-- **Duplicate names aren't DB-prevented** — `list_workflows search:"<name>"` first if re-creating is possible.
+- **Duplicate names aren't prevented** — `list_workflows search:"<name>"` first if re-creating is possible.
 - **Schedule edits via MCP are NOT supported** — changing a schedule, and switching it On or Paused, happen in the app. Direct the user there with the workflow's `link_url`.
 - **Runner sessions don't author workflows** — these 6 tools are for interactive sessions; a runner executing a scheduled run uses a different tool set and must not call `create_workflow`/`update_workflow`.
 
@@ -323,7 +323,7 @@ The **plans board** is Marcora's content pipeline: a queue of ideas/intents (**p
 
 ### The plan stage machine
 
-`Suggested → Accepted → In_Process → Complete`, plus `Dismissed` (terminal). Transitions are enforced server-side via `update_plan target_stage:` (use the UNDERSCORE form `In_Process`). Only these are allowed: Suggested→Accepted/Dismissed · Accepted→In_Process/Dismissed · In_Process→Complete/Accepted/Dismissed · Complete→Accepted (re-open, clears produced content)/Dismissed. **There is no `delete_plan`** — dismiss with `target_stage:"Dismissed"`.
+`Suggested → Accepted → In_Process → Complete`, plus `Dismissed` (terminal). Transitions go through `update_plan target_stage:` (use the UNDERSCORE form `In_Process`). Only these are allowed: Suggested→Accepted/Dismissed · Accepted→In_Process/Dismissed · In_Process→Complete/Accepted/Dismissed · Complete→Accepted (re-open, clears produced content)/Dismissed. **There is no `delete_plan`** — dismiss with `target_stage:"Dismissed"`.
 
 The **starting stage is set automatically from `source`**, you don't control it directly: `user_added` / `cora_requested` / `playbook` → **Accepted** (actionable now); `cora_proactive` → **Suggested** (awaits user accept). Set `source:"cora_requested"` when the user explicitly asked; `source:"cora_proactive"` when you're surfacing an unprompted suggestion. **Never** pass `source:"workflow"` or `"playbook"` from an interactive session.
 
@@ -335,10 +335,10 @@ The **starting stage is set automatically from `source`**, you don't control it 
 
 - **`create_plan`** — Create a plan. Only `title` is required. Optional executable params (`prompt`, `blueprint_id`, `project_id`, `category_id`, `due_date`, `reference_document_ids`, `context_collection_ids`, `targeting_dimension_ids`, `assigned_to`, `visibility`). **Dedupe first:** call `list_plans` with a `project_id` filter before creating; if a matching Accepted/Suggested plan exists, offer to `update_plan` it instead. When creating several in one turn, correlate them with `source_metadata.batch_id` and deep-link the filtered view.
 - **`get_plan`** — Fetch one plan by `plan_uuid` with all linked params. **Always call before `update_plan`** to avoid overwriting with stale values. `_produced_content` null = no content yet.
-- **`list_plans`** — Discovery + dedup. Visibility-scoped server-side (an empty result ≠ the team has no plans). Useful filters: `stage` (single-value array, UNDERSCORE form), `project_id`, `assignee_scope` (`me` default | `created_by_me` | `all_visible`). ⚠️ Known no-ops today: `due_before`/`due_after` and `search_text` are accepted but don't filter yet; multi-value `stage[]`/`source[]` honor only the first element — pass single-value arrays.
+- **`list_plans`** — Discovery + dedup. Results cover only the plans the user can see (an empty result ≠ the team has no plans). Useful filters: `stage` (single-value array, UNDERSCORE form), `project_id`, `assignee_scope` (`me` default | `created_by_me` | `all_visible`). Current limitations: `due_before`, `due_after` and `search_text` are accepted but not yet applied, and for `stage` and `source` only the first value is used — pass single-value arrays.
 - **`update_plan`** — Partial update; only keys you send mutate. Construct a minimal diff after `get_plan`. `reference_document_ids` / `context_collection_ids` / `targeting_dimension_ids` are **full-replace** (pass `[]` to clear). Server-managed fields (`source`, `produced_content_id`, timestamps, etc.) are rejected as immutable.
 - **`produce_plan`** — The MCP equivalent of the plans-board **Generate** button. Requires the plan in **Accepted** stage (Suggested → `update_plan target_stage:"Accepted"` first). **⚠️ Consumes AI credits and takes 1–2 min — confirm before producing a plan the user didn't explicitly ask to produce.** The plan's `prompt`, targeting, context collections, and project are used as generation inputs — set them via `update_plan` BEFORE producing.
-  - **Both paths are ASYNC now** — the tool returns immediately with a `generation_id`; **poll `get_generation_status`**. A plan **with** a blueprint → `path:"blueprint"`; **without** a blueprint → `path:"freeform"`. On completion the backend links the produced content and flips the plan to `In_Process` (then `Complete` when the content reaches ready).
+  - **Both paths are ASYNC now** — the tool returns immediately with a `generation_id`; **poll `get_generation_status`**. A plan **with** a blueprint → `path:"blueprint"`; **without** a blueprint → `path:"freeform"`. On completion Marcora links the produced content and flips the plan to `In_Process` (then `Complete` when the content reaches ready).
 
 ### The 6 playbook tools
 
@@ -375,7 +375,7 @@ The **starting stage is set automatically from `source`**, you don't control it 
 | To refresh a tracked web-page item after its source page changed | `marcora:update_context(context_item_id, refresh_webpage=true)` | Re-pulls from the stored URL (the app's refresh button). Only works on items created via `connected_webpage_url`. Find which items are refreshable via the `source_url` field on `list_context_items` / `get_context_item`. Don't `web_browse` + `update_context(content=…)` — that's a blind overwrite, not a tracked refresh. |
 | To edit an existing Content document — change the body, name, stage (`ready` / `in_progress`), visibility, category, or single-project assignment | `marcora:update_content` | `update_context` operates on Context items, not Content documents — different object. `update_project(project_brief_id=…)` only changes a project's brief pointer, not the document body or fields. `update_content` is partial-update (omit a field = leave alone) and replaces the body in full when `content` is supplied — call `get_content` first if you need to splice into the existing markdown. Setting `name_override` LOCKS the title so it won't auto-resync from the body's first header on future edits. |
 | To have Marcora's in-editor AI assistant edit / extend a document — or answer a question about it — with the reply streaming live into the document's sidebar | `marcora:ask_content_assistant` | `update_content` is a *manual* full-body replace — **you** compute and supply the new markdown. `ask_content_assistant` hands the request to Marcora's own Content Assistant: it loads the document + brand/reference context, decides whether to edit or just reply, and streams the result live to the user in the app. It's async — returns a `generation_id` to poll via `get_generation_status`. It is NOT the general Marcora Agent. |
-| To save a URL (blog post, competitor page, Google Doc export, presigned link) as a one-off context snapshot | `marcora:add_context` with `import_url=<url>` | Don't `web_browse`/`web_fetch` the URL just to paste the markdown into `content` — backend has the same Mozilla Readability extractor and avoids the round-trip through your conversation. Use `connected_webpage_url` instead if you want the URL kept and refreshable (see the web-page rows below). |
+| To save a URL (blog post, competitor page, Google Doc export, presigned link) as a one-off context snapshot | `marcora:add_context` with `import_url=<url>` | Don't `web_browse`/`web_fetch` the URL just to paste the markdown into `content` — Marcora extracts the page itself and avoids the round-trip through your conversation. Use `connected_webpage_url` instead if you want the URL kept and refreshable (see the web-page rows below). |
 | To know what content already exists about a topic | `marcora:get_relevant_context` for context, OR `marcora:list_content` for a content list | `create_content` would generate something new — wrong tool for "what already exists." |
 | To browse what's in the user's context library (full inventory, not RAG) | `marcora:list_context_items` | `get_relevant_context` returns relevance-scored chunks, not item names. Use `list_context_items` for the catalog view. Pass `reference_library_only=true` to scope to just the top-level Reference Library. |
 | To read the full markdown of a specific context item | `marcora:get_context_item(context_item_id)` | `list_context_items` only returns `content_intro` (a truncation). `get_relevant_context` returns RAG chunks. Use this for the actual content. |
@@ -391,7 +391,7 @@ The **starting stage is set automatically from `source`**, you don't control it 
 
 - **Hand over links exactly as returned.** When a tool returns `link_url` (or any URL field), copy it character for character into your reply. Never retype an id, shorten a URL, or rebuild one from a pattern — a single wrong character in a UUID gives the user a dead link that still looks right.
 
-- **Don't duplicate Content to "add it" to a project.** Attachment is a relationship (a `project_item` row), not a copy. Use `update_project(project_brief_id=...)` — it auto-attaches.
+- **Don't duplicate Content to "add it" to a project.** Attachment is a link between the project and the document, not a copy. Use `update_project(project_brief_id=...)` — it auto-attaches.
 
 - **Don't pre-fetch context before `create_content` when Marcora is doing the writing.** The `instructions` path already pulls in everything internally: Brand Foundation (so you don't need `marcora:get_brand_foundation` either), Reference Library via relevancy scoring, Project Context if `project_id` is set, and any `collection_ids` you pass. Calling `marcora:get_relevant_context` or `marcora:get_brand_foundation` as a setup step before *generating* is wasted work. **The exception that matters:** when *you* compose the content yourself and save it via the `content` parameter of `create_content` (or `update_content`), those paths store your text **verbatim** and consult no context — so you MUST call `get_relevant_context(include_brand_foundation=true)` first or your draft is off-brand and ignores the Reference Library. Other legitimate uses of those fetch tools: the narrow Workflow-1 sourcing-check (specific customer / incident not likely in the library) and direct user Q&A about brand voice or library contents.
 
@@ -409,7 +409,6 @@ The **starting stage is set automatically from `source`**, you don't control it 
 
 - **Empty-string inputs to `update_project` are silently ignored.** Net effect: passing `name=""` is a safe no-op rather than a clobber. There's intentionally no way to clear a project name through this tool.
 
-- **`project.system_prompt` is deprecated.** Don't try to set it. Use the project brief instead.
 
 - **`update_content` is for Content documents only — not Context items, not project briefs as a pointer.** It mutates the content document directly (body, name, stage, visibility, category, single-project assignment). Setting `name_override` locks the title (`has_custom_name=true`) and there's no un-lock path in this tool — let the next plain `content` write recompute the auto-name if needed. The tool rejects non-editable document types (e.g. the documents that back the context-item editor in the app) — those are managed by separate sync flows and would corrupt the linked context item if edited here.
 

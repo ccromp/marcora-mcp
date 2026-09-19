@@ -76,7 +76,7 @@ The 5 most common workflows are in `SKILL.md`. This file covers less-frequent re
 **Steps.**
 1. If you don't already know the `project_id`: `marcora:list_projects`.
 2. **State your plan** — name the field changing and the new value.
-3. `marcora:update_project(project_id, …)` with ONLY the fields changing (PATCH semantics — omitted fields are untouched).
+3. `marcora:update_project(project_id, …)` with ONLY the fields changing (a partial update — omitted fields are untouched).
    - `name` (text)
    - `visibility` enum: `team` | `private`
    - `status` enum: `active` | `archived`
@@ -115,7 +115,7 @@ When the user wants to change one of the four Brand Foundation elements:
 3. Write: `marcora:update_brand_foundation({element: "<element>", content: "<new markdown>"})`. Always full-replace — no patch semantics.
 4. Hand the user the `link_url` from the response — it opens the Brand Foundation section in Marcora. Use it **exactly as returned**; never build a Brand Foundation URL yourself. There is no `/brand-foundation` route (a hand-built link 404s and bounces them to `/home`, losing the chat).
 
-Per-element character limits: `company_overview` 10,000; `brand_voice`, `writing_style`, `writing_examples` 20,000 each. Overflow returns a structured `ERROR_CODE_INPUT_ERROR` naming the limit; the write is rejected before any DB mutation.
+Per-element character limits: `company_overview` 10,000; `brand_voice`, `writing_style`, `writing_examples` 20,000 each. Overflow returns an input error naming the limit, and nothing is saved.
 
 ---
 

@@ -23,6 +23,8 @@ All notable changes to the Marcora MCP server will be documented in this file.
 - Kept from the previous draft of this guidance: one multi-day schedule via `days_of_week`, document titles from the first heading, and `link_url` copied exactly.
 - New pitfall E15: telling the user a workflow is running when its schedule is Paused.
 - Clarified how a workflow's final message sets the run's status, and removed implementation details that don't help when using the tools.
+- `create_project` brief guidance now names the tool's actual parameters, `project_brief_instructions` and `project_brief_content`.
+- `list_plans` filters that are accepted but not yet applied are listed as current limitations.
 
 ## 2026-08-03 (Claude connection instructions)
 

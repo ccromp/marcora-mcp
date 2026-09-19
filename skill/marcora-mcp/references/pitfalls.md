@@ -8,11 +8,11 @@ The high-frequency pitfalls are in `SKILL.md` (§ Pitfalls and conventions). Thi
 
 **Symptom.** `marcora:update_project(project_brief_id=<bad-uuid>)` returns `"Document not found"`.
 
-**Cause.** The brief-resolution path resolves the UUID against the team's stored content documents. If no document matches the UUID, it throws this less-specific error.
+**Cause.** The UUID doesn't match any content document in the team, and this is the error that comes back.
 
 **What to do.** Verify the UUID. Common mistakes:
 - Pasting a `project_id` where a content UUID was expected.
-- Pasting a `project_item.id` (integer) instead of a content UUID.
+- Pasting a project document's numeric id instead of a content UUID.
 
 ---
 
@@ -64,9 +64,9 @@ The high-frequency pitfalls are in `SKILL.md` (§ Pitfalls and conventions). Thi
 
 ---
 
-## E7 — `private_override` and brief privacy
+## E7 — A private document as a project brief
 
-When `update_project` sets a private Content item as a project's brief, the underlying PATCH endpoint auto-sets `project_item.private_override = true` so other project members can see it. You don't need to manage this flag manually.
+When `update_project` sets a private Content item as a project's brief, Marcora automatically makes it visible to the project's members. You don't need to change its privacy yourself.
 
 ---
 
@@ -116,11 +116,11 @@ Don't show the user a UUID like `7b2c4f...` as an identifier. Surface the human-
 
 ---
 
-## E14 — A brand-new account holds every tool call
+## E14 — A brand-new account answers every tool with "setup underway"
 
 **Symptom.** Every tool you call — any tool — comes back with "Your Marcora account setup is still underway. We are importing your top web pages right now to build your context. Please try again in a few minutes.", sometimes with a progress suffix like `(3 of 7 setup steps complete.)`. Nothing errors; the server lists all its tools normally.
 
-**Cause.** The account was created recently and its context is still being built. Until setup completes (or 72 hours pass), the server intercepts `tools/call` and returns this message *as a successful result* instead of running the tool. `initialize` and `tools/list` are unaffected, which is why the integration looks perfectly healthy.
+**Cause.** The account was created recently and its context is still being built. While a new account is still being set up, tools reply with this "setup underway" message instead of doing the work. That is expected, not an error, and the connection itself is healthy — which is why the integration looks fine while no tool does anything.
 
 **What to do.** Tell the user setup is still running and try again in a few minutes — the progress suffix advances, so re-calling is a reasonable way to watch it. Do **not** treat it as a tool failure, do **not** retry in a tight loop, and do **not** suggest reconnecting the server or signing up again — a second signup splits their context across two accounts. If it persists beyond about an hour, setup has stalled rather than being slow: tell them to contact support.
 
