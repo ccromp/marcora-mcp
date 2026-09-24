@@ -49,6 +49,18 @@
 - Use the corresponding list tool to get fresh IDs (e.g., `list_blueprints` before `get_blueprint`)
 - IDs are UUIDs — ensure you're passing the full string, not a truncated version
 
+### "Project not found" / "You are not a member of project …"
+
+**Cause:** `get_relevant_context` was called with a `project_id` you can't search.
+- **`Project not found`** — the project doesn't exist, or belongs to a team other than your active team.
+- **`You are not a member of project <id>`** — the project is private and you are not one of its members.
+
+Neither error returns any context or the project's brief.
+
+**Solutions:**
+- Run `list_projects` to confirm the project id. If the project is in another of your teams, switch with `set_active_team` (this changes your active team everywhere).
+- For a private project, ask one of its members to add you — or search without `project_id`.
+
 ### Content generation timeout
 
 **Cause:** Content generation (especially from blueprints) can take 1–3 minutes.

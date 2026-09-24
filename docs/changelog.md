@@ -2,6 +2,31 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## YYYY-MM-DD (project briefs) <!-- HELD: set to the production promotion date at publish -->
+
+### Added
+
+- **`get_relevant_context` returns the project's brief.** With a `project_id`, the response now carries a top-level `project_brief` block as its first key (`content_id`, `name`, `word_count`, `content_intro`, `truncated`, `read_first`) — the same block `get_project` returns. It is absent when the project has no brief.
+- **New `get_relevant_context` input `include_project_brief`** (boolean, default `true`). Leave it on for the first call for a project in a conversation; set it `false` on later calls for the same project so the brief isn't re-sent. Ignored without `project_id`.
+- **`get_project` returns a readable brief.** `project_brief` gains `word_count`, `content_intro` (the full body up to 600 words, otherwise the opening 400), `truncated` and `read_first`. Each `documents` entry gains `is_project_brief`, and the brief sorts first.
+
+### Changed
+
+- `get_project`, `get_relevant_context`, `get_content` and `update_project` now tell the agent to read a project's brief before drafting, revising, assessing or critiquing work in that project, and how: `get_content` with the brief's `content_id` when `truncated` is `true`.
+- `get_relevant_context` documents its two project-access errors: `Project not found` and `You are not a member of project <id>`. Neither returns context or a brief.
+
+### Docs
+
+- `docs/tools.md` now lists `sources[].content_category` and `sources[].is_stale` on `get_relevant_context`, which were already returned but undocumented.
+- `docs/errors.md` covers the two project-access errors.
+
+### Skill → v0.7.6
+
+- New section, "Working inside a project — read the brief first": where the brief comes from (`get_project`, or the first `get_relevant_context` call for a project), reading the full body when `truncated`, and passing `include_project_brief: false` once you have it.
+- `get_content` is always warranted for a truncated project brief; the brief is read before it is rewritten or replaced.
+- Error runbook covers `Project not found` and `You are not a member of project <id>`.
+- New pitfall E2b: the brief never appears among relevancy chunks.
+
 ## 2026-09-19 (workflow status and schedules)
 
 ### Changed

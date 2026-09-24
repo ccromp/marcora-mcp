@@ -463,6 +463,10 @@ Searches the team's context library and returns the most relevant chunks for a g
 
 `collection_ids` and `project_id` are **additive**: they broaden the search to ALSO include those collections / that project's context alongside your general reference library — they do not restrict results to only that collection or project.
 
+**Working inside a project? The first call returns its brief.** When you pass `project_id` and the project has a brief, the response carries a top-level `project_brief` block as its **first** key: the project's authoritative statement of premise, scope and the structural decisions already taken. It is the same block `get_project` returns. Read it before drafting, revising, assessing or critiquing anything in that project — the chunks in the same response may be older than the brief or contradict it, and the brief wins. When `truncated` is `true`, call `get_content` with its `content_id` for the full text. The brief is stored as a document, not as a context item, so relevancy search can never surface it; this block is the only way it reaches you from this tool.
+
+> **Tip — the brief on the first call only:** `include_project_brief` defaults to `true`, so just omit it on the **first** call for a project. On **later** calls for the same project in the same conversation, set it `false` so the brief isn't re-sent. If you already have the brief (you called `get_project` for that project, or your environment already gave it to you), treat the first call as done and pass `false`.
+
 Set `include_brand_foundation: true` to also receive the team's Brand Foundation (company overview, brand voice, writing style, writing examples) in the same response — a one-stop fetch of everything you need to write on-brand yourself with your own model. Use this whenever **you** are composing content to save via the `content` parameter of `create_content` or `update_content` (those paths store text verbatim and consult no context). You **don't** need it when handing off to `create_content` with `instructions` — that path pulls Brand Foundation in automatically.
 
 > **Tip — bundle Brand Foundation on the first call:** Default the **first** `get_relevant_context` call of a conversation to `include_brand_foundation: true`. Brand Foundation is always-on foundational context that relevancy scoring never surfaces on its own; pulling it in once, up front, means the agent has the team's company overview and brand voice on hand for the rest of the session — useful even when just answering a question. On **subsequent** calls in the same conversation, set it `false`/omit so it isn't re-sent each time.
@@ -479,11 +483,13 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 | `dimension_option_ids` | array | No | Targeting dimension option IDs that bias relevancy toward an audience / persona / industry |
 | `context_rag_ids` | array | No | Previously returned chunk IDs to exclude (for pagination) |
 | `include_brand_foundation` | boolean | No | When `true`, also returns the team's Brand Foundation in the response. Default `false`. Recommended `true` on the **first** call of a conversation (and when paginating, the first page), then `false`/omit on follow-ups so it isn't re-sent each time |
+| `include_project_brief` | boolean | No | Default `true`. When `project_id` is given, also returns that project's brief as a top-level `project_brief` block. Leave it `true` (or omit it) on the **first** call for a project in a conversation; set `false` on later calls for the same project so the brief isn't re-sent. Ignored when `project_id` is omitted |
 
 **Output:**
 
 | Field | Type | Description |
 |---|---|---|
+| `project_brief` | object | **Present only** when `project_id` is given, `include_project_brief` is `true` (the default) and the project has a brief; absent otherwise. When present it is the **first** key — see below |
 | `relevant_context` | string | Ready-to-use markdown context packet assembled from the matched chunks |
 | `context_rag_ids` | array (uuid) | All chunk IDs returned. Pass back in `context_rag_ids` to exclude from future searches (pagination) |
 | `brand_foundation` | object | Always present — see below. `elements` is `null` unless `include_brand_foundation` is `true` |
@@ -491,6 +497,17 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 | `sources` | array | One entry per parent context item the returned chunks came from — see below |
 
 > The previous top-level `context_item_ids` field has been **removed** — each entry in `sources` carries its own `context_item_id`, and the union of every source's `context_rag_ids` equals the top-level `context_rag_ids`.
+
+**`project_brief` object** (same shape as `get_project`'s `project_brief`):
+
+| Field | Type | Description |
+|---|---|---|
+| `content_id` | string (uuid) | The brief document's UUID. Pass to `get_content` for the full text |
+| `name` | string | The brief's title |
+| `word_count` | integer | Word count of the full brief body |
+| `content_intro` | string | The brief's full body when it is 600 words or fewer; otherwise its opening 400 words |
+| `truncated` | boolean | `true` when `content_intro` is an excerpt — call `get_content` with `content_id` for the full body |
+| `read_first` | string | An instruction to read the brief before working in the project, naming the `content_id` to fetch |
 
 **`brand_foundation` object:**
 
@@ -518,6 +535,8 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 | `context_item_id` | string (uuid) | The parent context item's ID |
 | `context_item_name` | string \| null | The item's name |
 | `content_type` | string \| null | One of `file`, `manual`, `webpage`, `canvas`, `deliverable`, `integration_data`, `call_transcript` |
+| `content_category` | string \| null | How the item is classified for grounding: `company_authoritative` (the team's own source of truth), `reference_material`, or `unclassified`. Authoritative sources outrank reference material when they disagree |
+| `is_stale` | boolean \| null | `true` when the item is flagged as out of date — treat its claims with caution and prefer a fresher source |
 | `link_url` | string \| null | Deep-link that opens this item in the Marcora app (present for every source) |
 | `source_url` | string | Original external page URL — **present only for `webpage` items**, omitted otherwise |
 | `collection_id` | integer \| null | Collection the item belongs to, if any |
@@ -525,11 +544,21 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 | `last_updated` | integer \| null | Unix-ms timestamp of the item's last update (`null` if never updated) |
 | `context_rag_ids` | array (uuid) | The chunk IDs in this response that came from this item |
 
+**Errors when you pass `project_id`:**
+
+| Error | Meaning | What to do |
+|---|---|---|
+| `Project not found` | The project doesn't exist, or belongs to a team other than your active team | Check `list_projects`, or `set_active_team` if the project is in another team |
+| `You are not a member of project <id>` | The project is private and you are not one of its members | Ask a project member to add you, or search without `project_id` |
+
+Neither error returns any context or brief.
+
 **Example prompts:**
 - "Find context about our enterprise pricing" (then cite each source via its `link_url`)
 - "What do we know about competitor X?"
 - "Get context relevant to writing a product launch blog post"
 - "Pull together everything I need to write a healthcare launch email, including our brand foundation"
+- "What does the Acme Launch project already have on pricing?" (the first call also returns the project's brief)
 
 ---
 
@@ -1277,13 +1306,19 @@ Returns all content visible to the current user as a single unified array. Conte
 
 ### `get_content`
 
-Retrieves the full content of a specific document by its `content_id` (UUID).
+Retrieves the full markdown body of a specific document by its `content_id` (UUID).
+
+**Always warranted: reading a project's brief.** When `get_project` or `get_relevant_context` returns a `project_brief` block with `truncated: true`, call `get_content` with that block's `content_id` before drafting, revising, assessing or critiquing anything in that project. The brief states the project's premise and the structural decisions already taken, and work produced without it is likely to contradict them.
+
+**Otherwise, use it only when you need to read the body to answer a question about it** — for example "summarize what my latest case study says about pricing" or "does this messaging doc mention HIPAA?". The user can already open the document in Marcora from its link, so don't call this after `create_content` (or after `get_generation_status` returns `completed`) just to show them what was generated.
+
+**Links:** present `link_url` to the user exactly as returned — copy it character for character.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `content_id` | string | Yes | The UUID of the content to retrieve |
+| `content_id` | string | Yes | The UUID of the content to retrieve (from `list_content`, a `documents` entry or the `project_brief` block of `get_project`, or `get_generation_status`) |
 
 **Output:**
 
@@ -1298,8 +1333,8 @@ Retrieves the full content of a specific document by its `content_id` (UUID).
 | `link_url` | string | Direct URL to view in Marcora |
 
 **Example prompts:**
-- "Show me the full content of that blog post"
-- "Read my latest case study"
+- "Summarize what my latest case study says about pricing"
+- "Read the full brief for the Acme Launch project before we revise the launch email"
 
 ---
 
@@ -1480,7 +1515,11 @@ Returns all projects visible to the current user. Projects organize content into
 
 ### `get_project`
 
-Returns details for a specific project including its members, documents, context items, and (when set) a top-level `project_brief` shortcut so the brief is directly addressable for follow-up edits via `update_content`.
+Returns details for a specific project: its members, documents, context items, and — when one is set — the project's **brief**.
+
+**Read the brief before doing substantive work in the project.** The `project_brief` block is the project's authoritative statement of premise, scope and the structural decisions already taken. Its `content_intro` is the full body when the brief is short, otherwise the opening excerpt with `truncated: true` — call `get_content` with its `content_id` for the full text. The other documents and context items in the project may be older than the brief, or contradict it; the brief wins. The matching entry in `documents` is flagged `is_project_brief: true` and sorted first.
+
+`project_brief.content_id` is also the id to pass to `update_content` to **edit** the brief.
 
 **Parameters:**
 
@@ -1497,14 +1536,26 @@ Returns details for a specific project including its members, documents, context
 | `status` | string | Project status |
 | `visibility` | string | Visibility setting |
 | `members` | array | Project members |
-| `documents` | array | Documents in this project |
-| `project_brief` | object \| null | The project's pinned brief document, if set. `{name, content_id}` — same shape as `create_project`'s `project_brief` field. Pass `content_id` to `update_content` / `get_content` to edit or read the brief. `null` if the project has no brief set |
+| `documents` | array | Documents in this project. Each entry carries `content_id`, `name`, `visibility`, `is_ready`, `category`, `purpose`, `is_project_brief`, `in_project_context` and `web_url`. The brief's entry has `is_project_brief: true` and is sorted first |
+| `project_brief` | object \| null | The project's brief, or `null` when the project has no brief set. See below |
 | `context_items` | array | Context items associated with this project |
 | `created_at` | integer | Unix timestamp of creation |
+
+**`project_brief` object:**
+
+| Field | Type | Description |
+|---|---|---|
+| `content_id` | string (uuid) | The brief document's UUID. Pass to `get_content` to read it in full, or to `update_content` to edit it |
+| `name` | string | The brief's title |
+| `word_count` | integer | Word count of the full brief body |
+| `content_intro` | string | The brief's full body when it is 600 words or fewer; otherwise its opening 400 words |
+| `truncated` | boolean | `true` when `content_intro` is an excerpt — call `get_content` for the full body |
+| `read_first` | string | An instruction to read the brief before working in the project, naming the `content_id` to fetch |
 
 **Example prompts:**
 - "Show me the details of my product launch project"
 - "What documents are in this project?"
+- "What's the premise of the Acme project? Read its brief before we start"
 - "Open the brief for the Acme project so I can edit it"
 
 ---
@@ -1540,6 +1591,8 @@ Create a new project for organizing content and context into a workstream. Optio
 ### `update_project`
 
 Update mutable fields on an existing project (name, visibility, status, project brief). Uses PATCH semantics — only fields you pass are changed; omit a field to leave it unchanged.
+
+**To read the existing brief instead of replacing it, don't come here.** `get_project` returns the brief as a `project_brief` block with an excerpt, and `get_content` with that block's `content_id` returns the full body. Read it before you change it: the brief is the project's authoritative statement of premise and structural decisions, and replacing it blind discards them.
 
 **Parameters:**
 
