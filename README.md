@@ -123,7 +123,7 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Context & Resources | `update_context` | Update an existing context item |
 | Context & Resources | `list_context_items` | List context items in your library (optional semantic `search`) |
 | Context & Resources | `get_context_item` | Get a context item's full markdown content |
-| Context & Resources | `get_relevant_context` | Search context library by prompt |
+| Context & Resources | `get_relevant_context` | Search context library by prompt (with a `project_id`, also returns the project's brief) |
 | Context Intelligence | `list_ci_findings` | List findings from automated context-library scans |
 | Context Intelligence | `get_ci_finding` | Get one finding in full detail by UUID |
 | Context Intelligence | `update_ci_finding_status` | Acknowledge, dismiss, or resolve a finding |
@@ -150,7 +150,7 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Sharing & Export | `create_external_share` | Create a public share link |
 | Sharing & Export | `convert_markdown_to_word_doc` | Export markdown as Word doc |
 | Projects | `list_projects` | List all projects |
-| Projects | `get_project` | Get project details |
+| Projects | `get_project` | Get project details, including its brief |
 | Projects | `create_project` | Create a new project |
 | Projects | `update_project` | Update mutable fields on a project |
 | Plans & Playbooks | `list_plans` | List content plans (with filters) |
