@@ -2,7 +2,7 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
-## YYYY-MM-DD (project briefs) <!-- HELD: set to the production promotion date at publish -->
+## 2026-09-24 (project briefs)
 
 ### Added
 
