@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (the `mcp__marco
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.7.5
+  version: 0.7.6
 ---
 
 # Marcora AI Workflows
@@ -53,7 +53,7 @@ These are Marcora's core nouns. Internalize them before calling any tool.
 
 - **Project** — A workstream container. Groups related content + project-scoped context items + (optionally) a project brief. One project per initiative (a launch, a campaign, a positioning exercise). Projects have **members** (`owner` / `editor` / `viewer`) and a separate **Collaborator** role for project-only stakeholders.
 
-- **Project brief** — A piece of Content pinned inside a project as its strategic anchor. Surfaced prominently in the project UI. Set at project creation via `create_project` — `project_brief_instructions` (Marcora writes the brief from your prompt) or `project_brief_content` (your finished text, saved as-is) — or on an existing project via `update_project(project_brief_id=<content uuid>)`. The latter handles attachment automatically: if the content isn't yet in the project, the tool attaches it AND sets it as the brief in one call.
+- **Project brief** — A piece of Content pinned inside a project as its strategic anchor, and the project's **authoritative** statement of premise, scope and the decisions already taken. Surfaced prominently in the project UI. **Read it before doing substantive work in the project** (see "Working inside a project" below). Set at project creation via `create_project` — `project_brief_instructions` (Marcora writes the brief from your prompt) or `project_brief_content` (your finished text, saved as-is) — or on an existing project via `update_project(project_brief_id=<content uuid>)`. The latter handles attachment automatically: if the content isn't yet in the project, the tool attaches it AND sets it as the brief in one call.
 
 - **Context item** — A reference document (brand guidelines, persona research, competitor analysis, product spec, customer interview) that informs AI generation. Lives in one of three places:
   - **Reference Library** — top-level, team-wide. Created by `add_context` with no `project_id`. Filtered by relevancy at generation time.
@@ -79,7 +79,7 @@ These are Marcora's core nouns. Internalize them before calling any tool.
 - A **Project** contains many **Content** items and many **Context items**, plus optionally one **Project brief** (which is itself a Content item, pinned).
 - A **Content** item may belong to a Project (`project_id`) and may be generated from a **Blueprint** (`blueprint_uuid`).
 - A **Context item** lives at the team level (Reference Library) OR at the project level — never both at once.
-- The **Project brief** is a Content item, attached to the project and pinned as its brief. It is NOT a context item — different model, different tool.
+- The **Project brief** is a Content item, attached to the project and pinned as its brief. It is NOT a context item — different model, different tool. That is also why relevancy search never surfaces it as a chunk: it reaches you as a dedicated `project_brief` block instead.
 
 ### Lifecycle states worth knowing
 
@@ -120,7 +120,7 @@ The five workflows you'll handle 80% of the time. Two more surfaces — **Workfl
 2. If you don't already know it: `marcora:list_projects`. If the user mentioned an initiative, propose scoping to it.
 3. If the user named an audience attribute and you don't already know the option IDs: `marcora:list_targeting_dimensions`. Pick *option* IDs.
 4. **State your plan** in one sentence — naming the blueprint (or "freeform"), the project (or "no project"), the targeting, and that generation takes 1–3 min sync (freeform) or 3–5 min async (blueprint).
-5. `marcora:create_content` with `instructions` (always) + `blueprint_uuid` (if blueprint) + `project_id` + `dimension_option_ids` + optional `collection_ids` for one-off context. **Do not** pre-fetch context with `get_relevant_context` — the `instructions` path pulls all relevant context internally. (This holds only when *Marcora* writes via `instructions`. If instead *you* draft the content yourself and save it through the `content` parameter, you DO fetch context first — see "Writing the content yourself?" in Workflow 5 and the pitfall below.)
+5. `marcora:create_content` with `instructions` (always) + `blueprint_uuid` (if blueprint) + `project_id` + `dimension_option_ids` + optional `collection_ids` for one-off context. **Do not** pre-fetch context with `get_relevant_context` — the `instructions` path pulls all relevant context internally, including the project's brief when `project_id` is set. (This holds only when *Marcora* writes via `instructions`. If instead *you* draft the content yourself and save it through the `content` parameter, you DO fetch context first — see "Writing the content yourself?" in Workflow 5 and the pitfall below.)
 6. **If async** (returned a `generation_id`): poll `marcora:get_generation_status` every ~30s, surface progress to the user every minute. When `status == completed`, the response includes `content.link_url`.
 7. **Hand the user `content.link_url`.** They open it in Marcora. **Do NOT call `get_content` to fetch the body** — they review it, not you.
 
@@ -148,12 +148,34 @@ The five workflows you'll handle 80% of the time. Two more surfaces — **Workfl
 
 **Output to user.** "Brief set: [project link]."
 
-**To edit the brief (not change which doc IS the brief):** use `update_content` on the brief's `content_id`. Discover it via `get_project(project_id).project_brief.content_id` (the response includes a top-level `project_brief: {name, content_id} | null` shortcut so you don't have to guess which document is the brief) or, when the user just created the project, take it directly from the `create_project` response.
+**To edit the brief (not change which doc IS the brief):** use `update_content` on the brief's `content_id`. Discover it via `get_project(project_id).project_brief.content_id` (`project_brief` is `null` when the project has no brief) or, when the user just created the project, take it directly from the `create_project` response. **Read the current brief before you rewrite it** — `get_content(content_id)` for the full body — because `update_content` replaces the body in full.
 
 **Pitfalls — this is the founding misfire that motivated this skill:**
 - **Don't** fetch the content with `get_content` and re-create it via `create_content(project_id=...)` to "put it in the project." That creates a duplicate with a fresh UUID, orphaned from the original. Attachment is a relationship, not a copy. `update_project` handles it.
-- **Don't** call `get_project` first to check if the doc is in the project. `update_project` handles both states.
+- **Don't** call `get_project` first to check if the doc is in the project. `update_project` handles both states. (If the project *already has* a brief and the user is replacing it, it is worth reading the old one first — `get_project` then `get_content` — so nothing it settled is lost without the user knowing. That is a read for the user's benefit, not an attachment check.)
 - **Don't** use `add_context` to set a brief — `add_context` creates a *Context item*, which is a different object than a Content item used as a brief.
+
+---
+
+### Working inside a project — read the brief first
+
+**Goal.** Before you draft, revise, assess, critique or answer questions about work *in* a project, know what the project has already decided.
+
+The brief is the project's authoritative statement of premise, scope and the structural decisions already taken. The project's other documents and context items may be older than it or contradict it — **the brief wins**. Work produced without reading it is likely to contradict decisions the user has already made.
+
+**Two tools hand you the brief — you only need it once per project per conversation:**
+1. **`marcora:get_project(project_id)`** → a `project_brief` block (`null` when there is no brief). Its entry in `documents` is flagged `is_project_brief: true` and sorted first.
+2. **`marcora:get_relevant_context(prompt, project_id=…)`** → the same `project_brief` block, as the **first** key of the response, when the project has a brief. `include_project_brief` defaults to `true`.
+
+**Steps.**
+1. On your **first** touch of a project in the conversation, take the brief from whichever of the two calls you make first.
+2. Read `content_intro`. If `truncated` is `true`, it is only the opening excerpt — call `marcora:get_content(content_id)` for the full body **before** doing the work. (This is always a legitimate use of `get_content`.)
+3. On **every later** `get_relevant_context` call for the same project in the same conversation, pass `include_project_brief: false` — you already have it. If you got the brief from `get_project` first, the first `get_relevant_context` call for that project already counts as a later call. The same goes for a brief your environment has already put in your instructions for that project.
+4. A **different** project is a fresh start: leave `include_project_brief` at its default for your first call on it.
+
+**When you don't need to read it yourself.** Handing off to `create_content` with `instructions` + `project_id` — Marcora layers the brief in internally (Layer 3 of the context model above). Read it when *you* are the one reasoning about the project.
+
+**Output to user.** When the brief shapes your answer, say so in a phrase ("per the project brief, the launch leads with …") so the user can see which decisions you worked from.
 
 ---
 
@@ -209,12 +231,13 @@ The five workflows you'll handle 80% of the time. Two more surfaces — **Workfl
 
 **Steps (RAG path).**
 1. `marcora:get_relevant_context` with a descriptive `prompt`. Optionally **broaden** with `project_id` or `collection_ids` — these are *additive* (they add that project's / those collections' items on top of the general library, they don't restrict to only them). This is the *only* legitimate use of this tool besides the narrow Workflow 1 sourcing-check.
-2. Returns RAG chunks (a few hundred words each, not full items) plus a `sources[]` array — one entry per parent context item, each with its `context_item_id`, name, `content_type`, a `link_url` deep-link (and `source_url` for webpage items), and the chunk IDs from that item. Use `sources` to cite/link what you surface.
+2. Returns RAG chunks (a few hundred words each, not full items) plus a `sources[]` array — one entry per parent context item, each with its `context_item_id`, name, `content_type`, a `link_url` deep-link (and `source_url` for webpage items), and the chunk IDs from that item. Use `sources` to cite/link what you surface. Each source also carries `content_category` (`company_authoritative` outranks `reference_material` when they disagree) and `is_stale` (treat a stale item's claims with caution).
+   - **With `project_id`, the first call also returns the project's brief** as a `project_brief` block ahead of the chunks. Read it first, and weigh the chunks against it — see "Working inside a project" above. Pass `include_project_brief: false` on later calls for the same project.
 3. If results are sparse: paginate with `context_rag_ids` (excludes already-returned chunks), or offer to add new context.
 4. If the user wants the *full* content of one of the surfaced items, follow up with `marcora:get_context_item(context_item_id)` — `get_relevant_context` only returns chunks, not the whole item.
 5. Summarize for the user — don't dump raw chunks unless asked.
 
-**Writing the content yourself?** If you'll draft with your *own* model and then save it via the `content` parameter of `create_content` (or `update_content`) — rather than letting Marcora generate from `instructions` — call `marcora:get_relevant_context(prompt, include_brand_foundation=true)` **first** and write from what it returns. You get Reference Library RAG chunks **and** the team's Brand Foundation (company overview, brand voice, writing style, writing examples) in one response — so you write on-brand without a separate `get_brand_foundation` call. Those `content`-save paths store your text verbatim and consult no context on their own, so this fetch is the only thing that grounds your draft. Don't set the flag when handing off via `instructions` (that path pulls Brand Foundation in automatically). When paginating, set it `true` on the first page only.
+**Writing the content yourself?** If you'll draft with your *own* model and then save it via the `content` parameter of `create_content` (or `update_content`) — rather than letting Marcora generate from `instructions` — call `marcora:get_relevant_context(prompt, include_brand_foundation=true)` **first** and write from what it returns. You get Reference Library RAG chunks **and** the team's Brand Foundation (company overview, brand voice, writing style, writing examples) in one response — so you write on-brand without a separate `get_brand_foundation` call. Those `content`-save paths store your text verbatim and consult no context on their own, so this fetch is the only thing that grounds your draft. Don't set the flag when handing off via `instructions` (that path pulls Brand Foundation in automatically). When paginating, set it `true` on the first page only. If you are writing for a project, pass its `project_id` too: the first call returns the project's brief, and your draft must not contradict it.
 
 **Steps (browse path).**
 1. `marcora:list_context_items` (default returns everything the user can see; pass `reference_library_only=true` for just orphan items in the top-level Reference Library). Items in private collections / private projects the user is not in are filtered out automatically.
@@ -376,6 +399,7 @@ The **starting stage is set automatically from `source`**, you don't control it 
 | To edit an existing Content document — change the body, name, stage (`ready` / `in_progress`), visibility, category, or single-project assignment | `marcora:update_content` | `update_context` operates on Context items, not Content documents — different object. `update_project(project_brief_id=…)` only changes a project's brief pointer, not the document body or fields. `update_content` is partial-update (omit a field = leave alone) and replaces the body in full when `content` is supplied — call `get_content` first if you need to splice into the existing markdown. Setting `name_override` LOCKS the title so it won't auto-resync from the body's first header on future edits. |
 | To have Marcora's in-editor AI assistant edit / extend a document — or answer a question about it — with the reply streaming live into the document's sidebar | `marcora:ask_content_assistant` | `update_content` is a *manual* full-body replace — **you** compute and supply the new markdown. `ask_content_assistant` hands the request to Marcora's own Content Assistant: it loads the document + brand/reference context, decides whether to edit or just reply, and streams the result live to the user in the app. It's async — returns a `generation_id` to poll via `get_generation_status`. It is NOT the general Marcora Agent. |
 | To save a URL (blog post, competitor page, Google Doc export, presigned link) as a one-off context snapshot | `marcora:add_context` with `import_url=<url>` | Don't `web_browse`/`web_fetch` the URL just to paste the markdown into `content` — Marcora extracts the page itself and avoids the round-trip through your conversation. Use `connected_webpage_url` instead if you want the URL kept and refreshable (see the web-page rows below). |
+| To read a project's brief (its premise and settled decisions) | `marcora:get_project` → `project_brief`, or the `project_brief` block on your first `marcora:get_relevant_context(project_id=…)` call; then `marcora:get_content(content_id)` when `truncated` is true | `update_project` only *sets* which document is the brief — it never returns the brief. `list_context_items` / relevancy search never surface it: the brief is a document, not a context item. |
 | To know what content already exists about a topic | `marcora:get_relevant_context` for context, OR `marcora:list_content` for a content list | `create_content` would generate something new — wrong tool for "what already exists." |
 | To browse what's in the user's context library (full inventory, not RAG) | `marcora:list_context_items` | `get_relevant_context` returns relevance-scored chunks, not item names. Use `list_context_items` for the catalog view. Pass `reference_library_only=true` to scope to just the top-level Reference Library. |
 | To read the full markdown of a specific context item | `marcora:get_context_item(context_item_id)` | `list_context_items` only returns `content_intro` (a truncation). `get_relevant_context` returns RAG chunks. Use this for the actual content. |
@@ -395,7 +419,9 @@ The **starting stage is set automatically from `source`**, you don't control it 
 
 - **Don't pre-fetch context before `create_content` when Marcora is doing the writing.** The `instructions` path already pulls in everything internally: Brand Foundation (so you don't need `marcora:get_brand_foundation` either), Reference Library via relevancy scoring, Project Context if `project_id` is set, and any `collection_ids` you pass. Calling `marcora:get_relevant_context` or `marcora:get_brand_foundation` as a setup step before *generating* is wasted work. **The exception that matters:** when *you* compose the content yourself and save it via the `content` parameter of `create_content` (or `update_content`), those paths store your text **verbatim** and consult no context — so you MUST call `get_relevant_context(include_brand_foundation=true)` first or your draft is off-brand and ignores the Reference Library. Other legitimate uses of those fetch tools: the narrow Workflow-1 sourcing-check (specific customer / incident not likely in the library) and direct user Q&A about brand voice or library contents.
 
-- **Don't fetch the content body after generation.** Hand the user the `link_url`. `get_content` is for two cases only: (a) the user later asks a question that requires reading the body to answer, or (b) you need the markdown to feed `convert_markdown_to_word_doc`.
+- **Don't fetch the content body after generation.** Hand the user the `link_url`. `get_content` is for three cases only: (a) the user later asks a question that requires reading the body to answer, (b) you need the markdown to feed `convert_markdown_to_word_doc`, or (c) a `project_brief` block came back with `truncated: true` and you are about to work in that project — read the full brief first.
+
+- **Don't re-send the brief on every call.** `include_project_brief` defaults to `true`; after the first `get_relevant_context` call for a project (or once you have the brief from `get_project`), pass `false` for that project.
 
 - **Async generation is silent unless you poll.** Blueprint-driven `create_content` returns a `generation_id` immediately. Without polling, the user thinks nothing happened. Poll `get_generation_status` every ~30s; surface progress every minute.
 
@@ -427,7 +453,9 @@ For deeper edge cases, see `references/pitfalls.md`.
 When things go wrong, surface the raw error to the user — don't silently retry.
 
 - **`"Document not found"`** (from `update_project` with `project_brief_id`) → the UUID doesn't match any content document. Verify with the user; common mistake is pasting a project_id where a content UUID was expected.
-- **`"Project not found in your current team."`** → the project belongs to a different team. Ask the user to switch active teams in the Marcora app.
+- **`"Project not found in your current team."`** (from `update_project`) → the project belongs to a different team. Ask the user to switch active teams in the Marcora app.
+- **`"Project not found"`** (from `get_relevant_context` with `project_id`) → the project doesn't exist, or belongs to a team other than the active team. Check `list_projects`; if it's in another team, `set_active_team` (tell the user first — it's global). No context or brief comes back.
+- **`"You are not a member of project <id>"`** (from `get_relevant_context` with `project_id`) → the project is private and the user isn't one of its members. Tell the user; they can ask a project member to add them, or you can search without `project_id`. No context or brief comes back.
 - **`"You have reached your active project limit."`** → the team's plan caps active projects. Tell the user to archive an existing project or upgrade.
 - **Auth / `unauthorized` errors** → tell the user to reconnect Marcora in their MCP client's integration settings. Don't try to recover.
 - **Quota / rate-limit errors** → surface to the user with the message text. Don't retry in a tight loop.

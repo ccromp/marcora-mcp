@@ -26,6 +26,16 @@ The high-frequency pitfalls are in `SKILL.md` (§ Pitfalls and conventions). Thi
 
 ---
 
+## E2b — The project brief isn't among the chunks
+
+**Symptom.** You searched a project with `get_relevant_context(project_id=…)` and none of the chunks come from the project's brief.
+
+**Cause.** The brief is a Content document, not a context item, so relevancy search never indexes it. It reaches you as a separate `project_brief` block instead — on the first call for that project (`include_project_brief` defaults to `true`), or from `get_project`.
+
+**What to do.** Read the `project_brief` block (and `get_content` when `truncated` is `true`). If you passed `include_project_brief: false` and don't have the brief yet, call again without it, or call `get_project`.
+
+---
+
 ## E3 — Pagination for `get_relevant_context`
 
 **Symptom.** Repeating a `get_relevant_context` call returns the same chunks.
@@ -77,6 +87,8 @@ When `update_project` sets a private Content item as a project's brief, Marcora 
 - `supporting` — background material (the brief defaults to this)
 
 Most agents don't need to set or change `purpose` — it's surfaced for the UI. Treat it as informational. There's no MCP tool to change it.
+
+**Don't use `purpose` to find the brief.** The brief's entry carries `is_project_brief: true` and is sorted first in `documents`; `get_project` also returns it separately as the top-level `project_brief` block. Use those.
 
 ---
 
