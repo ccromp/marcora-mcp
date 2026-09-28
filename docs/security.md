@@ -39,7 +39,7 @@ The MCP server enforces the same permission rules as the Marcora web application
 
 If you discover a security vulnerability in the Marcora MCP server, please report it responsibly:
 
-**Email:** [chris@marketcore.ai](mailto:chris@marketcore.ai)
+**Email:** [security@marcora.ai](mailto:security@marcora.ai)
 
 Please include:
 - A description of the vulnerability
