@@ -61,6 +61,15 @@ Neither error returns any context or the project's brief.
 - Run `list_projects` to confirm the project id. If the project is in another of your teams, switch with `set_active_team` (this changes your active team everywhere).
 - For a private project, ask one of its members to add you — or search without `project_id`.
 
+### "Marcora is already updating this document."
+
+**Cause:** `ask_content_assistant` was called on a document that already has a Content Assistant run in progress. Marcora runs one request per document at a time, and holds the document until that run finishes or fails.
+
+**Solutions:**
+- Wait for the earlier run to finish (poll `get_generation_status` with its `generation_id` until it reaches a terminal status), then retry.
+- To make several changes to one document, send them one at a time, or combine them into one `prompt`.
+- Do not retry in a tight loop.
+
 ### Content generation timeout
 
 **Cause:** Content generation (especially from blueprints) can take 1–3 minutes.

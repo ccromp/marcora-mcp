@@ -2,6 +2,21 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-09-29 (one Content Assistant run per document)
+
+### Changed
+
+- **`ask_content_assistant` documents that a document takes one run at a time.** While a Content Assistant run is in progress, Marcora holds the document: nobody can edit it in the app, and a second `ask_content_assistant` call on the same document fails with "Marcora is already updating this document." The document is handed back when the run finishes or fails. Wait for the run to finish (`get_generation_status` reaches a terminal status) and retry, or combine requests into one `prompt`.
+
+### Docs
+
+- `docs/tools.md` and `docs/errors.md` cover the one-run-per-document rule and the new error.
+
+### Skill → v0.7.7
+
+- The `ask_content_assistant` guidance says one run per document at a time: wait for a terminal status before the next request, or combine requests.
+- Error runbook covers "Marcora is already updating this document."
+
 ## 2026-09-24 (project briefs)
 
 ### Added

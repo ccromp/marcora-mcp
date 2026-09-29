@@ -1400,6 +1400,8 @@ Send a natural-language request to Marcora's in-document **Content Assistant** f
 
 **Asynchronous.** Returns a `generation_id` (UUID) immediately and does the model work in the background. When the user has the document open in Marcora, the assistant's reply and any edits stream live into the document's AI Assistant sidebar via a realtime channel — they don't need to poll. Headless callers (or anyone wanting the result text) poll `get_generation_status` with the returned `generation_id`.
 
+**One run per document at a time.** While a run is in progress, Marcora holds the document: nobody (including the caller) can edit it in the app, and a second `ask_content_assistant` call on the same document fails. When the run finishes or fails, the document is handed back. To send several requests to one document, wait for each run to finish (`get_generation_status` reaches a terminal status) before sending the next, or combine them into one `prompt`.
+
 **Behavior:**
 - The assistant only rewrites the document body when it decides the request warrants a change; otherwise it just replies in the sidebar thread.
 - `chat_only_mode: true` forces a reply-only response with no document changes.
@@ -1432,6 +1434,7 @@ Send a natural-language request to Marcora's in-document **Content Assistant** f
 
 **Errors:**
 - `notfound` — `content_id` matches no content document
+- "Marcora is already updating this document." — another run on this document is still in progress. Wait for it to finish (poll `get_generation_status` if you have its `generation_id`), then retry. Do not retry in a tight loop.
 
 ---
 
