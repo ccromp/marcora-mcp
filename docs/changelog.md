@@ -2,6 +2,12 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-09-29 (skill 0.7.8)
+
+### Skill → v0.7.8
+
+- The tool-choice table row for `ask_content_assistant` also says one run per document at a time: wait for a terminal status before the next request, or combine requests into one `prompt`.
+
 ## 2026-09-29 (one Content Assistant run per document)
 
 ### Changed
