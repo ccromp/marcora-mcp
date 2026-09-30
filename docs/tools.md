@@ -814,7 +814,9 @@ You never compose the fix yourself. Every finding already stores its recommended
 
 **Where each fix lands:** by default the context item named in that finding's `context_item_id`. A `null` `context_item_id` means the fix targets the document itself. Pass `context_item_overrides` to send a specific fix somewhere else.
 
-**Asynchronous.** Returns immediately with one job per finding. To follow one to completion, poll `get_generation_status` with its `generation_id` — a **UUID** (the response hands you the UUID poll key `get_generation_status` expects). The honest outcome is the **`document_updated`** field on that response's `content` object: `true` means the document was actually changed, `false` means the recommendation was already covered and nothing was written. Report that distinction rather than assuming every applied fix changed something.
+**Asynchronous.** Returns immediately with one job per finding. To follow one to completion, poll `get_generation_status` with its `generation_id` — a **UUID** (the response hands you the UUID poll key `get_generation_status` expects).
+
+**Findings that land in the same document share one run.** Findings whose fixes land in the same document (the same context item, or the same content document when `context_item_id` is null) are applied together in one run, so their jobs share a `generation_id`. Poll that `generation_id` once; its `document_updated` covers all of them. Brand Foundation findings are not grouped: each keeps its own run and `generation_id`. The honest outcome is the **`document_updated`** field on that response's `content` object: `true` means the document was actually changed, `false` means the recommendation was already covered and nothing was written. Report that distinction rather than assuming every applied fix changed something.
 
 **Partial success is normal:** findings that could not be started come back in `errors[]` with a reason while the rest still run. Check **both** `jobs[]` and `errors[]`.
 
@@ -832,7 +834,7 @@ You never compose the fix yourself. Every finding already stores its recommended
 | `requested` | integer | How many findings were submitted |
 | `queued` | integer | How many runs actually started |
 | `skipped` | integer | How many could not start — see `errors[]` |
-| `jobs` | array | Per finding: `finding_id`, `status`, `generation_id` (uuid — poll `get_generation_status` with it), `document_uuid`, `context_item_id` |
+| `jobs` | array | Per finding: `finding_id`, `status`, `generation_id` (uuid — poll `get_generation_status` with it; jobs whose fixes land in the same document share one, so poll each distinct `generation_id` once), `document_uuid`, `context_item_id` |
 | `errors` | array | Per finding: `finding_id`, `error` |
 
 **Errors:**
@@ -841,6 +843,7 @@ You never compose the fix yourself. Every finding already stores its recommended
 - **context_item_overrides names a finding not in finding_ids** (400) — the override would be ignored, so it is rejected rather than silently dropped.
 - **You are not authorized to perform this action** (403) — applying requires an admin or editor role.
 - Per-finding failures (already resolved, not a grounding finding) arrive in `errors[]`, not as a thrown error.
+- **Marcora is already updating this document.** — per finding, in `errors[]`: another run on that document (for example the user's own Content Assistant request, or an earlier `apply_grounding_fix` call) is still in progress. Wait for it to finish, then retry those findings.
 
 **Example prompts:**
 - "Fix the pricing conflict it found"
@@ -1221,9 +1224,10 @@ You must provide either `content` or `instructions` (not both).
 
 ### `get_generation_status`
 
-Poll the status of an async generation by `generation_id`. Two tools produce a `generation_id` you can check here:
+Poll the status of an async generation by `generation_id`. Three tools produce a `generation_id` you can check here:
 - `create_content` with a `blueprint_uuid` (blueprint document generation)
 - `ask_content_assistant` (the in-document Content Assistant)
+- `apply_grounding_fix` (each job in `jobs[]` carries a `generation_id`, but jobs whose fixes land in the same document share one, because they are applied together in one run; poll each distinct `generation_id` once. It runs as a Content Assistant flow, so read `document_updated`; for a shared `generation_id` it covers every finding in that run)
 
 The response always includes `status`, `generation_id`, and `flow_type`. `content` is `null` until the run finishes.
 

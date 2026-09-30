@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (the `mcp__marco
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.7.8
+  version: 0.7.9
 ---
 
 # Marcora AI Workflows
@@ -266,7 +266,7 @@ The brief is the project's authoritative statement of premise, scope and the str
 2. If it returns `status: "running"`, poll `marcora:get_grounding_result({scan_id})` every 15–30s. **Poll with `scan_id`.** Polling with `content_id` returns the last *completed* scan, which during your run is the previous one — you'd report stale findings as fresh. Never re-call `check_content_grounding` to check progress.
 3. Review `findings[]` with the user. Each carries the full `suggested_fix` and the `context_item_id` it would write to. Hand over `link_url`.
 4. `marcora:apply_grounding_fix({finding_ids: [...]})` for what they approve. Use `context_item_overrides` to redirect a fix.
-5. Poll `marcora:get_generation_status({generation_id})` (integer id from each job). **`document_updated`** is the honest outcome: `false` means the recommendation was already covered and nothing was written. Report that distinction.
+5. Poll `marcora:get_generation_status({generation_id})` with the UUID `generation_id` from `jobs[]`. Findings whose fixes land in the same document (the same context item, or the same content document when `context_item_id` is null) are applied together in one run and share one `generation_id`: poll each distinct `generation_id` once, and its `document_updated` covers every finding in that run. Brand Foundation findings are not grouped. **`document_updated`** is the honest outcome: `false` means the recommendation was already covered and nothing was written. Report that distinction.
 
 **⚠️ The one way to lose data here.** `content` + `content_id` replaces the document's **entire body**, exactly like `update_content`. To ground part of an existing document, pass `content_id` **alone**. Never pass a paragraph alongside a `content_id` — the rest of the document is gone.
 
@@ -456,7 +456,7 @@ When things go wrong, surface the raw error to the user — don't silently retry
 - **`"Project not found in your current team."`** (from `update_project`) → the project belongs to a different team. Ask the user to switch active teams in the Marcora app.
 - **`"Project not found"`** (from `get_relevant_context` with `project_id`) → the project doesn't exist, or belongs to a team other than the active team. Check `list_projects`; if it's in another team, `set_active_team` (tell the user first — it's global). No context or brief comes back.
 - **`"You are not a member of project <id>"`** (from `get_relevant_context` with `project_id`) → the project is private and the user isn't one of its members. Tell the user; they can ask a project member to add them, or you can search without `project_id`. No context or brief comes back.
-- **`"Marcora is already updating this document."`** (from `ask_content_assistant`) → a Content Assistant run on that document is still in progress. Wait for it to finish (poll `get_generation_status` if you have its `generation_id`), then retry once. Don't retry in a tight loop.
+- **`"Marcora is already updating this document."`** (from `ask_content_assistant`, or per finding in `apply_grounding_fix`'s `errors[]`) → another run on that document is still in progress. Wait for it to finish (poll `get_generation_status` if you have its `generation_id`), then retry once (for `apply_grounding_fix`, retry just those findings). Don't retry in a tight loop.
 - **`"You have reached your active project limit."`** → the team's plan caps active projects. Tell the user to archive an existing project or upgrade.
 - **Auth / `unauthorized` errors** → tell the user to reconnect Marcora in their MCP client's integration settings. Don't try to recover.
 - **Quota / rate-limit errors** → surface to the user with the message text. Don't retry in a tight loop.

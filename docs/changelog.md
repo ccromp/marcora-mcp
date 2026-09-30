@@ -2,6 +2,23 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-09-30 (apply_grounding_fix: one run per document)
+
+### Changed
+
+- **`apply_grounding_fix` groups findings by document.** Findings whose fixes land in the same document (the same context item, or the same content document when `context_item_id` is null) are applied together in one run, so their jobs share a `generation_id`. Poll that `generation_id` once; its `document_updated` covers all of them. Brand Foundation findings are not grouped.
+- **New per-finding error: "Marcora is already updating this document."** It comes back in `errors[]` when another run holds the document. Wait for that run to finish, then retry those findings.
+- **`get_generation_status`** lists `apply_grounding_fix` as a source of `generation_id`s: poll each distinct one once.
+
+### Docs
+
+- `docs/tools.md` and `docs/errors.md` cover the grouping, the poll-once guidance and the error.
+
+### Skill → v0.7.9
+
+- The grounding workflow and Recipe I poll each distinct `generation_id` once, and name it as a UUID.
+- Error runbook covers "Marcora is already updating this document." from `apply_grounding_fix`.
+
 ## 2026-09-29 (skill 0.7.8)
 
 ### Skill → v0.7.8

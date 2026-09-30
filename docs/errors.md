@@ -63,10 +63,10 @@ Neither error returns any context or the project's brief.
 
 ### "Marcora is already updating this document."
 
-**Cause:** `ask_content_assistant` was called on a document that already has a Content Assistant run in progress. Marcora runs one request per document at a time, and holds the document until that run finishes or fails.
+**Cause:** `ask_content_assistant` was called on a document that already has a Content Assistant run in progress, or `apply_grounding_fix` tried to apply a fix to a document another run still holds (it comes back per finding in `errors[]`). Marcora runs one request per document at a time, and holds the document until that run finishes or fails.
 
 **Solutions:**
-- Wait for the earlier run to finish (poll `get_generation_status` with its `generation_id` until it reaches a terminal status), then retry.
+- Wait for the earlier run to finish (poll `get_generation_status` with its `generation_id` until it reaches a terminal status), then retry. For `apply_grounding_fix`, retry just the findings that came back with this error.
 - To make several changes to one document, send them one at a time, or combine them into one `prompt`.
 - Do not retry in a tight loop.
 
