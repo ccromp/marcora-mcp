@@ -1,22 +1,31 @@
 {
   "name": "marcora",
-  "version": "1.1.0",
-  "description": "Marcora — the context layer for GTM teams. Bundles the hosted Marcora MCP server with its companion skill (marcora-mcp) so your AI assistant can create on-brand marketing content, manage brand context and blueprints, organize projects, plan and produce content on the plans board with playbooks, and build reusable workflows.",
+  "displayName": "Marcora: Brand Context & Writing",
+  "version": "1.2.0",
+  "description": "Your living company context, in Claude and any AI tool or agent that supports MCP: positioning, voice, and product facts, set up once and updated in one place.",
+  "icon": "./.claude-plugin/icon.png",
   "author": {
     "name": "Marcora",
+    "email": "support@marcora.ai",
     "url": "https://marcora.ai"
   },
   "homepage": "https://marcora.ai/mcp",
+  "documentationUrl": "https://marcora.ai/docs/mcp-overview",
+  "supportUrl": "mailto:support@marcora.ai",
+  "privacyPolicyUrl": "https://marcora.ai/privacy-policy",
+  "termsOfServiceUrl": "https://marcora.ai/terms",
   "repository": "https://github.com/ccromp/marcora-mcp",
   "license": "CC-BY-4.0",
   "keywords": [
     "marcora",
     "marketing",
-    "content",
-    "gtm",
+    "product-marketing",
+    "brand-voice",
     "brand",
-    "blueprints",
-    "workflows",
-    "mcp"
+    "content",
+    "messaging",
+    "gtm",
+    "copywriting",
+    "workflows"
   ]
 }

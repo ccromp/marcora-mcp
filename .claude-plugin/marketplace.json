@@ -5,14 +5,15 @@
     "url": "https://marcora.ai"
   },
   "metadata": {
-    "description": "Official Marcora plugins for Claude Code — the context layer for GTM teams."
+    "description": "Marcora plugins for Claude Code — the context layer for GTM teams."
   },
   "plugins": [
     {
       "name": "marcora",
+      "displayName": "Marcora: Brand Context & Writing",
       "source": "./plugin",
-      "description": "The context layer for GTM teams. Bundles the hosted Marcora MCP server (OAuth or API token) with its companion skill — marcora-mcp (object model, the core content workflows, the content plans board and playbooks, and reusable multi-step workflows) — so your AI assistant can create on-brand marketing content, manage brand context and blueprints, plan and produce content, and automate recurring marketing work.",
-      "version": "1.1.0",
+      "description": "Your living company context, in Claude and any AI tool or agent that supports MCP: positioning, voice, and product facts, set up once and updated in one place.",
+      "version": "1.2.0",
       "author": {
         "name": "Marcora"
       },
@@ -22,12 +23,14 @@
       "keywords": [
         "marcora",
         "marketing",
-        "content",
-        "gtm",
+        "product-marketing",
+        "brand-voice",
         "brand",
-        "blueprints",
-        "workflows",
-        "mcp"
+        "content",
+        "messaging",
+        "gtm",
+        "copywriting",
+        "workflows"
       ]
     }
   ]

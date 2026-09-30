@@ -2,7 +2,7 @@
   "mcpServers": {
     "marcora": {
       "type": "http",
-      "url": "https://mcp.marcora.ai"
+      "url": "https://mcp.marcora.ai/"
     }
   }
 }
