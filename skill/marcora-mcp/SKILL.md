@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (the `mcp__marco
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.7.9
+  version: 0.7.10
 ---
 
 # Marcora AI Workflows
@@ -264,7 +264,7 @@ The brief is the project's authoritative statement of premise, scope and the str
 **Steps.**
 1. `marcora:check_content_grounding` — `content_id` alone to scan an existing document, `content` alone to store-and-scan new markdown.
 2. If it returns `status: "running"`, poll `marcora:get_grounding_result({scan_id})` every 15–30s. **Poll with `scan_id`.** Polling with `content_id` returns the last *completed* scan, which during your run is the previous one — you'd report stale findings as fresh. Never re-call `check_content_grounding` to check progress.
-3. Review `findings[]` with the user. Each carries the full `suggested_fix` and the `context_item_id` it would write to. Hand over `link_url`.
+3. **Check coverage before calling anything unsupported.** If `coverage_complete` is `false`, or `excluded_items` is present, the check did not read every context item, so a gap may still have support. Say so: describe those gaps as "not yet confirmed", not "unsupported". `coverage_reason: "library_catch_up"` means some context items have not been prepared yet; re-run the check to include more of them. `library_extraction_failed` means some could not be prepared. Then review `findings[]` with the user. Each carries the full `suggested_fix` and the `context_item_id` it would write to. Hand over `link_url`.
 4. `marcora:apply_grounding_fix({finding_ids: [...]})` for what they approve. Use `context_item_overrides` to redirect a fix.
 5. Poll `marcora:get_generation_status({generation_id})` with the UUID `generation_id` from `jobs[]`. Findings whose fixes land in the same document (the same context item, or the same content document when `context_item_id` is null) are applied together in one run and share one `generation_id`: poll each distinct `generation_id` once, and its `document_updated` covers every finding in that run. Brand Foundation findings are not grouped. **`document_updated`** is the honest outcome: `false` means the recommendation was already covered and nothing was written. Report that distinction.
 

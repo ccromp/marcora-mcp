@@ -2,6 +2,21 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-10-06 (grounding coverage)
+
+### Changed
+
+- **`check_content_grounding` and `get_grounding_result` report coverage.** New fields: `coverage_complete`, `coverage_reason` (`library_catch_up` or `library_extraction_failed`, else `null`) and, when the check skipped context items being edited during it, `excluded_items` (`id`, `reason: sync_lock`, `source`). An item's name is shown only to the person who ran the check.
+- Check `coverage_complete` and `excluded_items` before treating a gap as unsupported.
+
+### Docs
+
+- `docs/tools.md`: the result envelope lists the new fields, plus a Coverage section.
+
+### Skill → v0.7.10
+
+- The grounding workflow, Recipe I and a new pitfall (E16) check coverage before calling a gap unsupported.
+
 ## 2026-09-30 (apply_grounding_fix: one run per document)
 
 ### Changed

@@ -148,6 +148,16 @@ Don't show the user a UUID like `7b2c4f...` as an identifier. Surface the human-
 
 ---
 
+## E16 — Calling a grounding gap "unsupported" when the check was incomplete
+
+**Symptom.** You tell the user a claim has no support in their reference library, and it turns out a context item covers it.
+
+**Cause.** The check did not read every context item. `coverage_complete` was `false` (some context items had not been prepared yet, `coverage_reason: "library_catch_up"`, or could not be prepared, `library_extraction_failed`), or `excluded_items` listed items skipped because they were being edited during the check. A gap only means "nothing in what was checked backs this".
+
+**What to do.** Read `coverage_complete` and `excluded_items` before reporting gaps. If coverage is incomplete, say the gaps are not yet confirmed. For `library_catch_up`, re-run the check to include more context items. Treat gaps as unsupported only when `coverage_complete` is `true` and there are no `excluded_items`.
+
+---
+
 ## Linking the user to their Brand Foundation
 
 **Symptom.** You update the user's Brand Foundation, link them to it, and the link 404s — they land on `/home` and the conversation they were in is gone.

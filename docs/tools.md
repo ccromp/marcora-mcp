@@ -867,6 +867,9 @@ You never compose the fix yourself. Every finding already stores its recommended
 | `claims` | array | Each extracted claim: `claim_text`, `subject`, `value`, `bucket` (`supported`/`conflict`/`gap`), `refs[]`, `confidence` (a **string**) |
 | `corpus_items` | array | The context items the scan was checked against: `context_item_id`, `name`, `source`, `content_category`, `link_url` |
 | `details_visible` | boolean | `false` when you are not the document's creator — you get counts only |
+| `coverage_complete` | boolean | `true` when every context item in the reference library was ready to be checked. `false` means some were not, so a claim reported as a gap may still have support in one of them. See [Coverage](#coverage) |
+| `coverage_reason` | string \| null | Why coverage is incomplete. `null` when `coverage_complete` is `true` |
+| `excluded_items` | array | Present only when the check skipped at least one context item. Each entry: `id`, `reason`, `source` |
 
 Each entry in `findings[]`:
 
@@ -882,6 +885,24 @@ Each entry in `findings[]`:
 | `suggested_fix` | object \| null | The **full** recommended update — review this before applying |
 | `context_item_id` | string (uuid) \| null | Where applying would write. `null` = the document itself |
 | `link_url` | string \| null | Opens the finding |
+
+#### Coverage
+
+A gap means the check found nothing in the reference library that backs a claim. That only means the claim is unsupported if the check could read the whole library. Two fields tell you whether it could.
+
+`coverage_reason` values:
+
+| Value | Meaning | What to do |
+|---|---|---|
+| `null` | Every context item was ready and checked | Treat gaps as unsupported claims |
+| `library_catch_up` | Some context items have not been prepared for grounding yet, so this check did not use them | Re-run the check to include more of them. Until coverage is complete, describe gaps as "not yet confirmed", not "unsupported" |
+| `library_extraction_failed` | Some context items could not be prepared, so this check could not use them | Tell the user the check is incomplete; don't call those gaps unsupported |
+
+`excluded_items` lists context items the check skipped because they were being edited while it ran (`reason`: `sync_lock`). `source` is `context_item` or `project_brief`. Entries identify each item by `id`. An item's name is never shown to anyone except the person who ran the check; everyone else, including the content's creator, gets ids only. A skipped item can be present even when `coverage_complete` is `true`, so check both fields.
+
+**The rule:** check `coverage_complete` (and `excluded_items`) before treating any gap as unsupported. A gap from an incomplete check is "not confirmed by what was checked", not "the library has nothing on this".
+
+`summary.corpus_freshness` reports how the reference library was prepared for this check. It is diagnostic detail; you don't need it to act on the result.
 
 ---
 
