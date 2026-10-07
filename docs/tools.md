@@ -39,7 +39,7 @@ Returns profile and subscription information for the currently authenticated use
 
 Invite someone to your Marcora account by email. An invitation email is sent automatically, and the response also returns the exact invite link so you can share it directly (e.g. paste it to the person in Slack).
 
-Roles: **creator** (a full team member who can create and edit content), **admin** (a team administrator), and **collaborator** (a project-scoped member who only works inside one project). Brand-new invitees get a sign-up link; people who already have a Marcora account get a login link and see the invitation in-app after they log in.
+Roles: **creator** (a full team member who can create and edit content), **admin** (a team administrator), and **collaborator** (a project-scoped member who only works inside one project). Brand-new invitees get a sign-up link; people who already have a Marcora account and still belong to an active team get a login link and see the invitation in-app after they log in; people who have an account but no active team (e.g. a removed teammate) get a sign-up link to rejoin with their existing password.
 
 > **Who can invite whom.** You must be an **admin** to invite an admin or a creator (admins can invite any role). A **creator** can invite collaborators only. Viewers cannot invite anyone.
 
@@ -59,12 +59,12 @@ Roles: **creator** (a full team member who can create and edit content), **admin
 |---|---|---|
 | `outcome` | string | `invited` (an invitation email was sent) or `added_to_project` (the email was already a team member and was added straight to the project) |
 | `emailed` | boolean | True when an invitation email was sent |
-| `invite_link` | string \| null | The exact link to share directly — the sign-up link (with the project deep-link when a project was given) for new users, or the login URL for existing users. `null` when no invitation was sent |
+| `invite_link` | string \| null | The exact link to share directly — the sign-up link (with the project deep-link when a project was given) for new users and for existing users with no active team, or the login URL for existing users who still belong to an active team. `null` when no invitation was sent |
 | `message` | string | Human-readable summary of what happened |
 | `email` | string | The invited email address |
 | `role` | string | `admin`, `creator`, or `collaborator` |
 | `project_id` | string \| null | Project the invitee was added to / pointed at, if any |
-| `existing_user` | boolean \| null | True if the email already had a Marcora account (login link) vs a new sign-up link |
+| `existing_user` | boolean \| null | True if the email already had a Marcora account. Such a user gets the login link if they still belong to an active team, or the sign-up link to rejoin if they have none (e.g. a removed teammate). False for a brand-new user (sign-up link) |
 | `invitation_id` | integer \| null | ID of the created/reused invitation, when one was sent |
 | `invite_token` | string \| null | Invitation token, when one was sent |
 
@@ -867,7 +867,7 @@ You never compose the fix yourself. Every finding already stores its recommended
 | `claims` | array | Each extracted claim: `claim_text`, `subject`, `value`, `bucket` (`supported`/`conflict`/`gap`), `refs[]`, `confidence` (a **string**) |
 | `corpus_items` | array | The context items the scan was checked against: `context_item_id`, `name`, `source`, `content_category`, `link_url` |
 | `details_visible` | boolean | `false` when you are not the document's creator — you get counts only |
-| `coverage_complete` | boolean | `true` when every context item in the reference library was ready to be checked. `false` means some were not, so a claim reported as a gap may still have support in one of them. See [Coverage](#coverage) |
+| `coverage_complete` | boolean | `false` means some context items were not read, so a claim reported as a gap may still have support in an unread item. `true` does not by itself mean every context item was read: `excluded_items` lists any item the check left out, and it can be present even when `coverage_complete` is `true`. See [Coverage](#coverage) |
 | `coverage_reason` | string \| null | Why coverage is incomplete. `null` when `coverage_complete` is `true` |
 | `excluded_items` | array | Present only when the check skipped at least one context item. Each entry: `id`, `reason`, `source` |
 
@@ -888,13 +888,13 @@ Each entry in `findings[]`:
 
 #### Coverage
 
-A gap means the check found nothing in the reference library that backs a claim. That only means the claim is unsupported if the check could read the whole library. Two fields tell you whether it could.
+A gap means the check found nothing in the reference library that backs a claim. That only means the claim is unsupported if the check could read the whole library. Three fields tell you whether it could: `coverage_complete`, `coverage_reason` and `excluded_items`.
 
 `coverage_reason` values:
 
 | Value | Meaning | What to do |
 |---|---|---|
-| `null` | Every context item was ready and checked | Treat gaps as unsupported claims |
+| `null` | Every context item was ready to be checked | Treat gaps as unsupported claims, unless `excluded_items` lists items the check left out |
 | `library_catch_up` | Some context items have not been prepared for grounding yet, so this check did not use them | Re-run the check to include more of them. Until coverage is complete, describe gaps as "not yet confirmed", not "unsupported" |
 | `library_extraction_failed` | Some context items could not be prepared, so this check could not use them | Tell the user the check is incomplete; don't call those gaps unsupported |
 
@@ -1425,7 +1425,7 @@ Send a natural-language request to Marcora's in-document **Content Assistant** f
 
 **Asynchronous.** Returns a `generation_id` (UUID) immediately and does the model work in the background. When the user has the document open in Marcora, the assistant's reply and any edits stream live into the document's AI Assistant sidebar via a realtime channel — they don't need to poll. Headless callers (or anyone wanting the result text) poll `get_generation_status` with the returned `generation_id`.
 
-**One run per document at a time.** While a run is in progress, Marcora holds the document: nobody (including the caller) can edit it in the app, and a second `ask_content_assistant` call on the same document fails. When the run finishes or fails, the document is handed back. To send several requests to one document, wait for each run to finish (`get_generation_status` reaches a terminal status) before sending the next, or combine them into one `prompt`.
+**One run per document at a time.** While a run is in progress, a second `ask_content_assistant` call on the same document fails. A run that may edit the document also holds it: nobody (including the caller) can edit it in the app until the run finishes or fails, when it is handed back. A `chat_only_mode: true` run doesn't hold the document, so people can keep editing while it replies. To send several requests to one document, wait for each run to finish (`get_generation_status` reaches a terminal status) before sending the next, or combine them into one `prompt`.
 
 **Behavior:**
 - The assistant only rewrites the document body when it decides the request warrants a change; otherwise it just replies in the sidebar thread.

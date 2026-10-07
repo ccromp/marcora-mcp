@@ -2,6 +2,22 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-10-07 (chat-only Content Assistant runs, rejoin invites, grounding coverage wording)
+
+### Changed
+
+- **`ask_content_assistant`: a `chat_only_mode: true` run no longer holds the document**, so people can keep editing it in the app while the assistant replies. A run that may edit the document still holds it until it finishes or fails, and a second call on the same document is still refused while any run is in progress. `get_generation_status` reports chat-only runs with `flow_type: ai_assistant`, as before. The tool description says so.
+- **`invite_user`: an existing user with no active team (e.g. a removed teammate) gets the sign-up link**, returned in `invite_link`, to rejoin with their existing password, instead of a login link they could not use. `existing_user` is still `true` for them, and `message` says they are rejoining. Existing users who still belong to an active team get the login link as before. The tool description says so.
+- **`coverage_complete` (`check_content_grounding`, `get_grounding_result`): `true` no longer claims the whole library was read.** `false` still means some context items were not read. `excluded_items` lists any item the check left out, and it can be present when `coverage_complete` is `true`, so check both.
+
+### Docs
+
+- `docs/tools.md`: the `ask_content_assistant` one-run rule, the `invite_user` intro plus `invite_link` and `existing_user`, and the `coverage_complete` envelope row and Coverage section. `docs/errors.md`: "Marcora is already updating this document." cause.
+
+### Skill → v0.7.12 · plugin → v1.2.2
+
+- The `ask_content_assistant` note says a chat-only run doesn't hold the document.
+
 ## 2026-10-07 (triggering follows the user's request)
 
 ### Changed
