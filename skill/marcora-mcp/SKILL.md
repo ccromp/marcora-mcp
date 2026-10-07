@@ -1,10 +1,10 @@
 ---
 name: marcora-mcp
-description: Use this skill BEFORE calling any Marcora MCP tool (the `mcp__marcora*` family — create_content, add_context, create_plan, produce_plan, create_workflow, etc.) and whenever a request involves Marcora, including any `marcora.ai` URL the user pastes (e.g. an `app.marcora.ai` library or canvas link). It maps the Marcora tools to the standard product-marketing workflows — creating, editing, and sharing content; generating from blueprints; managing projects and briefs; adding reference context; browsing the Blueprint Exchange; answering what's in the library; managing content plans and playbooks; and building reusable, multi-step workflows — and applies Marcora's domain rules so the right artifact lands in the right place. Triggers on Marcora, blueprints, projects, briefs, the Reference Library, Brand Foundation, Targeting Dimensions, Context Collections, content plans, playbooks, and workflow cues ("recurring", "automate this", "make this reusable") — even when the user doesn't say "Marcora."
+description: Use this skill BEFORE calling any Marcora MCP tool (create_content, add_context, create_plan, produce_plan, create_workflow, etc.) and whenever the user's request involves Marcora, including any `marcora.ai` URL the user pastes (e.g. an `app.marcora.ai` library or canvas link). It maps the Marcora tools to the standard product-marketing workflows — creating, editing, and sharing content; generating from blueprints; managing projects and briefs; adding reference context; browsing the Blueprint Exchange; answering what's in the library; managing content plans and playbooks; and building reusable, multi-step workflows — and applies Marcora's domain rules so the right artifact lands in the right place. Triggers on Marcora and its objects: blueprints, Marcora projects and project briefs, the Reference Library, Brand Foundation, Targeting Dimensions, Context Collections, content plans, playbooks, and Marcora workflows (including making one recurring or reusable).
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.7.10
+  version: 0.7.11
 ---
 
 # Marcora AI Workflows
@@ -19,9 +19,9 @@ You are connected to Marcora, a product-marketing context platform for go-to-mar
 
 ## When this skill applies
 
-Apply this skill on any Marcora-related task. **You may already have relevant context in your awareness** — a list of blueprints the user mentioned earlier, a project they're currently working on, content they just generated. Use what you already have; only call discovery tools (`marcora:list_*`) to fill genuine gaps. Don't re-list what you already know.
+Apply this skill when the user's request involves Marcora: one of its tools, one of its objects, or a `marcora.ai` link. **You may already have relevant context in your awareness** — a list of blueprints the user mentioned earlier, a project they're currently working on, content they just generated. Use what you already have; only call discovery tools (`marcora:list_*`) to fill genuine gaps. Don't re-list what you already know.
 
-If the user explicitly opts out ("don't use my Marcora tools for this"), respect that and don't call any `marcora:*` tool.
+If the user says not to use Marcora for a task, don't call any `marcora:*` tool.
 
 ---
 

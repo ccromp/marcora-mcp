@@ -2,6 +2,16 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-10-07 (triggering follows the user's request)
+
+### Changed
+
+- **The server's `instructions` no longer tell clients to use Marcora unprompted.** They now say which tool fits which request, and that `create_content` has Marcora write and save the piece while a draft in the chat is written by the client. One text for every client.
+
+### Skill → v0.7.11 · plugin → v1.2.1
+
+- The skill description triggers on Marcora, its objects and `marcora.ai` links. It no longer claims requests that don't involve Marcora, and generic workflow cues ("recurring", "automate this") now count only for Marcora workflows.
+
 ## 2026-10-06 (grounding coverage)
 
 ### Changed
