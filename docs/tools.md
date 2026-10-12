@@ -339,12 +339,16 @@ To **re-pull a tracked web-page item** from its stored URL — the same action a
 | `name` | string | No | If provided, updates the name. Omit to leave unchanged. Ignored when `refresh_webpage` is true |
 | `content` | string | No | New markdown body. Omit to leave unchanged. Triggers RAG re-embedding. Mutually exclusive with `import_url`. Ignored when `refresh_webpage` is true |
 | `import_url` | string | No | Public URL — backend fetches and converts to clean markdown server-side, then stores it as a fresh one-off snapshot body. Mutually exclusive with `content`. Ignored when `refresh_webpage` is true |
-| `collection_id` | integer \| null | **Yes (nullable)** | Full replace. Pass the current ID to keep the item in its collection, pass a different ID to move it, or pass `null` (`0` works too) to move it back to the top level of the Reference Library |
-| `project_id` | string (uuid) \| null | **Yes (nullable)** | Full replace. Pass the current ID to keep the project association, pass a different ID to move it, or pass `null` to disassociate it |
+| `collection_id` | integer \| null | **Yes (nullable)** | Full replace. Pass the current ID to keep the item in its collection, pass a different ID to move it, or pass `null` (`0` works too) to move it back to the top level of the Reference Library. Not read at all when `refresh_webpage` is true, so it is not required on that branch |
+| `project_id` | string (uuid) \| null | No — **but omitting it destroys data** | Full replace, with no "leave unchanged" option. Omitting the key is identical to passing `null`: the item is **detached** from its project and the call still returns 200, so nothing warns you. Pass the current ID to keep the association, a different ID to move it, or `null` to detach deliberately. Not read at all when `refresh_webpage` is true |
 
-> **Important:** `collection_id` and `project_id` use full-replace semantics — you must pass them on every call (even with `refresh_webpage`, pass the item's current values; the refresh does not change them). Omitting them is NOT the same as leaving them unchanged. If you don't know the current values, call `get_context_item` first or check the context item in the web app before updating.
+> **Important:** `collection_id` and `project_id` use full-replace semantics — pass both on every call. Omitting them is NOT the same as leaving them unchanged. If you don't know the current values, call `get_context_item` first or check the context item in the web app before updating.
 >
 > The two behave differently when omitted, so pass both explicitly: omitting **`collection_id`** returns a `Missing param` error, while omitting **`project_id`** silently **detaches** the item from its project.
+>
+> **Exception — `refresh_webpage: true`:** that branch reads **neither** field. `collection_id` is not required there, and the item's project and collection are left exactly as they were.
+
+> **Why the input schema lists `collection_id` as required but not `project_id`:** the server genuinely rejects a missing `collection_id` on the update path, while a missing `project_id` is accepted and writes `NULL`. The schema declares only what the server actually enforces; the destructive default is documented in prose rather than encoded, because JSON Schema cannot express the `refresh_webpage` carve-out without a top-level combinator that MCP clients reject.
 
 Both fields accept a JSON `null` — the tool's input schema types them as `["integer","null"]` / `["string","null"]`, so strict MCP clients can send `null` directly. Use it to move an item **out of a collection and back to the top level of the Reference Library**, or to **detach it from a project**. For `collection_id`, `0` is accepted as an alias for `null`.
 
