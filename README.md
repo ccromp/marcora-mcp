@@ -63,7 +63,7 @@ The **Marcora AI Workflows** Anthropic Skill ships alongside this server. It tea
 
 | Skill | What it covers | Source |
 |---|---|---|
-| **Marcora AI Workflows** (`marcora-mcp`) | Object model (content, blueprints, projects, context items); content-generation patterns; the 4-layer context model; project-brief mechanics; the content plans board and playbooks; building reusable multi-step workflows; and choosing between similar tools | [`skill/marcora-mcp/`](skill/marcora-mcp/) |
+| **Marcora AI Workflows** (`marcora-mcp`) | A short core (object model, the 4-layer context model, which workflow fits which job, the rules every call needs) plus one reference file per workflow: generating content, projects and briefs, adding and finding context, Brand Foundation, grounding, content plans and playbooks, reusable multi-step workflows, blueprints, sharing and export | [`skill/marcora-mcp/`](skill/marcora-mcp/) |
 
 Your AI client picks the skill up on demand based on the task.
 
@@ -71,7 +71,7 @@ Your AI client picks the skill up on demand based on the task.
 
 Get the `.skill` file from the [latest release](https://github.com/ccromp/marcora-mcp/releases/latest):
 
-- `marcora-mcp.skill` — the Marcora skill (a zip archive containing `SKILL.md` and its bundled reference files).
+- `marcora-mcp.skill` — the Marcora skill (a zip archive containing a short `SKILL.md` core plus one reference file per workflow under `references/`, which your AI client opens only when a task needs it).
 
 ### Install
 
@@ -91,7 +91,7 @@ Import the `.skill` file via Claude Desktop's Skills folder. See [Anthropic's Sk
 
 **ChatGPT, Cursor, and other non-Anthropic clients:**
 
-These clients don't directly support Anthropic Skills (yet). Workaround: unzip the `.skill` file and paste the contents of `SKILL.md` into your client's custom instructions or system-prompt slot. Bundled reference files can be pasted in too if your client supports longer context.
+These clients don't directly support Anthropic Skills (yet). Workaround: unzip the `.skill` file and paste the contents of `SKILL.md` into your client's custom instructions or system-prompt slot. `SKILL.md` names the reference file for each workflow: paste the ones you use most (for example `references/workflows.md` if you build Marcora workflows), or all of them if your client supports longer context.
 
 ### Power-user install (clone and symlink)
 
