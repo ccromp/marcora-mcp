@@ -275,8 +275,8 @@ Add a new context item to your reference library. Context items are reference ma
 You can supply the body in exactly one of three ways:
 
 - **`content`** — paste the markdown body directly. Best for short or hand-authored material. Creates a plain-text (`manual`) item.
-- **`import_url`** — pass a public URL to import **once**. The backend fetches it and converts it to clean markdown server-side using a headless browser + Mozilla Readability (the same engine used for the user-website context-import flow), then stores that markdown as a **static snapshot**. The URL is **not** retained and the item is **not** refreshable. Use for one-off imports — a presigned-link export (e.g. a Google Doc, or a connected-app sandbox), a competitor's blog post, or anything you'd otherwise have to pull into your own conversation just to forward. Importing is **asynchronous**: the call returns immediately with the new item's `id` and `import_status: "processing"`, and the content finishes loading a moment later — poll `get_context_item` to confirm (the content appears and `import_status` flips to `"ready"`). Because it returns right away, you can import many URLs back-to-back without anything timing out. If an item is still missing a minute or two later, the fetch didn't succeed — check the URL and try again.
-- **`connected_webpage_url`** — pass a URL to track as a live **web page**. The backend fetches the page, stores it as a `webpage` context item, and **remembers the URL** so it can be re-pulled later (via `update_context` `refresh_webpage`, or the refresh button in the Marcora web app). Use this for the customer's own pages and any page you want to keep current. If the same URL is already tracked, the existing item is **updated in place** (no duplicate).
+- **`import_url`** — pass a public URL to import **once**. The backend fetches it and converts it to clean markdown server-side using AI main-content extraction (it isolates the primary page or article body and drops navigation and boilerplate), then stores that markdown as a **static snapshot**. The URL is **not** retained and the item is **not** refreshable. Use for one-off imports — a presigned-link export (e.g. a Google Doc, or a connected-app sandbox), a competitor's blog post, or anything you'd otherwise have to pull into your own conversation just to forward. Importing is **asynchronous**: the call returns immediately with the new item's `id` and `import_status: "processing"`, and the content finishes loading a moment later — poll `get_context_item` to confirm (the content appears and `import_status` flips to `"ready"`). Because it returns right away, you can import many URLs back-to-back without anything timing out. If an item is still missing a minute or two later, the fetch didn't succeed — check the URL and try again.
+- **`connected_webpage_url`** — pass a URL to track as a live **web page**. The backend fetches the page, stores it as a `webpage` context item, and **remembers the URL** so it can be re-pulled later (via `update_context` `refresh_webpage`, or the refresh button in the Marcora web app). Use this for the customer's own pages and any page you want to keep current. If the same URL is already tracked, the existing item is **updated in place** (no duplicate) and its stored content is **overwritten** with the fresh fetch. Because of that overwrite, `add_context` is marked as a destructive tool.
 
 Providing zero, or more than one, of `content` / `import_url` / `connected_webpage_url` returns a 400.
 
@@ -569,6 +569,8 @@ Neither error returns any context or brief.
 ---
 
 ## Context Intelligence
+
+> **In ChatGPT** the three tools below appear as `list_context_intelligence_findings`, `get_context_intelligence_finding` and `update_context_intelligence_finding_status`. Everywhere else the names stay as documented here.
 
 Context Intelligence is Marcora's automated review layer for your reference/context library. Health-audit and web-freshness scans produce **findings** — stale content, contradictions, outdated web sources, classification gaps — each with a status lifecycle (`pending` → `acknowledged` / `dismissed` / `resolved`). These tools list and inspect findings, record your decision on them, and kick off a new health-audit sweep. To **apply** a finding's suggested fix, use [`apply_grounding_fix`](#apply_grounding_fix) — it works on health-audit findings and content-grounding findings alike.
 
@@ -2009,6 +2011,8 @@ If `anchor_date` is omitted, the playbook's persisted `anchor_date` (if any) is 
 
 ## Workflows
 
+> **Not available in ChatGPT.** In ChatGPT the six workflow tools (`list_workflows`, `get_workflow`, `get_workflow_runs`, `create_workflow`, `update_workflow`, `run_workflow`) are not offered; set workflows up in the Marcora app. Every other client sees them.
+
 Workflows are reusable, multi-step automations that a Managed Agents session executes on demand or on a schedule. Build them with `create_workflow`, set them Active or Inactive and edit them with `update_workflow`, trigger them with `run_workflow`, and inspect run history with `get_workflow_runs`.
 
 > **Two switches, two vocabularies.** A workflow is **Active** or **Inactive** (or Archived). Its schedule, if it has one, is **On** or **Paused**. A scheduled run needs both: the workflow Active **and** the schedule On. A manual run needs only Active. New workflows are saved Inactive and every schedule is saved Paused; no MCP tool can turn a schedule On — the user does that in the Marcora app with **Resume schedule**. When describing a workflow as Active, always say whether its schedule is On, Paused, or absent. The companion **`marcora-mcp`** skill documents authoring patterns (step design, scheduling, deduplication, runner-summary conventions) in its Workflows chapter.
@@ -2049,7 +2053,7 @@ List workflows for your active team. Supports an optional status filter and a na
 
 ### `get_workflow`
 
-Fetch one workflow's full definition plus its triggers and latest run. Always call this before `update_workflow` — partial updates clobber unspecified keys, so you need the current values first.
+Read-only. Returns one workflow template by `workflow_id`: its name, description, status (Active / Inactive), ordered steps, declared inputs, `allowed_tools` and tags, plus its triggers (including the schedule, if any), its latest run, and a `run_state` sentence saying what will and won't run. Call it before `update_workflow` to see the current values: steps, inputs and `allowed_tools` are replaced outright when updated.
 
 **Parameters:**
 
@@ -2093,8 +2097,8 @@ Create a new workflow template for your active team. New workflows are saved **I
 | `name` | string | Yes | Human-readable workflow name. Confirm with the user before creating |
 | `description` | string | No | One or two sentences; becomes part of the runner's system prompt |
 | `steps` | array | Yes | Ordered list of steps. Each should be specific enough that a fresh agent can execute it without follow-up questions |
-| `inputs` | object | No | Declares what the workflow needs (e.g. `topic`, `date_range`); resolved from trigger bindings on scheduled runs |
-| `allowed_tools` | array | **Yes** | **Required, non-empty.** The exact set of tools the workflow runner is permitted to use. A workflow cannot be created without an explicit allowlist — an empty list would let the runner inherit the full tool set. Prefer tight allowlists, especially for scheduled runs |
+| `inputs` | object | No | Declares what the workflow needs (e.g. `topic`, `date_range`) |
+| `allowed_tools` | array | **Yes** | **Required, non-empty.** The tools the runner agent is instructed to use when the workflow runs. A workflow cannot be created without an explicit allowlist. Prefer tight allowlists, especially for scheduled runs |
 | `tags` | string[] | No | Optional tags |
 | `schedule_config` | object | No | Omit unless scheduling is requested. **Calendar mode (preferred):** `{ "frequency": "daily"\|"weekly", "hour": 0-23, "days_of_week": [0-6], "timezone": "<IANA zone>" }` — `hour` and `days_of_week` are UTC (0 = Sunday); `days_of_week` takes 1–7 distinct days, so "3 times a week" is one schedule. **Interval mode** (no `hour`): runs every `interval_hours` hours. `timezone` is display-only. Always saved Paused |
 
@@ -2124,7 +2128,7 @@ Partial update of a workflow template — only the keys you send mutate; unspeci
 | `status` | string | No | `active`, `inactive`, or `archived` (use `archived` as soft-delete; restore with `inactive` or `active`) |
 | `steps` | array | No | Replacement step definitions |
 | `inputs` | object | No | Replacement input schema |
-| `allowed_tools` | array | No | Replacement tool allowlist |
+| `allowed_tools` | array | No | Replacement list of the tools the runner agent is instructed to use. Overwrites the existing list |
 | `tags` | string[] | No | Replacement tags |
 
 **Output:** The updated workflow object — `id`, `name`, `status`, `steps`, `inputs`, `allowed_tools`, `tags`, `updated_at`, `link_url` — plus `schedule` whenever the workflow has one, and `next_step` when this call set the status to Active or Inactive (what will and won't run afterwards; follow it).
@@ -2138,9 +2142,9 @@ Partial update of a workflow template — only the keys you send mutate; unspeci
 
 ### `run_workflow`
 
-Manually run a workflow now. Creates a workflow run and dispatches a Managed Agents session. Inspect the returned `status` to know what happened. Only an **Active** workflow can run; an Inactive or archived one is refused. The schedule plays no part in a manual run.
+Manually run a workflow now. Creates a run record and starts an automated agent session that carries out the workflow's steps, using Marcora tools and your connected apps; the session is instructed to use only the tools in the workflow's `allowed_tools`. Inspect the returned `status` to know what happened. Only an **Active** workflow can run; an Inactive or archived one is refused. The schedule plays no part in a manual run.
 
-> **Check `status`:** `running` → dispatch succeeded, a session is live; `failed` → dispatch failed, read `error_reason` for the cause; `skipped` → the runner decided no work was needed (rare for manual runs).
+> **Check `status`:** `running` → dispatch succeeded, the agent session is live; `failed` → dispatch failed, read `error_reason` for the cause; `skipped` → the runner decided no work was needed (rare for manual runs).
 
 **Parameters:**
 

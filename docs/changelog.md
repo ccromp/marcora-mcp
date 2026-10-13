@@ -2,6 +2,19 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-10-13 (tool wording and annotations)
+
+### Changed
+
+- **`add_context` is marked destructive.** Adding a URL that is already tracked (`connected_webpage_url`) updates that item in place and overwrites its stored content with the fresh fetch. The description now says so and no longer compares the extraction with other tools.
+- **Workflow tools describe `allowed_tools` accurately.** It is the list of tools the runner agent is instructed to use. `create_workflow` no longer mentions trigger bindings it cannot create, and `run_workflow` says what a run does.
+- **`get_workflow`** opens by saying what it returns.
+- **In ChatGPT**, the six workflow tools are not offered, and the three Context Intelligence tools appear as `list_context_intelligence_findings`, `get_context_intelligence_finding` and `update_context_intelligence_finding_status`. Everywhere else the names are unchanged.
+
+### Skill → v0.7.15 · plugin → v1.2.5
+
+- Context section: `add_context` overwrite note. Workflow section: `allowed_tools` wording and the ChatGPT note.
+
 ## 2026-10-13 (v1.1: tool metadata, `learn_marcora_tools`, plan-tool fix)
 
 ### Added
