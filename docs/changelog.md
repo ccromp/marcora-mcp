@@ -2,6 +2,18 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-10-13 (the AI client writes new content by default)
+
+### Changed
+
+- **New content is written by your AI client, then saved.** When you ask an assistant to write something grounded in your brand and save it in Marcora, it now calls `get_relevant_context` with `include_brand_foundation: true`, writes the piece itself, and saves it with `create_content` `content` (starting with `# <Title>`). Before, assistants often sent a one-line prompt to Marcora's own writer, which skipped that step.
+- **Marcora's own writer (`create_content` with `instructions`) is for three cases:** you ask Marcora to write it, a blueprint is used, or a plan is being fulfilled. Descriptions of `create_content`, `get_relevant_context` and `get_brand_foundation`, the server instructions and `learn_marcora_tools` say so. Assistants no longer look up blueprints on every request.
+- No tool names, inputs, outputs or annotations changed.
+
+### Skill → v0.7.15 · plugin → v1.2.5
+
+- Workflow 1, the "pre-fetch" pitfall, the routing rows and the Content glossary entry follow the new default.
+
 ## 2026-10-13 (v1.1: tool metadata, `learn_marcora_tools`, plan-tool fix)
 
 ### Added
