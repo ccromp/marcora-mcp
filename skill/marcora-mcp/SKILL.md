@@ -297,10 +297,10 @@ If intent is ambiguous, ask: *"Do you want to run this once, or set it up as a r
 (Not available in ChatGPT, where these six tools aren't offered; set workflows up in the Marcora app there. Every other client sees them.)
 
 - **`create_workflow`** — Create a template. Inputs: `name`, `steps`, `description`, `inputs`, `allowed_tools`, `tags`, optional `schedule_config`. Saves the workflow **Inactive** and any schedule **Paused**; the response carries a `next_step` saying what will and won't run.
-- **`get_workflow`** — Fetch one workflow with triggers + latest run, plus `run_state` (one sentence covering both switches) and `schedule` (its read-back, when it has one). Call before `update_workflow` to avoid clobbering unknown fields, and before saying whether a workflow runs.
+- **`get_workflow`** — Read-only. Returns one workflow's name, description, status (Active / Inactive), steps, inputs, `allowed_tools` and tags, plus its triggers (including the schedule, if any) and latest run, and `run_state` (one sentence covering both switches) and `schedule` (its read-back, when it has one). Call before `update_workflow` to avoid clobbering unknown fields, and before saying whether a workflow runs.
 - **`list_workflows`** — List the user's workflows (`status`, `search`, pagination). Call with `search:` before creating to spot duplicate names. The list does not show schedules — `status: "active"` in it does not mean a workflow is running.
 - **`update_workflow`** — Partial update; send only keys you want to change. `status` accepts `"active"`, `"inactive"` or `"archived"` (soft-delete); anything else is refused and nothing is saved. It cannot edit a schedule or switch one On. When the call changes the status to Active or Inactive, the response carries a `next_step`.
-- **`run_workflow`** — Manually dispatch a run. Only an **Active** workflow runs; the schedule plays no part in a manual run. Inspect `.status`: `"running"` = success, `"failed"` = check `.error_reason`.
+- **`run_workflow`** — Manually run a workflow: creates a run record and starts an automated agent session that carries out the steps, using Marcora tools and the user's connected apps, instructed to use only the tools in `allowed_tools`. Only an **Active** workflow runs; the schedule plays no part in a manual run. Inspect `.status`: `"running"` = success, `"failed"` = check `.error_reason`.
 - **`get_workflow_runs`** — Run history. Pass `run_id` for single-run detail (step logs + tool-call logs); omit for a paginated list.
 
 ### Building well
