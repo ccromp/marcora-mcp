@@ -309,7 +309,6 @@ Providing zero, or more than one, of `content` / `import_url` / `connected_webpa
 | `import_status` | string \| null | For `import_url` items: `"processing"` right after the call, `"ready"` once the content has loaded. `null` for pasted content and web pages |
 | `collection_id` | integer \| null | Collection this item belongs to (null if none) |
 | `project_id` | string \| null | Project association (null if none) |
-| `created_at` | integer | Unix timestamp of creation |
 | `link_url` | string | Direct URL to view this context item in the Marcora app. Resolves to the project, collection, or reference library view depending on the item's scope |
 
 **Example prompts:**
@@ -465,7 +464,7 @@ The IDs you pass here can come from `list_context_items`, `get_project(project_i
 
 ### `get_relevant_context`
 
-Searches the team's context library and returns the most relevant chunks for a given prompt, assembled into a ready-to-use markdown packet. Alongside the packet it returns a structured `sources` array — one entry per parent context item — so you can cite and deep-link each source without follow-up lookups, plus a `retrieval` object echoing the scope the search ran under. Use this to gather supporting context before generating or refining content.
+Searches the team's context library and returns the most relevant chunks for a given prompt, assembled into a ready-to-use markdown packet. Alongside the packet it returns a structured `sources` array — one entry per parent context item — so you can cite and deep-link each source without follow-up lookups. Use this to gather supporting context before generating or refining content.
 
 `collection_ids` and `project_id` are **additive**: they broaden the search to ALSO include those collections / that project's context alongside your general reference library — they do not restrict results to only that collection or project.
 
@@ -510,7 +509,6 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 | `relevant_context` | string | Ready-to-use markdown context packet assembled from the matched chunks |
 | `context_rag_ids` | array (uuid) | All chunk IDs returned. Pass back in `context_rag_ids` to exclude from future searches (pagination) |
 | `brand_foundation` | object | Always present — see below. `elements` is `null` unless `include_brand_foundation` is `true` |
-| `retrieval` | object | Echo of the search scope this response ran under — see below |
 | `sources` | array | One entry per parent context item the returned chunks came from — see below |
 
 > The previous top-level `context_item_ids` field has been **removed** — each entry in `sources` carries its own `context_item_id`, and the union of every source's `context_rag_ids` equals the top-level `context_rag_ids`.
@@ -536,17 +534,6 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 | `elements` | object \| null | `null` unless included. When present: `company_overview`, `brand_voice`, `writing_style`, `writing_examples` (strings; empty string for any not yet set) |
 | `link_url` | string | Deep-link to the Brand Foundation tab in the Marcora app. Present only when included |
 
-**`retrieval` object:**
-
-| Field | Type | Description |
-|---|---|---|
-| `team_scope` | string | Always `authenticated_user_active_team` |
-| `project_id` | string (uuid) \| null | Echo of the `project_id` input |
-| `collection_ids` | array | Echo of the `collection_ids` input |
-| `dimension_option_ids` | array | Echo of the `dimension_option_ids` input |
-| `excluded_context_rag_ids` | array (uuid) | Echo of the `context_rag_ids` input (the exclusions) |
-| `returned_count` | integer | Number of context chunks returned |
-
 **`sources[]` — each entry:**
 
 | Field | Type | Description |
@@ -560,7 +547,7 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 | `source_url` | string | Original external page URL — **present only for `webpage` items**, omitted otherwise |
 | `collection_id` | integer \| null | Collection the item belongs to, if any |
 | `project_id` | string (uuid) \| null | Project the item belongs to, if any |
-| `last_updated` | integer \| null | Unix-ms timestamp of the item's last update (`null` if never updated) |
+| `last_updated` | string (date) \| null | Date of the item's last update, `YYYY-MM-DD` (`null` if never updated) |
 | `context_rag_ids` | array (uuid) | The chunk IDs in this response that came from this item |
 
 **Errors when you pass `project_id`:**
@@ -1259,12 +1246,10 @@ You must provide either `content` or `instructions` (not both).
 
 | Field | Type | Description |
 |---|---|---|
-| `id` | integer | Content record ID |
 | `title` | string | Document title |
 | `content` | string | Document content in markdown |
 | `content_id` | string | Unique identifier for use with `get_content` and share tools |
 | `link_url` | string | Direct URL to view in Marcora |
-| `created_at` | integer | Unix timestamp of creation |
 
 **Output (with blueprint — asynchronous):**
 

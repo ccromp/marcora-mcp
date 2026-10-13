@@ -46,6 +46,19 @@ All notable changes to the Marcora MCP server will be documented in this file.
 
 - **The `refresh_webpage` documentation was wrong about `collection_id` / `project_id`.** It previously said you must still pass both on a refresh. That branch re-pulls the page and **reads neither field** — `collection_id` is not required there, and a refresh never moves an item between projects or collections.
 
+## 2026-10-07 (tool results: less internal metadata)
+
+### Changed
+
+- **`get_relevant_context` no longer returns the `retrieval` object.** It only echoed your own inputs plus internal metadata. Count chunks with `context_rag_ids`.
+- **`get_relevant_context` `sources[].last_updated` is now a date** (`YYYY-MM-DD`, or `null`) instead of a Unix-ms timestamp.
+- **`create_content` no longer returns the integer `id` or `created_at`.** Use `content_id`, which every other tool takes.
+- **`add_context` no longer returns `created_at`.**
+
+### Docs
+
+- `docs/tools.md`: the three output tables match. (Documented 2026-10-13.)
+
 ## 2026-10-07 (chat-only Content Assistant runs, rejoin invites, grounding coverage wording)
 
 ### Changed
