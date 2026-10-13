@@ -133,6 +133,7 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Content Grounding | `apply_grounding_fix` | Apply a finding's recommended fix by id |
 | Reference | `list_content_categories` | List content categories |
 | Reference | `list_targeting_dimensions` | List targeting dimensions and options |
+| Reference | `learn_marcora_tools` | Marcora's guide to its own tools, by topic (for assistants without the skill) |
 | Blueprints | `list_blueprints` | List all blueprints |
 | Blueprints | `get_blueprint` | Get blueprint details by UUID |
 | Blueprints | `create_blueprint` | Create a reusable content template |
@@ -141,7 +142,7 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Community Blueprints | `list_community_blueprints` | Browse community templates |
 | Community Blueprints | `get_community_blueprint_details` | Get community blueprint details |
 | Community Blueprints | `import_community_blueprint` | Import a community blueprint |
-| Content | `create_content` | Generate content (with or without blueprint) |
+| Content | `create_content` | Write and save a new document in the workspace (with or without blueprint) |
 | Content | `get_generation_status` | Check async generation status |
 | Content | `list_content` | List all content (optional semantic `search`) |
 | Content | `get_content` | Get full content by ID |

@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (create_content,
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.7.13
+  version: 0.7.14
 ---
 
 # Marcora AI Workflows
@@ -323,7 +323,7 @@ If intent is ambiguous, ask: *"Do you want to run this once, or set it up as a r
 
 ### What the runner writes to its run summary
 
-The runner agent's FINAL message becomes the run's summary (rendered as markdown on the run-detail page). Instruct it to: format in markdown, lead with a one-line conclusion, and **link back to anything created** (most Marcora tools return a `url`/`link` — include it). For summary-only workflows, the summary IS the deliverable — make it complete.
+The runner agent's FINAL message becomes the run's summary (rendered as markdown on the run-detail page). Instruct it to: format in markdown, lead with a one-line conclusion, and **link back to anything created** (most Marcora tools return a `url`/`link` — include it). For summary-only workflows, the summary IS the output — make it complete.
 
 **Setting the run's status:** tell the runner to start its final message with one of these prefixes — `Workflow complete: <md>` → succeeded · `Partial completion: <md>` → succeeded (partial) · `SKIP: <reason>` → skipped · `FAIL: <reason>` → failed. With no prefix, the final message is used as the run summary as-is.
 
@@ -348,7 +348,7 @@ The **plans board** is Marcora's content pipeline: a queue of ideas/intents (**p
 
 `Suggested → Accepted → In_Process → Complete`, plus `Dismissed` (terminal). Transitions go through `update_plan target_stage:` (use the UNDERSCORE form `In_Process`). Only these are allowed: Suggested→Accepted/Dismissed · Accepted→In_Process/Dismissed · In_Process→Complete/Accepted/Dismissed · Complete→Accepted (re-open, clears produced content)/Dismissed. **There is no `delete_plan`** — dismiss with `target_stage:"Dismissed"`.
 
-The **starting stage is set automatically from `source`**, you don't control it directly: `user_added` / `cora_requested` / `playbook` → **Accepted** (actionable now); `cora_proactive` → **Suggested** (awaits user accept). Set `source:"cora_requested"` when the user explicitly asked; `source:"cora_proactive"` when you're surfacing an unprompted suggestion. **Never** pass `source:"workflow"` or `"playbook"` from an interactive session.
+The **starting stage is set automatically from `source`**, you don't control it directly: `cora_requested` / `playbook` → **Accepted** (actionable now); `user_added` / `cora_proactive` / `workflow` → **Suggested** (awaits user accept). Set `source:"cora_requested"` when the user explicitly asked; `source:"cora_proactive"` when you're surfacing an unprompted suggestion. **Never** pass `source:"workflow"` or `"playbook"` from an interactive session.
 
 ### Visibility
 
@@ -359,7 +359,7 @@ The **starting stage is set automatically from `source`**, you don't control it 
 - **`create_plan`** — Create a plan. Only `title` is required. Optional executable params (`prompt`, `blueprint_id`, `project_id`, `category_id`, `due_date`, `reference_document_ids`, `context_collection_ids`, `targeting_dimension_ids`, `assigned_to`, `visibility`). **Dedupe first:** call `list_plans` with a `project_id` filter before creating; if a matching Accepted/Suggested plan exists, offer to `update_plan` it instead. When creating several in one turn, correlate them with `source_metadata.batch_id` and deep-link the filtered view.
 - **`get_plan`** — Fetch one plan by `plan_uuid` with all linked params. **Always call before `update_plan`** to avoid overwriting with stale values. `_produced_content` null = no content yet.
 - **`list_plans`** — Discovery + dedup. Results cover only the plans the user can see (an empty result ≠ the team has no plans). Useful filters: `stage` (single-value array, UNDERSCORE form), `project_id`, `assignee_scope` (`me` default | `created_by_me` | `all_visible`). Current limitations: `due_before`, `due_after` and `search_text` are accepted but not yet applied, and for `stage` and `source` only the first value is used — pass single-value arrays.
-- **`update_plan`** — Partial update; only keys you send mutate. Construct a minimal diff after `get_plan`. `reference_document_ids` / `context_collection_ids` / `targeting_dimension_ids` are **full-replace** (pass `[]` to clear). Server-managed fields (`source`, `produced_content_id`, timestamps, etc.) are rejected as immutable.
+- **`update_plan`** — Partial update; only keys you send mutate. Construct a minimal diff after `get_plan`. `reference_document_ids` / `context_collection_ids` / `targeting_dimension_ids` are **full-replace** when non-empty; `[]` is ignored, so they can't be cleared. `null` clears `blueprint_id` / `due_date` but is ignored for `project_id` / `category_id`. Server-managed fields (`source`, `produced_content_id`, timestamps, etc.) are rejected as immutable.
 - **`produce_plan`** — The MCP equivalent of the plans-board **Generate** button. Requires the plan in **Accepted** stage (Suggested → `update_plan target_stage:"Accepted"` first). **⚠️ Consumes Studio Credits and takes 1–2 min — confirm before producing a plan the user didn't explicitly ask to produce.** The plan's `prompt`, targeting, context collections, and project are used as generation inputs — set them via `update_plan` BEFORE producing.
   - **Both paths are ASYNC now** — the tool returns immediately with a `generation_id`; **poll `get_generation_status`**. A plan **with** a blueprint → `path:"blueprint"`; **without** a blueprint → `path:"freeform"`. On completion Marcora links the produced content and flips the plan to `In_Process` (then `Complete` when the content reaches ready).
 

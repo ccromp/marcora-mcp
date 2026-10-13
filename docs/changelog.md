@@ -2,6 +2,28 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-10-13 (v1.1: tool metadata, `learn_marcora_tools`, plan-tool fix)
+
+### Added
+
+- **`learn_marcora_tools`** returns Marcora's guide to its own tools, one topic at a time: the object model, which tool fits which request, the order tools chain in, and the mistakes to avoid. It carries the same guidance as the companion skill, for AI assistants that don't have the skill installed. Read-only, no workspace data, no credits. The server instructions now point skill-less clients to it before multi-step Marcora work.
+- **Empty-workspace reply on `get_brand_foundation` and `get_relevant_context`.** When the team has no Brand Foundation and nothing in its reference library yet, both return `workspace_status: "empty"` and a `next_step` string first, telling the assistant to say so and offer to set the workspace up (their website via `add_context`, or a drafted Company Overview and Brand Voice via `update_brand_foundation`), saving nothing without the user's OK. Both fields are absent for any workspace with content, and both are declared in the tools' output schemas.
+- **Two tools load up front in Claude Code.** `get_relevant_context` and `get_brand_foundation` are marked to load at the start of a session, so Claude Code doesn't defer them behind tool search.
+
+### Changed
+
+- **Front-loaded tool descriptions.** Claude Code cuts every tool description at 2,048 characters, and 16 brand-server descriptions ran past it. Each now opens with what the tool does, when to use it rather than its neighbours, and the must-know rules, with the rest of the contract after that. Same contract, re-ordered: no tool name, input schema, annotation or behaviour changed.
+- **Clearer routing between writing in the chat and saving to Marcora.** `get_relevant_context` is the tool for drafts written in the chat and for questions about the user's own company; `create_content` writes **and saves** a new document in the workspace, so it is for when the user asks Marcora to create or save content. These docs carry the same routing text.
+
+### Fixed
+
+- **`update_plan` and `create_plan` descriptions now match what the server does.** On `update_plan`, an empty array `[]` for `reference_document_ids`, `context_collection_ids` or `targeting_dimension_ids` is **ignored** (a non-empty array still replaces the set), and `null` clears only `blueprint_id` and `due_date`: it is ignored for `project_id` and `category_id`. On `create_plan`, `user_added` plans start in **Suggested**, not Accepted. The server's behaviour did not change; the descriptions and these docs previously said otherwise.
+
+### Skill → v0.7.14 · plugin → v1.2.4
+
+- Plan section: the starting stage by `source` and `update_plan`'s array and `null` rules, corrected as above.
+- Run-summary wording: "the summary IS the output".
+
 ## 2026-10-11 (Studio Credits wording)
 
 ### Changed

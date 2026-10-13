@@ -165,6 +165,8 @@ By default returns all four elements. Pass `elements` to scope the response to a
 | `writing_style` | string | Markdown content for Writing Style. Empty string if not set. Only present if requested via `elements` |
 | `writing_examples` | string | Markdown content for Writing Examples. Free-form structure — whatever the user has saved. Empty string if not set. Only present if requested via `elements` |
 | `link_url` | string | Deep-link that opens the Brand Foundation section in the Marcora web app (where the user can toggle between the four elements). Always present |
+| `workspace_status` | string | `"empty"`, present only when the team has no Brand Foundation and nothing in its reference library yet |
+| `next_step` | string | Present only with `workspace_status: "empty"`: tell the user the workspace is empty and offer to set it up (their website via `add_context`, or a drafted Company Overview and Brand Voice via `update_brand_foundation`). Save nothing without their OK |
 
 **Example prompts:**
 - "What's my brand foundation?"
@@ -467,6 +469,17 @@ Searches the team's context library and returns the most relevant chunks for a g
 
 `collection_ids` and `project_id` are **additive**: they broaden the search to ALSO include those collections / that project's context alongside your general reference library — they do not restrict results to only that collection or project.
 
+**When to use it:**
+- The user wants writing grounded in their team's brand or company context that **you** will write in the chat (a blog post, email, social post, landing page, press release, ad or messaging): call it with `include_brand_foundation: true` and write from what it returns.
+- The user asks about their own company, product, positioning, launches or competitors (*"what do we have on competitor X?"*): call it and answer from their context.
+- Before saving text you wrote yourself through the `content` parameter of `create_content` / `update_content`: those store it verbatim and consult no context.
+
+**When not to use it:**
+- Before `create_content` with `instructions`: Marcora gathers the context itself.
+- For brand voice, company overview, writing style or writing examples on their own: relevancy search never returns Brand Foundation. Use `get_brand_foundation`, or set `include_brand_foundation: true`.
+
+> **Loaded up front in Claude Code.** `get_relevant_context` and `get_brand_foundation` are marked to load at the start of a session, so Claude Code doesn't defer them behind tool search.
+
 **Working inside a project? The first call returns its brief.** When you pass `project_id` and the project has a brief, the response carries a top-level `project_brief` block as its **first** key: the project's authoritative statement of premise, scope and the structural decisions already taken. It is the same block `get_project` returns. Read it before drafting, revising, assessing or critiquing anything in that project — the chunks in the same response may be older than the brief or contradict it, and the brief wins. When `truncated` is `true`, call `get_content` with its `content_id` for the full text. The brief is stored as a document, not as a context item, so relevancy search can never surface it; this block is the only way it reaches you from this tool.
 
 > **Tip — the brief on the first call only:** `include_project_brief` defaults to `true`, so just omit it on the **first** call for a project. On **later** calls for the same project in the same conversation, set it `false` so the brief isn't re-sent. If you already have the brief (you called `get_project` for that project, or your environment already gave it to you), treat the first call as done and pass `false`.
@@ -501,6 +514,8 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 | `sources` | array | One entry per parent context item the returned chunks came from — see below |
 
 > The previous top-level `context_item_ids` field has been **removed** — each entry in `sources` carries its own `context_item_id`, and the union of every source's `context_rag_ids` equals the top-level `context_rag_ids`.
+
+> **Empty workspace:** when the team has no Brand Foundation and nothing in its reference library yet, the response also carries `workspace_status: "empty"` and a `next_step` string, placed first. `next_step` tells you to say the workspace is empty and offer to set it up (add their website with `add_context`, or draft a Company Overview and Brand Voice for `update_brand_foundation`), saving nothing without the user's OK. Both fields are absent otherwise.
 
 **`project_brief` object** (same shape as `get_project`'s `project_brief`):
 
@@ -940,6 +955,26 @@ Returns targeting dimensions and their options for the current team. Dimensions 
 
 ---
 
+### `learn_marcora_tools`
+
+Returns Marcora's guide to its own tools: what each Marcora object is, which tool fits which request, the order the tools chain in, and the mistakes to avoid. It carries the same guidance as the companion `marcora-mcp` skill, for AI assistants that don't have the skill installed. Your assistant calls it once before multi-step Marcora work, or when it's unsure which tool fits.
+
+Read-only: it reads no workspace data, changes nothing, and uses no credits.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `topic` | string | No | The section to return. Omit for an overview (the object model, the context model, a which-tool table, and the list of topics). One of: `choosing-tools`, `generate-content`, `projects-and-briefs`, `add-context`, `find-context`, `grounding`, `workflows`, `plans-and-playbooks`, `pitfalls`, `edge-cases`, `recipes`, `glossary`. |
+
+**Output:** An object with `topic` (the section returned, or `overview`), `title`, `guide_version` (the matching skill version), `content` (the guidance, in markdown), and `topics` (every topic with a title and a one-line summary).
+
+**Example prompts:**
+- "Before you start, check how Marcora's tools fit together"
+- "Which Marcora tool should I use to set a project brief?"
+
+---
+
 ## Blueprints
 
 ### `list_blueprints`
@@ -1186,7 +1221,11 @@ Import a blueprint from the Marcora community exchange into your team's library.
 
 ### `create_content`
 
-Create content by supplying your own text directly, generating from an AI prompt, or generating from a blueprint.
+Writes a new piece of content with Marcora and **saves** it as a document in the user's Marcora workspace. Every successful call creates a new saved document, not a chat reply.
+
+**When to use it:** when the user asks Marcora to create, write or save content, or to save text they already have. If the user wants a draft in the chat instead, don't call it: call `get_relevant_context` with `include_brand_foundation: true` and write the draft in the chat.
+
+You can supply your own text directly, generate from an AI prompt, or generate from a blueprint.
 
 > **Revising an existing document? Use `update_content` instead** — edit it in place rather than forking a new doc. Edits are non-destructive: Marcora keeps a version history and the user can revert from the app.
 
@@ -1755,9 +1794,8 @@ Fetch a single plan by UUID with full details including linked references, conte
 Create a new content plan in the authenticated user's active team.
 
 **Starting stage by source:**
-- `user_added`, `cora_requested`, `playbook` → starts at **Accepted**
-- `cora_proactive` → starts at **Suggested**
-- `workflow` → starts at **Suggested** (by default)
+- `cora_requested`, `playbook` → starts at **Accepted**
+- `user_added`, `cora_proactive`, `workflow` → starts at **Suggested**
 
 **Parameters:**
 
@@ -1790,9 +1828,9 @@ Create a new content plan in the authenticated user's active team.
 
 Partial update of a plan: mutable fields and stage transitions. All fields are optional — supply only what you want to change.
 
-> **Array fields replace entirely:** `reference_document_ids`, `context_collection_ids`, and `targeting_dimension_ids` REPLACE the full set when provided. Pass `[]` to clear all.
+> **Array fields replace entirely:** a non-empty `reference_document_ids`, `context_collection_ids` or `targeting_dimension_ids` REPLACES the full set (it doesn't merge). An empty array `[]` is ignored, so this tool can't clear these lists.
 
-> **Nullable fields:** Pass `null` to clear `blueprint_id`, `project_id`, `category_id`, and `due_date`.
+> **Clearing fields:** pass `null` to clear `blueprint_id` or `due_date`. `null` is ignored for `project_id` and `category_id`: to change one of those, pass a new value.
 
 **Stage transition rules:**
 - `Suggested` → `Accepted` or `Dismissed`
@@ -1810,13 +1848,13 @@ Partial update of a plan: mutable fields and stage transitions. All fields are o
 | `description` | string | No | New description |
 | `prompt` | string | No | Updated content prompt |
 | `blueprint_id` | string/null | No | Blueprint UUID. Pass `null` to clear |
-| `project_id` | string/null | No | Project UUID. Pass `null` to clear |
-| `category_id` | integer/null | No | Content category ID. Pass `null` to clear |
+| `project_id` | string/null | No | Project UUID. `null` is ignored: pass a new value to change it |
+| `category_id` | integer/null | No | Content category ID. `null` is ignored: pass a new value to change it |
 | `due_date` | string/null | No | ISO YYYY-MM-DD. Pass `null` to clear |
 | `assigned_to` | integer | No | Integer user ID. Must be a current team member |
-| `reference_document_ids` | string[] | No | REPLACES the full set of reference documents. Pass `[]` to clear all |
-| `context_collection_ids` | integer[] | No | REPLACES the full set of context collections. Pass `[]` to clear all |
-| `targeting_dimension_ids` | integer[] | No | REPLACES the full set of targeting dimensions. Pass `[]` to clear all |
+| `reference_document_ids` | string[] | No | A non-empty array REPLACES the full set of reference documents. `[]` is ignored, so the set can't be cleared |
+| `context_collection_ids` | integer[] | No | A non-empty array REPLACES the full set of context collections. `[]` is ignored, so the set can't be cleared |
+| `targeting_dimension_ids` | integer[] | No | A non-empty array REPLACES the full set of targeting dimensions. `[]` is ignored, so the set can't be cleared |
 | `target_stage` | string | No | Trigger a stage transition. Use UNDERSCORE form (e.g. `In_Process`). Allowed: `Suggested`, `Accepted`, `In_Process`, `Complete`, `Dismissed` |
 
 **Output:** Updated plan object with all fields.
