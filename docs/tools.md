@@ -148,7 +148,7 @@ Returns the team's Brand Foundation — the foundational brand and company infor
 
 By default returns all four elements. Pass `elements` to scope the response to a subset. The response is structured JSON — paste it directly into a downstream AI prompt (modern LLMs read JSON fine) or template-string the fields into markdown if you prefer.
 
-> **Note:** You don't need to call this before `create_content` with `instructions` (or `create_plan`) — those pull Brand Foundation in automatically. But if **you** are composing content yourself to save via the `content` parameter of `create_content`/`update_content`, fetch it first (or use `get_relevant_context` with `include_brand_foundation: true`), since those verbatim-save paths consult no context. Call it directly whenever the user wants to see, discuss, or hand off their Brand Foundation.
+> **Note:** You don't need to call this before `create_content` with `instructions` (or `create_plan`) — those pull Brand Foundation in automatically. When **you** are composing content yourself to save via the `content` parameter of `create_content`/`update_content` (the default for new content), fetch it first (or use `get_relevant_context` with `include_brand_foundation: true`), since those verbatim-save paths consult no context. Call it directly whenever the user wants to see, discuss, or hand off their Brand Foundation.
 
 **Parameters:**
 
@@ -469,12 +469,12 @@ Searches the team's context library and returns the most relevant chunks for a g
 `collection_ids` and `project_id` are **additive**: they broaden the search to ALSO include those collections / that project's context alongside your general reference library — they do not restrict results to only that collection or project.
 
 **When to use it:**
-- The user wants writing grounded in their team's brand or company context that **you** will write in the chat (a blog post, email, social post, landing page, press release, ad or messaging): call it with `include_brand_foundation: true` and write from what it returns.
+- The user wants writing grounded in their team's brand or company context (a blog post, email, social post, landing page, press release, ad or messaging), including *"write it and save it in Marcora"*: call it with `include_brand_foundation: true`, write it yourself from what it returns, then save it with `create_content` `content` if asked to.
 - The user asks about their own company, product, positioning, launches or competitors (*"what do we have on competitor X?"*): call it and answer from their context.
 - Before saving text you wrote yourself through the `content` parameter of `create_content` / `update_content`: those store it verbatim and consult no context.
 
 **When not to use it:**
-- Before `create_content` with `instructions`: Marcora gathers the context itself.
+- Before `create_content` with `instructions` (used only when the user asks Marcora to write it, a blueprint is used, or a plan is being fulfilled): Marcora gathers the context itself.
 - For brand voice, company overview, writing style or writing examples on their own: relevancy search never returns Brand Foundation. Use `get_brand_foundation`, or set `include_brand_foundation: true`.
 
 > **Loaded up front in Claude Code.** `get_relevant_context` and `get_brand_foundation` are marked to load at the start of a session, so Claude Code doesn't defer them behind tool search.
@@ -1210,11 +1210,9 @@ Import a blueprint from the Marcora community exchange into your team's library.
 
 ### `create_content`
 
-Writes a new piece of content with Marcora and **saves** it as a document in the user's Marcora workspace. Every successful call creates a new saved document, not a chat reply.
+Saves a new piece of content as a document in the user's Marcora workspace. Every successful call creates a new saved document, not a chat reply.
 
-**When to use it:** when the user asks Marcora to create, write or save content, or to save text they already have. If the user wants a draft in the chat instead, don't call it: call `get_relevant_context` with `include_brand_foundation: true` and write the draft in the chat.
-
-You can supply your own text directly, generate from an AI prompt, or generate from a blueprint.
+**When to use it:** to save content in the user's Marcora workspace. **By default you write the content yourself and save it with `content`:** call `get_relevant_context` with `include_brand_foundation: true`, write the piece from what it returns, then save it. If the user wants a draft in the chat instead, don't call it. Marcora's own writer (`instructions`, optionally with `blueprint_uuid`) is for three cases only: the user asks Marcora to write it, a blueprint is used, or a plan is being fulfilled.
 
 > **Revising an existing document? Use `update_content` instead** — edit it in place rather than forking a new doc. Edits are non-destructive: Marcora keeps a version history and the user can revert from the app.
 
@@ -1226,7 +1224,7 @@ You must provide either `content` or `instructions` (not both).
 - **With `instructions`** (synchronous): Creates a freeform document from an AI prompt. Takes 1–3 minutes.
 - **With `instructions` + `blueprint_uuid`** (asynchronous): Generates content from a blueprint template. Returns a `generation_id` to poll via `get_generation_status`. Takes 3–5 minutes.
 
-> **Context handling depends on which input you use.** With **`instructions`** (Marcora writes it), the tool pulls all relevant context internally — Brand Foundation + Reference Library (relevancy-scored) + Project Context (if `project_id`) + any `collection_ids` — so do **not** pre-fetch with `get_relevant_context`; that's wasted work. With **`content`** (you supply finished text), the tool stores your markdown **verbatim** and consults **no** context. So if you're composing the content yourself, call `get_relevant_context` with `include_brand_foundation: true` **first** and write from what it returns — otherwise your draft ignores the team's brand and reference material. Rule of thumb: to have Marcora write against full team context automatically, use `instructions`; use `content` to save text the user already wrote/approved, or when the user wants *you* to do the writing (fetch context first).
+> **Context handling depends on which input you use.** With **`content`** (you write it, the default for new content), the tool stores your markdown **verbatim** and consults **no** context. So call `get_relevant_context` with `include_brand_foundation: true` **first** (add `project_id` when writing for a project) and write from what it returns, otherwise your draft ignores the team's brand and reference material. With **`instructions`** (Marcora writes it: only when the user asks Marcora to write it, a blueprint is used, or a plan is being fulfilled), the tool pulls all relevant context internally — Brand Foundation + Reference Library (relevancy-scored) + Project Context (if `project_id`) + any `collection_ids` — so on that path do **not** pre-fetch with `get_relevant_context`; that's wasted work. To build on existing documents when you write it yourself, read them with `get_content` and write from them; `reference_content_ids` is for the `instructions` paths and is rejected with `content`.
 
 **Parameters:**
 
