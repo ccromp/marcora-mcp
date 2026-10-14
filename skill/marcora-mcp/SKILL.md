@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (create_content,
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.7.15
+  version: 0.7.16
 ---
 
 # Marcora AI Workflows
@@ -204,7 +204,7 @@ The brief is the project's authoritative statement of premise, scope and the str
 3. `marcora:add_context` with `name` and the body, plus optional `collection_id` (top-level) or `project_id` (project-scoped). Pick the body argument based on what you have — provide **exactly one** of these three (zero or more than one → 400):
    - **`content`** — paste markdown directly. Best for short or hand-authored material.
    - **`import_url`** — pass a public URL imported **once**: Marcora fetches it and converts the page to clean markdown, stored as a **static snapshot** (the URL is not retained, the item is not refreshable). Use for one-off sources — a blog post, a presigned-link export from Google Docs or a connected-app sandbox, etc. Don't `web_browse`/`web_fetch` it into your conversation first just to forward the bytes.
-   - **`connected_webpage_url`** — pass a URL to track as a live, refreshable **web page** (`content_type: "webpage"`): the URL is stored so it can be re-pulled later via `update_context(refresh_webpage=true)` or the app's refresh button. Use this for the customer's own pages and anything you'll want to keep current. Dedupes by URL (re-adding updates in place). **Admin/editor only** — collaborators are rejected.
+   - **`connected_webpage_url`** — pass a URL to track as a live, refreshable **web page** (`content_type: "webpage"`): the URL is stored so it can be re-pulled later via `update_context(refresh_webpage=true)` or the app's refresh button. Use this for the customer's own pages and anything you'll want to keep current. Dedupes by URL: re-adding a tracked URL updates that item in place and **overwrites** its stored content with the fresh fetch (so `add_context` is marked destructive). **Admin/editor only** — collaborators are rejected.
 
 **Output to user.** "Added: [link]. Want to use this in a content generation now?"
 
@@ -303,11 +303,13 @@ If intent is ambiguous, ask: *"Do you want to run this once, or set it up as a r
 
 ### The 6 workflow tools
 
+(Not available in ChatGPT, where these six tools aren't offered; set workflows up in the Marcora app there. Every other client sees them.)
+
 - **`create_workflow`** — Create a template. Inputs: `name`, `steps`, `description`, `inputs`, `allowed_tools`, `tags`, optional `schedule_config`. Saves the workflow **Inactive** and any schedule **Paused**; the response carries a `next_step` saying what will and won't run.
-- **`get_workflow`** — Fetch one workflow with triggers + latest run, plus `run_state` (one sentence covering both switches) and `schedule` (its read-back, when it has one). Call before `update_workflow` to avoid clobbering unknown fields, and before saying whether a workflow runs.
+- **`get_workflow`** — Read-only. Returns one workflow's name, description, status (Active / Inactive), steps, inputs, `allowed_tools` and tags, plus its triggers (including the schedule, if any) and latest run, and `run_state` (one sentence covering both switches) and `schedule` (its read-back, when it has one). Call before `update_workflow` to avoid clobbering unknown fields, and before saying whether a workflow runs.
 - **`list_workflows`** — List the user's workflows (`status`, `search`, pagination). Call with `search:` before creating to spot duplicate names. The list does not show schedules — `status: "active"` in it does not mean a workflow is running.
 - **`update_workflow`** — Partial update; send only keys you want to change. `status` accepts `"active"`, `"inactive"` or `"archived"` (soft-delete); anything else is refused and nothing is saved. It cannot edit a schedule or switch one On. When the call changes the status to Active or Inactive, the response carries a `next_step`.
-- **`run_workflow`** — Manually dispatch a run. Only an **Active** workflow runs; the schedule plays no part in a manual run. Inspect `.status`: `"running"` = success, `"failed"` = check `.error_reason`.
+- **`run_workflow`** — Manually run a workflow: creates a run record and starts an automated agent session that carries out the steps, using Marcora tools and the user's connected apps, instructed to use only the tools in `allowed_tools`. Only an **Active** workflow runs; the schedule plays no part in a manual run. Inspect `.status`: `"running"` = success, `"failed"` = check `.error_reason`.
 - **`get_workflow_runs`** — Run history. Pass `run_id` for single-run detail (step logs + tool-call logs); omit for a paginated list.
 
 ### Building well
@@ -317,7 +319,7 @@ If intent is ambiguous, ask: *"Do you want to run this once, or set it up as a r
    - **(a) An external destination** — depending on the user's connected integrations: `create_content`, `add_context`, `create_project`, `update_context`, `create_external_share`, or connected apps: send an email (Gmail), post a message (Slack, Teams, Discord), create a task (Google Tasks, Asana, Linear), or write to Google Docs, Sheets or Notion.
    - **(b) Run summary only** — the user just reads the result on the run-detail page. Legitimate for "look something up / summarize / find me" workflows. Restate it back so they know where to look.
 3. **Translate steps into plain-language `{name, description}` entries** specific enough that a fresh agent can act without follow-up. Add `agent_hint` for non-obvious guidance. Tool names in step descriptions render as chips — write them in canonical `SCREAMING_SNAKE_CASE`.
-4. **Set `allowed_tools` narrowly** (3–6 tools). The call is rejected if `allowed_tools` is missing or empty — even summary-only workflows need read tools spelled out (e.g. `web_search`, `web_browse`).
+4. **Set `allowed_tools` narrowly** (3–6 tools). It is the list of tools the runner agent is instructed to use. The call is rejected if `allowed_tools` is missing or empty — even summary-only workflows need read tools spelled out (e.g. `web_search`, `web_browse`).
 5. **Two switches, two vocabularies — never mix them.** The workflow is **Active** or **Inactive** (or Archived). Its schedule, if it has one, is **On** or **Paused**. Never call a schedule "active" or "inactive", and never call a workflow "paused" or "on". Whenever you say a workflow is Active, say in the same sentence whether its schedule is On, Paused, or absent — "Active" alone only means the workflow is *allowed* to run.
    - **What runs needs both switches:** a scheduled run needs the workflow Active **and** the schedule On. A manual run (`run_workflow`) needs only Active.
    - Inactive → nothing runs, by any route (manual runs are refused too). Active with no schedule → runs only when started manually. Active with the schedule Paused → manual runs work, but it won't run on its schedule until the user clicks **Resume schedule** in the app. Active with the schedule On → runs on its schedule. Inactive with the schedule On → nothing runs until the workflow is set Active.
@@ -426,7 +428,7 @@ The **starting stage is set automatically from `source`**, you don't control it 
 
 - **Don't duplicate Content to "add it" to a project.** Attachment is a link between the project and the document, not a copy. Use `update_project(project_brief_id=...)` — it auto-attaches.
 
-- **Write new content yourself; don't hand a plain "write X" to Marcora's generator.** The default for new content is `get_relevant_context(include_brand_foundation=true)` → you write → `create_content` with `content`. The `content` path stores your text **verbatim** and consults no context, so skip the context call and your draft is off-brand and ignores the Reference Library. Marcora's generator (`instructions`) is for three cases: the user asks Marcora to write it, a Blueprint is used, or a plan is being fulfilled. **On that path, don't pre-fetch:** the `instructions` path already pulls in Brand Foundation (so you don't need `marcora:get_brand_foundation` either), Reference Library via relevancy scoring, Project Context if `project_id` is set, and any `collection_ids` you pass, so fetching first is wasted work. Other legitimate uses of the fetch tools: the narrow Workflow-1 sourcing-check (specific customer / incident not likely in the library) and direct user Q&A about brand voice or library contents.
+- **Write new content yourself; don't hand a plain "write X" to Marcora's generator.** The default for new content is `get_relevant_context(include_brand_foundation=true)` → you write → `create_content` with `content`. The `content` path stores your text **verbatim** and consults no context, so if you skip the context call, your draft is off-brand and ignores the Reference Library. Marcora's generator (`instructions`) is for three cases: the user asks Marcora to write it, a Blueprint is used, or a plan is being fulfilled. **On that path, don't pre-fetch:** the `instructions` path already pulls in Brand Foundation (so you don't need `marcora:get_brand_foundation` either), Reference Library via relevancy scoring, Project Context if `project_id` is set, and any `collection_ids` you pass, so fetching first is wasted work. Other legitimate uses of the fetch tools: the narrow Workflow-1 sourcing-check (specific customer / incident not likely in the library) and direct user Q&A about brand voice or library contents.
 
 - **Don't fetch the content body after generation.** Hand the user the `link_url`. `get_content` is for three cases only: (a) the user later asks a question that requires reading the body to answer, (b) you need the markdown to feed `convert_markdown_to_word_doc`, or (c) a `project_brief` block came back with `truncated: true` and you are about to work in that project — read the full brief first.
 

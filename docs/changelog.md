@@ -2,7 +2,7 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
-## 2026-10-13 (the AI client writes new content by default)
+## Unreleased (the AI client writes new content by default)
 
 ### Changed
 
@@ -10,9 +10,22 @@ All notable changes to the Marcora MCP server will be documented in this file.
 - **Marcora's own writer (`create_content` with `instructions`) is for three cases:** you ask Marcora to write it, a blueprint is used, or a plan is being fulfilled. Descriptions of `create_content`, `get_relevant_context` and `get_brand_foundation`, the server instructions and `learn_marcora_tools` say so. Assistants no longer look up blueprints on every request.
 - No tool names, inputs, outputs or annotations changed.
 
-### Skill → v0.7.15 · plugin → v1.2.5
+### Skill → v0.7.16 · plugin → v1.2.6
 
 - Workflow 1, the "pre-fetch" pitfall, the routing rows and the Content glossary entry follow the new default.
+
+## 2026-10-13 (tool wording and annotations)
+
+### Changed
+
+- **`add_context` is marked destructive.** Adding a URL that is already tracked (`connected_webpage_url`) updates that item in place and overwrites its stored content with the fresh fetch. The description now says so and no longer compares the extraction with other tools.
+- **Workflow tools describe `allowed_tools` accurately.** It is the list of tools the runner agent is instructed to use. `create_workflow` no longer mentions trigger bindings it cannot create, and `run_workflow` says what a run does.
+- **`get_workflow`** opens by saying what it returns.
+- **In ChatGPT**, the six workflow tools are not offered, and the three Context Intelligence tools appear as `list_context_intelligence_findings`, `get_context_intelligence_finding` and `update_context_intelligence_finding_status`. Everywhere else the names are unchanged.
+
+### Skill → v0.7.15 · plugin → v1.2.5
+
+- Context section: `add_context` overwrite note. Workflow section: `allowed_tools` wording and the ChatGPT note.
 
 ## 2026-10-13 (v1.1: tool metadata, `learn_marcora_tools`, plan-tool fix)
 
