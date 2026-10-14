@@ -310,6 +310,9 @@ Providing zero, or more than one, of `content` / `import_url` / `connected_webpa
 | `collection_id` | integer \| null | Collection this item belongs to (null if none) |
 | `project_id` | string \| null | Project association (null if none) |
 | `link_url` | string | Direct URL to view this context item in the Marcora app. Resolves to the project, collection, or reference library view depending on the item's scope |
+| `capacity` | object | Present only when the team's plan limits context items: `{used, limit, remaining}` after this add. Absent when the plan has no limit |
+
+At the plan's limit the call returns an error stating the limit; deleting an item makes room.
 
 **Example prompts:**
 - "Add our brand guidelines to Marcora"
@@ -379,19 +382,19 @@ Both fields accept a JSON `null` — the tool's input schema types them as `["in
 
 ### `list_context_items`
 
-Lists context items from the team's context library. By default returns all items the user can see (across projects, collections, and the reference library). Set `reference_library_only=true` to return only items that are not in any project or collection — these are the items shown in the "Reference Library" section of the Marcora web app.
+Lists the context items in the team's reference library, newest first. Use it to browse and filter the library and to find context-item IDs. By default returns all items the user can see (across projects, collections, and the reference library). Set `reference_library_only=true` to return only items that are not in any project or collection — these are the items shown in the "Reference Library" section of the Marcora web app.
 
 Each returned item carries its own `collection_id` and `project_id` (both nullable), so you always know where it lives. To get the full markdown content of any item, pass its id to `get_context_item`.
 
 **Privacy:** items in private collections (where you are not the creator) and items in private projects (where you are not a member) are filtered out — they will not appear in the response.
 
-**Semantic search:** pass a natural-language `search` query to rank items by semantic relevance (by their best-matching chunk) instead of recency; each item then carries a `relevance_score` (cosine `0`–`1`, higher = more relevant). Omit or leave `search` empty for the normal recency-ordered list. The scores are **cross-comparable with `list_content`** — call both tools with the same `search` query, merge the two arrays, and take the top matches by `relevance_score`, then present them to the user for confirmation before fetching full text with `get_context_item` / `get_content`.
+**Optional `search`:** pass a natural-language query to sort the list by similarity instead of recency. Each item is scored by its best-matching passage and carries a `relevance_score` (cosine `0`–`1`, higher = more similar); items with no indexed passages yet have a `null` score and sort last. Search only re-orders: every item the user can see is still returned, with no cutoff, so the response is as large as the library. To find the passages that are relevant to a question, use `get_relevant_context`.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `search` | string | No | Optional natural-language query. When provided, items are ranked by semantic relevance to it (by their best-matching chunk) instead of recency, and each item gains a `relevance_score`. Omit or leave empty for the normal recency-ordered list. Scores are cross-comparable with `list_content` |
+| `search` | string | No | Optional natural-language query. When provided, every item is scored by its best-matching passage and the list is sorted by that score instead of recency; each item gains a `relevance_score`. Nothing is dropped, so the response is still the whole library. Omit or leave empty for the normal recency-ordered list |
 | `reference_library_only` | boolean | No | When `true`, returns only items not in any project or collection. Default `false` returns everything |
 
 **Output:** An object with a single `context_items` key holding an array of context items. Each item has:
@@ -410,7 +413,7 @@ Each returned item carries its own `collection_id` and `project_id` (both nullab
 | `relevancy_processed_status` | string | RAG indexing status (`unprocessed`, `provisional`, `complete`) |
 | `collection_id` | integer \| null | Collection this item lives in, or `null` |
 | `project_id` | string (uuid) \| null | Project this item is associated with, or `null` |
-| `relevance_score` | number | Present only when a `search` query is supplied. Cosine similarity (`0`–`1`, higher = more relevant) of the item's best-matching chunk to the query. Cross-comparable with the `relevance_score` returned by `list_content` |
+| `relevance_score` | number \| null | Present only when a `search` query is supplied. Cosine similarity (`0`–`1`, higher = more similar) of the item's best-matching passage to the query; `null` when the item has no indexed passage yet |
 
 **Other ways to discover context-item IDs:**
 - `get_project(project_id).context_items` — items attached to a specific project
@@ -425,7 +428,7 @@ Each returned item carries its own `collection_id` and `project_id` (both nullab
 
 ### `get_context_item`
 
-Fetch the full markdown content of a single context item by ID. Use this when you need the actual content of an item — `list_context_items` only returns `content_intro` (a short truncation).
+Opens a single context item by ID and returns its full markdown content and metadata. Use it when you already have an item's ID and need to read the whole item — `list_context_items` only returns `content_intro` (a short truncation), and `get_relevant_context` returns matched passages. It does not search; to find material relevant to a question, use `get_relevant_context`.
 
 The IDs you pass here can come from `list_context_items`, `get_project(project_id).context_items`, `list_context_collections`, or `get_relevant_context`.
 
@@ -464,7 +467,9 @@ The IDs you pass here can come from `list_context_items`, `get_project(project_i
 
 ### `get_relevant_context`
 
-Searches the team's context library and returns the most relevant chunks for a given prompt, assembled into a ready-to-use markdown packet. Alongside the packet it returns a structured `sources` array — one entry per parent context item — so you can cite and deep-link each source without follow-up lookups. Use this to gather supporting context before generating or refining content.
+Searches the team's context library and returns the passages most relevant to a given prompt,
+
+**How results are ranked:** each passage is scored on its own and against the whole document it belongs to, and the two scores are blended; weak matches are dropped, so fewer than 10 can come back. `dimension_option_ids` lean the ranking toward the chosen audience, persona or industry. It searches the reference library plus the project, collections and shared collections the user can access.
 
 `collection_ids` and `project_id` are **additive**: they broaden the search to ALSO include those collections / that project's context alongside your general reference library — they do not restrict results to only that collection or project.
 
@@ -1337,15 +1342,15 @@ The response always includes `status`, `generation_id`, and `flow_type`, plus `g
 
 ### `list_content`
 
-Returns all content visible to the current user as a single unified array. Content created from scratch and from blueprints are merged with consistent field names. The same `content_id` can be passed to `get_content`, `update_content`, and `create_external_share`.
+Lists the team's content that the current user can see, as a single unified array with consistent field names, newest first. Use it to browse and filter the team's content and to find content IDs. The same `content_id` can be passed to `get_content`, `update_content`, and `create_external_share`.
 
-**Semantic search:** pass a natural-language `search` query to rank results by semantic relevance instead of recency; each row then carries a `relevance_score` (cosine `0`–`1`, higher = more relevant). Omit or leave `search` empty for the normal recency-ordered list. The scores are **cross-comparable with `list_context_items`** — call both tools with the same `search` query, merge the two arrays, and take the top matches by `relevance_score`, then present them to the user for confirmation before fetching full text with `get_content` / `get_context_item`.
+**Optional `search`:** pass a natural-language query to sort the list by similarity instead of recency; each row then carries a `relevance_score` (cosine `0`–`1`, higher = more similar). Search only re-orders: every visible row is still returned, with no cutoff. To find passages in the reference library that are relevant to a question, use `get_relevant_context`.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `search` | string | No | Optional natural-language query. When provided, results are ranked by semantic relevance to it (instead of recency) and each row gains a `relevance_score`. Omit or leave empty for the normal recency-ordered list. Scores are cross-comparable with `list_context_items` |
+| `search` | string | No | Optional natural-language query. When provided, every visible row is scored by similarity to it and the list is sorted by that score instead of recency; each row gains a `relevance_score`. Nothing is dropped. Omit or leave empty for the normal recency-ordered list |
 
 **Output:** An object with a single `content` key holding an array of items.
 
@@ -1359,7 +1364,7 @@ Returns all content visible to the current user as a single unified array. Conte
 | `created_by` | string | Name of the creator |
 | `projects` | string[] | Project names this content belongs to |
 | `web_url` | string | Direct URL to view this content in Marcora |
-| `relevance_score` | number | Present only when a `search` query is supplied. Cosine similarity (`0`–`1`, higher = more relevant) of the row to the query. Cross-comparable with the `relevance_score` returned by `list_context_items` |
+| `relevance_score` | number | Present only when a `search` query is supplied. Cosine similarity (`0`–`1`, higher = more similar) of the row to the query |
 
 **Example prompts:**
 - "Show me all my content"

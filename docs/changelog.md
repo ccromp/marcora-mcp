@@ -2,6 +2,19 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-10-24 (search wording, add_context capacity)
+
+### Changed
+
+- **`list_context_items`, `list_content` and `get_context_item` describe their real roles.** The two list tools browse and filter; their optional `search` re-orders the whole list by similarity and cuts nothing. `get_context_item` opens one item by ID. The "rank, merge and take the top matches" instruction is gone.
+- **`get_relevant_context` describes its ranking.** Passages are scored on their own and against their whole document, the scores are blended, and weak matches are dropped.
+- **`add_context` reports plan capacity.** When the team's plan limits context items, the result carries `capacity` with `used`, `limit` and `remaining`. It is absent on a plan with no limit.
+- **The plan-limit error is neutral.** It states the limit and that deleting an item makes room (for projects, archiving also does, since the limit counts active projects).
+
+### Skill → v0.7.19 · plugin → v1.2.9
+
+- Context section and decision table: discovery guidance matches the tool descriptions above.
+
 ## 2026-10-23 (generation modes)
 
 ### Added
