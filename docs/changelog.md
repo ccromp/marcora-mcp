@@ -2,6 +2,16 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-10-13 (add_context URL wording)
+
+### Changed
+
+- **`add_context` no longer says the import URL is discarded.** The URL given to `import_url` is stored with the item as its source. The item is still a static snapshot that cannot be refreshed; use `connected_webpage_url` for a page that should stay current. Descriptions, the `import_url` parameter text and the usage guide now say so.
+
+### Skill → v0.7.16 · plugin → v1.2.6
+
+- Context section: `add_context` `import_url` wording.
+
 ## 2026-10-13 (tool wording and annotations)
 
 ### Changed

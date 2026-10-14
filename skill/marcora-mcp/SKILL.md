@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (create_content,
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.7.15
+  version: 0.7.16
 ---
 
 # Marcora AI Workflows
@@ -194,7 +194,7 @@ The brief is the project's authoritative statement of premise, scope and the str
 2. If top-level + the user wants it organized: `marcora:list_context_collections`. Use existing collection if a fit; otherwise `marcora:create_context_collection`.
 3. `marcora:add_context` with `name` and the body, plus optional `collection_id` (top-level) or `project_id` (project-scoped). Pick the body argument based on what you have — provide **exactly one** of these three (zero or more than one → 400):
    - **`content`** — paste markdown directly. Best for short or hand-authored material.
-   - **`import_url`** — pass a public URL imported **once**: Marcora fetches it and converts the page to clean markdown, stored as a **static snapshot** (the URL is not retained, the item is not refreshable). Use for one-off sources — a blog post, a presigned-link export from Google Docs or a connected-app sandbox, etc. Don't `web_browse`/`web_fetch` it into your conversation first just to forward the bytes.
+   - **`import_url`** — pass a public URL imported **once**: Marcora fetches it and converts the page to clean markdown, stored as a **static snapshot** that cannot be refreshed. Use for one-off sources — a blog post, a presigned-link export from Google Docs or a connected-app sandbox, etc. Don't `web_browse`/`web_fetch` it into your conversation first just to forward the bytes.
    - **`connected_webpage_url`** — pass a URL to track as a live, refreshable **web page** (`content_type: "webpage"`): the URL is stored so it can be re-pulled later via `update_context(refresh_webpage=true)` or the app's refresh button. Use this for the customer's own pages and anything you'll want to keep current. Dedupes by URL: re-adding a tracked URL updates that item in place and **overwrites** its stored content with the fresh fetch (so `add_context` is marked destructive). **Admin/editor only** — collaborators are rejected.
 
 **Output to user.** "Added: [link]. Want to use this in a content generation now?"

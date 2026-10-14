@@ -288,7 +288,7 @@ Providing zero, or more than one, of `content` / `import_url` / `connected_webpa
 |---|---|---|---|
 | `name` | string | Yes | Descriptive name for the context item |
 | `content` | string | Conditional | Markdown body (creates a `manual` item). Provide exactly one of `content` / `import_url` / `connected_webpage_url` |
-| `import_url` | string | Conditional | Public URL imported **once** as a static markdown snapshot (URL not retained, not refreshable). Provide exactly one of the three body inputs |
+| `import_url` | string | Conditional | Public URL imported **once** as a static markdown snapshot (a static snapshot, not refreshable). Provide exactly one of the three body inputs |
 | `connected_webpage_url` | string | Conditional | Public URL tracked as a live, refreshable `webpage` item (URL stored; dedupes by URL; admin/editor only). Provide exactly one of the three body inputs |
 | `collection_id` | integer | No | Collection ID to organize the item (from `list_context_collections` or `create_context_collection`). **Omit it — or pass `0` — to file the item at the top level of the Reference Library** |
 | `project_id` | string | No | Project ID to associate with (from `list_projects`). Omit it to leave the item unassociated |
