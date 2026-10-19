@@ -91,9 +91,9 @@ Neither error returns any context or the project's brief.
 
 ### "Your Marcora account setup is still underway"
 
-**Cause:** The account is brand new and Marcora is still building its context — importing the team's top web pages, writing the brand foundation, and preparing a first document. While that is running, every tool call returns this message instead of its normal result.
+**Cause:** The account is brand new and Marcora is still building its context — importing the team's top web pages, writing the brand foundation, and preparing a first document. While that is running, every tool call returns this message instead of its normal result. The result is flagged as a tool error (`isError: true`) so that every client, including SDK-based ones, surfaces the message rather than rejecting the response.
 
-This is expected, not a fault. The connection is fine: the server still lists all its tools and authentication has succeeded. Only the *calls* are held.
+This is expected, not a fault, even though the result is flagged as an error. The connection is fine: the server still lists all its tools and authentication has succeeded. Only the *calls* are held.
 
 **Solutions:**
 - Wait a few minutes and try the call again. Setup usually finishes well inside that.

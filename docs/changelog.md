@@ -2,6 +2,16 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-10-14 (setup-underway notice is now an error result)
+
+### Changed
+
+- **The "account setup is still underway" notice is now returned as a tool error (`isError: true`).** It was a plain success result. Because every Marcora tool declares an output schema, the official MCP SDKs (TypeScript and Python) rejected that success result with "Tool X has an output schema but did not return structured content", so SDK-based clients never saw the message. The text, HTTP status and headers are unchanged; only the `isError` flag is new. Clients should treat it as a transient, retryable notice, not a failure of the tool. See [Errors & Troubleshooting → Account Setup](./errors.md#account-setup).
+
+### Skill → v0.7.18, plugin → v1.2.8
+
+- Pitfall E14 now says the notice arrives flagged as an error and that this does not mean the tool is broken.
+
 ## 2026-10-13 (add_context URL wording)
 
 ### Changed
