@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (create_content,
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.7.19
+  version: 0.7.20
 ---
 
 # Marcora AI Workflows
@@ -46,7 +46,7 @@ The Marcora MCP server is hosted; the user's MCP client connects directly. You d
 
 These are Marcora's core nouns. Internalize them before calling any tool.
 
-- **Content** — A document. The unit of output. Created by `marcora:create_content`. Two creation modes that share one tool: pass `instructions` only for freeform AI generation (sync, 1–3 min), pass `instructions + blueprint_uuid` for blueprint-driven generation (async, 3–5 min, returns a `generation_id` to poll), or pass `content` only to save the user's own pre-written text directly.
+- **Content** — A document. The unit of output. Created by `marcora:create_content`. Two ways to create one with the same tool. The default: you write the piece yourself from the team's context (`get_relevant_context`) and pass `content` only, which saves your text verbatim. The alternative is Marcora's own writer: pass `instructions` (sync, 1–3 min), or `instructions + blueprint_uuid` for blueprint-driven generation (async, 3–5 min, returns a `generation_id` to poll). Use `instructions` only when the user asks Marcora to write it, a Blueprint is used, or a plan is being fulfilled.
   **A document's title comes from its first heading — there is no title parameter.** On the `content` path, start the markdown with `# <Title>` on the first line. On the `instructions` path, state the wanted title inside the instructions text. Never send `content` and `instructions` together (that is rejected), not even to carry a title. The title keeps following the first heading unless someone locks it with `update_content name_override`.
 
 - **Blueprint** — A reusable AI template that defines structure, tone, and instructions for a content type (case study, launch one-pager, weekly newsletter, etc.). Has Blueprint DNA — a structural/tonal analysis Marcora uses to guide generation. Multi-format blueprints can produce a coordinated *campaign* (blog + email + in-app) in a single generation.
@@ -112,23 +112,32 @@ The five workflows you'll handle 80% of the time. Two more surfaces — **Workfl
 
 **Goal.** Produce a piece of content for the user, optionally inside a project, optionally targeting an audience.
 
-**Preconditions.** None hard-required. If you don't already know what blueprints exist, what projects exist, or what targeting options exist, fetch them first.
+**The default: you write it.** When the user asks you to write, draft or create something (and, optionally, to save it to Marcora), write it yourself from the team's context, then save it with `content`. Marcora's own writer (`instructions`) is for three cases only: **(a)** the user asks Marcora to write or generate it, **(b)** a Blueprint is used (the user names one or asks for a template), or **(c)** a plan is being fulfilled. Do not go looking for a blueprint on every request, and do not hand a plain "write X" to the generator.
 
-**Steps.**
-1. If you don't already know it: `marcora:list_blueprints` (returns your published blueprints under a `blueprints` array). Propose a fitting one.
-   - **If nothing in the user's library fits**, also check `marcora:list_community_blueprints` (the Blueprint Exchange). If something there fits, propose it: "I don't see a matching template in your library, but '\[name]' on the Blueprint Exchange looks like a fit — want me to import it?" If they say yes: `marcora:get_community_blueprint_details` to confirm fit → `marcora:import_community_blueprint` → use the returned UUID as the `blueprint_uuid` in step 5.
+**Preconditions.** None hard-required. If the user mentioned an initiative and you don't already know the project, fetch it first.
+
+**Steps — you write it (the default).**
+1. If the user mentioned an initiative and you don't already know it: `marcora:list_projects`. If they want the piece scoped to it, keep the `project_id`.
+2. `marcora:get_relevant_context` with a `prompt` describing the piece and `include_brand_foundation: true` on the first call of the conversation. Pass `project_id` when the piece belongs to a project (the first call returns the project's brief — read it; your draft must not contradict it). One response gives you Reference Library chunks and the team's Brand Foundation (company overview, brand voice, writing style, writing examples).
+3. Write the piece yourself from what it returned. To build on existing documents, read them with `marcora:get_content` (find them with `list_content`) and write from them.
+4. If the user only wants a draft, give it in the chat and stop. If they want it saved in Marcora (including "write X and save it in Marcora"): `marcora:create_content` with `content` only. Start `content` with `# <Title>` on the first line; add `project_id` and `category_id` where relevant. `content` cannot be combined with `instructions` or `blueprint_uuid`, and `reference_content_ids` is rejected with it.
+5. **Hand the user `link_url`** exactly as returned. They open it in Marcora. **Do NOT call `get_content` to fetch the body back** — they review it, not you.
+
+**Steps — Marcora writes it (the user asks Marcora to write it, a Blueprint is used, or a plan is being fulfilled).**
+1. If a Blueprint is wanted and you don't already know its UUID: `marcora:list_blueprints` (returns your published blueprints under a `blueprints` array) and propose a fitting one.
+   - **If nothing in the user's library fits**, also check `marcora:list_community_blueprints` (the Blueprint Exchange). If something there fits, propose it: "I don't see a matching template in your library, but '\[name]' on the Blueprint Exchange looks like a fit — want me to import it?" If they say yes: `marcora:get_community_blueprint_details` to confirm fit → `marcora:import_community_blueprint` → use the returned UUID as the `blueprint_uuid` in step 4.
 2. If you don't already know it: `marcora:list_projects`. If the user mentioned an initiative, propose scoping to it.
 3. If the user named an audience attribute and you don't already know the option IDs: `marcora:list_targeting_dimensions`. Pick *option* IDs.
 4. **State your plan** in one sentence — naming the blueprint (or "freeform"), the project (or "no project"), the targeting, and that generation takes 1–3 min sync (freeform) or 3–5 min async (blueprint).
-5. `marcora:create_content` with `instructions` (always) + `blueprint_uuid` (if blueprint) + `project_id` + `dimension_option_ids` + optional `collection_ids` for one-off context. **Do not** pre-fetch context with `get_relevant_context` — the `instructions` path pulls all relevant context internally, including the project's brief when `project_id` is set. (This holds only when *Marcora* writes via `instructions`. If instead *you* draft the content yourself and save it through the `content` parameter, you DO fetch context first — see "Writing the content yourself?" in Workflow 5 and the pitfall below.)
+5. `marcora:create_content` with `instructions` + `blueprint_uuid` (if blueprint) + `project_id` + `dimension_option_ids` + optional `collection_ids` for one-off context. **Do not** pre-fetch context with `get_relevant_context` — the `instructions` path pulls all relevant context internally, including the project's brief when `project_id` is set. (This holds only when *Marcora* writes via `instructions`; when you draft the content yourself you DO fetch context first — see "Writing the content yourself?" in Workflow 5 and the pitfall below.)
 6. **If async** (returned a `generation_id`): poll `marcora:get_generation_status` every ~30s, surface progress to the user every minute. When `status == completed`, the response includes `content.link_url`.
 7. **Hand the user `content.link_url`.** They open it in Marcora. **Do NOT call `get_content` to fetch the body** — they review it, not you.
 
-**Validation.** Before step 5, sanity-check that `content` is not combined with `blueprint_uuid` or `instructions` (mutually exclusive — pick one mode).
+**Validation.** Before saving, sanity-check that `content` is not combined with `blueprint_uuid` or `instructions` (mutually exclusive — pick one mode).
 
 **Output to user.** "Done — your case study is ready: [link]. Want me to share it externally, export to Word, or refine?"
 
-**Narrow exception to "don't pre-fetch context".** If the user wants content about something narrow and specific that probably isn't in the standard Reference Library (a particular customer name, a specific incident, a niche internal initiative), one targeted `marcora:get_relevant_context` call up front is reasonable — purely so you can ask "I don't see source material on X yet — want to add some before I generate?" Skip the pre-check for broad topics (brand voice, common positioning, generic blog ideas). The model pulls what it needs at generation time.
+**Narrow exception to "don't pre-fetch context" (Marcora-writes path only).** If the user asks Marcora to write about something narrow and specific that probably isn't in the standard Reference Library (a particular customer name, a specific incident, a niche internal initiative), one targeted `marcora:get_relevant_context` call up front is reasonable — purely so you can ask "I don't see source material on X yet — want to add some before I generate?" Skip the pre-check for broad topics (brand voice, common positioning, generic blog ideas). The model pulls what it needs at generation time.
 
 ---
 
@@ -239,7 +248,7 @@ The brief is the project's authoritative statement of premise, scope and the str
 4. If the user wants the *full* content of one of the surfaced items, follow up with `marcora:get_context_item(context_item_id)` — `get_relevant_context` only returns chunks, not the whole item.
 5. Summarize for the user — don't dump raw chunks unless asked.
 
-**Writing the content yourself?** If you'll draft with your *own* model and then save it via the `content` parameter of `create_content` (or `update_content`) — rather than letting Marcora generate from `instructions` — call `marcora:get_relevant_context(prompt, include_brand_foundation=true)` **first** and write from what it returns. You get Reference Library RAG chunks **and** the team's Brand Foundation (company overview, brand voice, writing style, writing examples) in one response — so you write on-brand without a separate `get_brand_foundation` call. Those `content`-save paths store your text verbatim and consult no context on their own, so this fetch is the only thing that grounds your draft. Don't set the flag when handing off via `instructions` (that path pulls Brand Foundation in automatically). When paginating, set it `true` on the first page only. If you are writing for a project, pass its `project_id` too: the first call returns the project's brief, and your draft must not contradict it.
+**Writing the content yourself? (This is the default for new content.)** When you draft with your *own* model and then save it via the `content` parameter of `create_content` (or `update_content`) — rather than letting Marcora generate from `instructions` — call `marcora:get_relevant_context(prompt, include_brand_foundation=true)` **first** and write from what it returns. You get Reference Library RAG chunks **and** the team's Brand Foundation (company overview, brand voice, writing style, writing examples) in one response — so you write on-brand without a separate `get_brand_foundation` call. Those `content`-save paths store your text verbatim and consult no context on their own, so this fetch is the only thing that grounds your draft. Don't set the flag when handing off via `instructions` (that path pulls Brand Foundation in automatically). When paginating, set it `true` on the first page only. If you are writing for a project, pass its `project_id` too: the first call returns the project's brief, and your draft must not contradict it.
 
 **Steps (browse path).**
 1. `marcora:list_context_items` (default returns everything the user can see; pass `reference_library_only=true` for just orphan items in the top-level Reference Library). Items in private collections / private projects the user is not in are filtered out automatically.
@@ -341,7 +350,7 @@ The runner agent's FINAL message becomes the run's summary (rendered as markdown
 
 The **plans board** is Marcora's content pipeline: a queue of ideas/intents (**plans**) that move through stages and get *produced* into real Content. **Playbooks** are reusable, ordered templates of plan items you can stamp out as a batch.
 
-> **Mindset:** a plan is *intent*, Content is *output*. Creating a plan doesn't write anything — `produce_plan` does. Keep the two straight: `create_content` generates a document now; `create_plan` records "we should write X" for later.
+> **Mindset:** a plan is *intent*, Content is *output*. Creating a plan doesn't write anything — `produce_plan` does. Keep the two straight: `create_content` writes or saves a document now; `create_plan` records "we should write X" for later.
 
 ### The plan stage machine
 
@@ -385,9 +394,9 @@ The **starting stage is set automatically from `source`**, you don't control it 
 
 | If the user wants… | Call this | Not this — because… |
 |---|---|---|
-| To create a new document (any kind) | `marcora:create_content` | `add_context` creates a *reference item*, not a document. |
-| To generate from a template they have | `marcora:create_content` with `blueprint_uuid` | `get_blueprint` only fetches details; it doesn't generate. |
-| To save their own pre-written text as a document | `marcora:create_content` with `content` only | Don't add `blueprint_uuid` or `instructions` — incompatible. |
+| To write a new document (any kind) | Write it yourself from `marcora:get_relevant_context(include_brand_foundation=true)`, then `marcora:create_content` with `content` | `add_context` creates a *reference item*, not a document. Use `instructions` only when the user asks Marcora to write it, a Blueprint is used, or a plan is being fulfilled. |
+| To generate from a template they name (or ask for) | `marcora:create_content` with `instructions` + `blueprint_uuid` | `get_blueprint` only fetches details; it doesn't generate. |
+| To save text as a document (yours or the user's) | `marcora:create_content` with `content` only | Don't add `blueprint_uuid` or `instructions` — incompatible. |
 | To pin a Content item as a project's strategic anchor | `marcora:update_project(project_brief_id=…)` | `add_context` creates a Context item, NOT a brief. Different objects. |
 | To attach an existing Content item to a project (no brief intent) | `marcora:update_project(project_brief_id=…)` (which auto-attaches), OR have the user attach in-app | Don't `create_content(project_id=…)` to "duplicate" it into the project — orphaned copy. |
 | To add reference material reusable across all projects | `marcora:add_context` (no `project_id`) | A Context Collection is just a folder; you still need `add_context` to put items in it. |
@@ -403,7 +412,7 @@ The **starting stage is set automatically from `source`**, you don't control it 
 | To browse what's in the user's context library (full inventory) | `marcora:list_context_items` | `get_relevant_context` returns the passages relevant to a question, not the item list. Use `list_context_items` for the catalog view. Pass `reference_library_only=true` to scope to just the top-level Reference Library. |
 | To read the full markdown of a specific context item | `marcora:get_context_item(context_item_id)` | `list_context_items` only returns `content_intro` (a truncation). `get_relevant_context` returns matched passages. Use this to open one item whose ID you already have. |
 | To find the passages in the library that are relevant to a question | `marcora:get_relevant_context` | It scores each passage on its own and against its whole document, drops weak matches and returns the top 10 with their `sources`. `list_context_items(search=…)` and `list_content(search=…)` only re-order a full listing: they cut nothing, so the response is as large as the library. Open a surfaced item in full with `get_context_item(context_item_id)`. |
-| To read the team's Brand Foundation (company overview, brand voice, writing style, writing examples) | `marcora:get_brand_foundation` | `get_relevant_context` searches the Reference Library, not Brand Foundation. Auto-pulled into `create_content` when you pass `instructions` — don't fetch as a setup step before *generating*. (Do fetch it when you're supplying `content` yourself.) |
+| To read the team's Brand Foundation (company overview, brand voice, writing style, writing examples) | `marcora:get_brand_foundation` | `get_relevant_context` searches the Reference Library, not Brand Foundation. Auto-pulled into `create_content` when Marcora writes via `instructions`. When you write it yourself, `get_relevant_context(include_brand_foundation=true)` returns it together with the context in one call. |
 | To change one of the four Brand Foundation elements | `marcora:update_brand_foundation` | Brand Foundation lives at the team level, not as Context items — `update_context` won't touch it. Always full-replace; fetch first with `get_brand_foundation` to confirm what's being replaced. Hand the user the returned `link_url` — never build a Brand Foundation URL yourself. |
 | To find a teammate's numeric `user_id` (to assign a plan/content to them) | `marcora:get_team_info` | `get_current_user_info` is only *you*. `get_team_info` lists every team you're in + each member's numeric `user_id` — the value `assigned_to` / `update_plan(assigned_to=…)` expects. Pending invites show `user_id: null` (can't be assigned yet). |
 | To switch which team you're working in | `marcora:set_active_team` | Changes your active team for **all** subsequent calls. ⚠️ Global — it applies everywhere for the account (app tabs, Marcora agent sessions, other clients). Tell the user first; capture the returned `previous_team_id` and switch back when done. |
@@ -416,7 +425,7 @@ The **starting stage is set automatically from `source`**, you don't control it 
 
 - **Don't duplicate Content to "add it" to a project.** Attachment is a link between the project and the document, not a copy. Use `update_project(project_brief_id=...)` — it auto-attaches.
 
-- **Don't pre-fetch context before `create_content` when Marcora is doing the writing.** The `instructions` path already pulls in everything internally: Brand Foundation (so you don't need `marcora:get_brand_foundation` either), Reference Library via relevancy scoring, Project Context if `project_id` is set, and any `collection_ids` you pass. Calling `marcora:get_relevant_context` or `marcora:get_brand_foundation` as a setup step before *generating* is wasted work. **The exception that matters:** when *you* compose the content yourself and save it via the `content` parameter of `create_content` (or `update_content`), those paths store your text **verbatim** and consult no context — so you MUST call `get_relevant_context(include_brand_foundation=true)` first or your draft is off-brand and ignores the Reference Library. Other legitimate uses of those fetch tools: the narrow Workflow-1 sourcing-check (specific customer / incident not likely in the library) and direct user Q&A about brand voice or library contents.
+- **Write new content yourself; don't hand a plain "write X" to Marcora's generator.** The default for new content is `get_relevant_context(include_brand_foundation=true)` → you write → `create_content` with `content`. The `content` path stores your text **verbatim** and consults no context, so if you skip the context call, your draft is off-brand and ignores the Reference Library. Marcora's generator (`instructions`) is for three cases: the user asks Marcora to write it, a Blueprint is used, or a plan is being fulfilled. **On that path, don't pre-fetch:** the `instructions` path already pulls in Brand Foundation (so you don't need `marcora:get_brand_foundation` either), Reference Library via relevancy scoring, Project Context if `project_id` is set, and any `collection_ids` you pass, so fetching first is wasted work. Other legitimate uses of the fetch tools: the narrow Workflow-1 sourcing-check (specific customer / incident not likely in the library) and direct user Q&A about brand voice or library contents.
 
 - **Don't fetch the content body after generation.** Hand the user the `link_url`. `get_content` is for three cases only: (a) the user later asks a question that requires reading the body to answer, (b) you need the markdown to feed `convert_markdown_to_word_doc`, or (c) a `project_brief` block came back with `truncated: true` and you are about to work in that project — read the full brief first.
 

@@ -142,7 +142,7 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Community Blueprints | `list_community_blueprints` | Browse community templates |
 | Community Blueprints | `get_community_blueprint_details` | Get community blueprint details |
 | Community Blueprints | `import_community_blueprint` | Import a community blueprint |
-| Content | `create_content` | Write and save a new document in the workspace (with or without blueprint) |
+| Content | `create_content` | Save a new document in the workspace: your own text by default, or written by Marcora (with or without blueprint) |
 | Content | `get_generation_status` | Check async generation status |
 | Content | `list_content` | List all content (optional semantic `search`) |
 | Content | `get_content` | Get full content by ID |
