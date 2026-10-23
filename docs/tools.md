@@ -1767,7 +1767,7 @@ Fetch a single plan by UUID with full details including linked references, conte
 | `plan.reference_documents` | array | Content items attached as reference material |
 | `plan.context_collections` | array | Context collections pre-attached to the plan |
 | `plan.targeting_dimensions` | array | Targeting dimension options pre-attached |
-| `plan._produced_content` | object/null | Full produced content object, or null |
+| `plan._produced_content` | object/null | Linked content summary `{content_id, name, stage, visibility}`, or null. Call `get_content` with `content_id` for the full item |
 | `plan._source_metadata_resolved` | object/null | Resolved source metadata, or null |
 
 **Example prompts:**

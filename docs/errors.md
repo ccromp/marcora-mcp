@@ -87,6 +87,14 @@ Neither error returns any context or the project's brief.
 - Use `list_content_categories` to get valid category IDs
 - Use `list_targeting_dimensions` to get valid dimension option IDs
 
+### "This action needs N Studio Credits and your team has M"
+
+**Cause:** Your team doesn't have enough Studio Credits for a tool that spends them: `create_content`, `create_blueprint`, `create_blueprint_draft`, `finalize_blueprint_draft`, `produce_plan`, `create_project` (when it generates a brief), `create_workflow`, `update_workflow`, `run_workflow` and `ask_content_assistant`. The result is a tool error (`isError: true`) with readable text: what the action needs, what the team has, and a link to add credits or upgrade. It is not a server fault.
+
+**Solutions:**
+- Add credits or upgrade through the link in the message, then retry.
+- Check what's left with `get_current_user_info` (`ai_credits_available`).
+
 ## Account Setup
 
 ### "Your Marcora account setup is still underway"

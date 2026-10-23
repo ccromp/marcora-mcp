@@ -2,6 +2,13 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-10-23 (credit errors, plan produced-content shape)
+
+### Changed
+
+- **Running out of Studio Credits now returns a readable tool error** (`isError: true`) on the ten credit-spending tools, stating what the action needs, what the team has, and an upgrade link. It was a generic internal error with no explanation. See [Errors & Troubleshooting](./errors.md).
+- **`get_plan` / `list_plans` `_produced_content` is now `{content_id, name, stage, visibility}`.** It uses `content_id` and no longer returns `deliverable_id` or `content_type`. Tool definitions did not change. Use `content_id` with `get_content` for the full item.
+
 ## 2026-10-14 (setup-underway notice is now an error result)
 
 ### Changed
