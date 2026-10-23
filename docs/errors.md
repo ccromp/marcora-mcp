@@ -72,11 +72,11 @@ Neither error returns any context or the project's brief.
 
 ### Content generation timeout
 
-**Cause:** Content generation (especially from blueprints) can take 1–3 minutes.
+**Cause:** Content generation can take a few minutes: Quick up to about 3½ minutes, Multi-model and blueprint generation 3–5 minutes.
 
 **Solutions:**
 - This is normal behavior, not an error. Wait for the response to complete.
-- For blueprint-based generation, `create_content` returns a `generation_id` — use `get_generation_status` to poll for completion
+- For blueprint-based and Multi-model generation (`generation_mode: "multi_model"`), `create_content` returns a `generation_id` — use `get_generation_status` to poll for completion. `produce_plan` always returns one
 - Do not retry the call while a generation is in progress
 
 ### Invalid category_id or dimension_option_ids

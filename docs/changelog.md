@@ -2,6 +2,18 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-10-23 (generation modes)
+
+### Added
+
+- **`create_content` and `produce_plan` take a generation mode.** `generation_mode` is `quick` (one model) or `multi_model` (two drafts and a synthesis). When omitted, content with a blueprint runs Multi-model and content without one runs Quick. For Quick only, `ai_provider` (which model family writes the document; allowed values are in the tool's input schema) and `use_extended_thinking` (default `true`) choose the model family and whether it reasons at length; both are ignored with Multi-model. `create_content` with `generation_mode: "multi_model"` and no blueprint is asynchronous: poll `get_generation_status`.
+- **`get_generation_status` returns `generation_mode`** (when known), and `flow_type` can now be `document` (generated without a blueprint) alongside `blueprint` and `ai_assistant`.
+
+### Changed
+
+- **Studio Credits needed to start:** 1 for Quick, 5 for Multi-model. Charged at completion at the model's cost (typically Quick 1–2, Multi-model 6–7). Otherwise the call fails with `insufficient_credits` (402) and nothing is generated.
+- `create_blueprint_draft` and `create_project` descriptions now state when they use Studio Credits.
+
 ## 2026-10-23 (credit errors, plan produced-content shape)
 
 ### Changed

@@ -1066,7 +1066,7 @@ Create a reusable blueprint template for generating content at scale. Blueprints
 
 ### `create_blueprint_draft`
 
-Create an AI-assisted blueprint draft from a prompt. This creates a draft you can review before saving as a full blueprint — it does not create content directly.
+Create an AI-assisted blueprint draft from a prompt. This creates a draft you can review before saving as a full blueprint — it does not create content directly. Uses Studio Credits, charged when the draft completes at the model's cost (1 credit = 5¢, rounded up). If the team is out of credits the call fails with an `insufficient_credits` error (code 402) and no draft is created.
 
 **Parameters:**
 
@@ -1223,8 +1223,13 @@ You must provide either `content` or `instructions` (not both).
 > **Document title — there is no title parameter.** The title is taken from the document's first heading. With `content`, start the markdown with `# <Title>` on the first line; with `instructions`, state the wanted title in the instructions text. Never send both `content` and `instructions` to carry a title — that call is rejected.
 
 - **With `content`** (synchronous): Saves your supplied text directly as a document — no AI generation. Returns immediately.
-- **With `instructions`** (synchronous): Creates a freeform document from an AI prompt. Takes 1–3 minutes.
-- **With `instructions` + `blueprint_uuid`** (asynchronous): Generates content from a blueprint template. Returns a `generation_id` to poll via `get_generation_status`. Takes 3–5 minutes.
+- **With `instructions`** (Quick, synchronous): Marcora writes the document with one model. Takes about 45 seconds to 3½ minutes (allow a long timeout). Returns the content object.
+- **With `instructions` + `generation_mode: "multi_model"`** (no blueprint, asynchronous): Marcora writes two drafts and a synthesis. Returns a `generation_id` to poll via `get_generation_status`. Takes 3–5 minutes.
+- **With `instructions` + `blueprint_uuid`** (asynchronous): Generates content from a blueprint template. Returns a `generation_id` to poll via `get_generation_status`. Takes 3–5 minutes. Runs Multi-model by default.
+
+**Generation modes.** Pass `generation_mode` to choose how Marcora writes: `quick` (one model) or `multi_model` (two drafts and a synthesis). When you omit it, a call with a blueprint runs Multi-model and a call without one runs Quick. For Quick only, `ai_provider` picks which model family writes the document (the allowed values and the default are in the tool's input schema) and `use_extended_thinking` (default `true`) turns extended thinking on or off — slower and can use more Studio Credits when on; pass `false` for a faster run. Provider and thinking are ignored with Multi-model. All three apply to the `instructions` paths only.
+
+**Studio Credits.** The `instructions` paths use Studio Credits, charged when the document completes at the model's cost (1 credit = 5¢, rounded up; typically Quick 1–2, Multi-model 6–7). Starting needs 1 credit available for Quick and 5 for Multi-model; otherwise the call fails with an `insufficient_credits` error (code 402) and nothing is generated. Saving `content` uses none.
 
 > **Context handling depends on which input you use.** With **`instructions`** (Marcora writes it), the tool pulls all relevant context internally — Brand Foundation + Reference Library (relevancy-scored) + Project Context (if `project_id`) + any `collection_ids` — so do **not** pre-fetch with `get_relevant_context`; that's wasted work. With **`content`** (you supply finished text), the tool stores your markdown **verbatim** and consults **no** context. So if you're composing the content yourself, call `get_relevant_context` with `include_brand_foundation: true` **first** and write from what it returns — otherwise your draft ignores the team's brand and reference material. Rule of thumb: to have Marcora write against full team context automatically, use `instructions`; use `content` to save text the user already wrote/approved, or when the user wants *you* to do the writing (fetch context first).
 
@@ -1235,16 +1240,18 @@ You must provide either `content` or `instructions` (not both).
 | `content` | string | No* | Your own text to save directly as a document. Cannot be used with `blueprint_uuid` |
 | `instructions` | string | No* | Detailed instructions describing what to create (AI will generate it) |
 | `blueprint_uuid` | string | No | Blueprint UUID to generate from. Makes the call async. Only works with `instructions` |
+| `generation_mode` | string | No | `quick` (one model) or `multi_model` (two drafts and a synthesis; async). Default: `multi_model` with `blueprint_uuid`, `quick` without. `instructions` paths only |
+| `ai_provider` | string | No | Quick only: which model family writes the document. Allowed values and default are in the tool's input schema. Ignored with `multi_model` |
 | `plan_id` | string (uuid) | No | Plan UUID from `create_plan`, `list_plans`, or `get_plan` (use `plan_uuid`, not the integer id). Associates the new content with the plan and triggers an automatic stage transition to `In_Process`. Auto-linking only applies when used with `blueprint_uuid`. Do not pass if the plan is in `Complete` stage — call `update_plan` with `target_stage=Accepted` first |
 | `project_id` | string | No | Project to associate this content with |
 | `category_id` | integer | No | Content category ID |
 | `collection_ids` | array | No | Context collection IDs to include |
 | `dimension_option_ids` | array | No | Targeting dimension option IDs |
-| `use_extended_thinking` | boolean | No | Enable extended thinking for complex content (sync mode only, with `instructions`) |
+| `use_extended_thinking` | boolean | No | Quick only: whether the model reasons at length before writing. Default `true`; slower and can use more Studio Credits. Pass `false` for a faster run. Ignored with `multi_model` |
 
 \* You must provide either `content` or `instructions`, but not both.
 
-**Output (without blueprint — synchronous):**
+**Output (Quick — synchronous):**
 
 | Field | Type | Description |
 |---|---|---|
@@ -1253,7 +1260,7 @@ You must provide either `content` or `instructions` (not both).
 | `content_id` | string | Unique identifier for use with `get_content` and share tools |
 | `link_url` | string | Direct URL to view in Marcora |
 
-**Output (with blueprint — asynchronous):**
+**Output (Multi-model or with a blueprint — asynchronous):**
 
 | Field | Type | Description |
 |---|---|---|
@@ -1269,18 +1276,19 @@ You must provide either `content` or `instructions` (not both).
 - Providing both `content` and `instructions` — use one or the other
 - Using `content` with `blueprint_uuid` — blueprints require `instructions`
 - Invalid `blueprint_uuid` — use `list_blueprints` to find valid UUIDs
-- Timeout on synchronous calls — AI-generated content can take 1–3 minutes, which is normal
+- Timeout on synchronous calls — Quick generation can take up to about 3½ minutes, which is normal
+- `insufficient_credits` (402) — the team doesn't have the 1 (Quick) or 5 (Multi-model) Studio Credits needed to start
 
 ---
 
 ### `get_generation_status`
 
-Poll the status of an async generation by `generation_id`. Three tools produce a `generation_id` you can check here:
-- `create_content` with a `blueprint_uuid` (blueprint document generation)
+Poll the status of an async generation by `generation_id`. These flows produce a `generation_id` you can check here:
+- `create_content` with a `blueprint_uuid` or `generation_mode: "multi_model"` (document generation), and `produce_plan`
 - `ask_content_assistant` (the in-document Content Assistant)
 - `apply_grounding_fix` (each job in `jobs[]` carries a `generation_id`, but jobs whose fixes land in the same document share one, because they are applied together in one run; poll each distinct `generation_id` once. It runs as a Content Assistant flow, so read `document_updated`; for a shared `generation_id` it covers every finding in that run)
 
-The response always includes `status`, `generation_id`, and `flow_type`. `content` is `null` until the run finishes.
+The response always includes `status`, `generation_id`, and `flow_type`, plus `generation_mode` (`quick` or `multi_model`) when known. `content` is `null` until the run finishes.
 
 **Parameters:**
 
@@ -1294,16 +1302,17 @@ The response always includes `status`, `generation_id`, and `flow_type`. `conten
 |---|---|---|
 | `generation_id` | string (uuid) | The generation ID being checked |
 | `status` | string | Status of this run. Blueprint flow terminates at `completed`; Content Assistant flow terminates at `complete`; `failed` on error. Intermediate values: `pending`, `processing`, `streaming` |
-| `flow_type` | string | `ai_assistant` for `ask_content_assistant` runs, otherwise a blueprint/content generation |
+| `flow_type` | string | `blueprint` (generated from a blueprint), `document` (generated without a blueprint, e.g. Multi-model `create_content` or `produce_plan` without a blueprint) or `ai_assistant` (`ask_content_assistant`) |
+| `generation_mode` | string | `quick` or `multi_model`. Omitted when not recorded |
 | `content` | object \| null | `null` until the run completes. Shape depends on `flow_type` (below) |
 
-**`content` — blueprint flow** (`flow_type` ≠ `ai_assistant`):
+**`content` — document generation** (`flow_type` `blueprint` or `document`; `blueprint_id` appears only with a blueprint):
 
 | Field | Type | Description |
 |---|---|---|
 | `content_id` | string (uuid) | The generated document's ID. Pass to `get_content` if you need the body |
 | `name` | string | Document name |
-| `blueprint_id` | integer | Blueprint used to generate |
+| `blueprint_id` | integer | Blueprint used to generate (blueprint runs only) |
 | `link_url` | string | Direct URL to view/open in Marcora |
 
 **`content` — Content Assistant flow** (`flow_type` = `ai_assistant`):
@@ -1620,7 +1629,7 @@ Returns details for a specific project: its members, documents, context items, a
 
 ### `create_project`
 
-Create a new project for organizing content and context into a workstream. Optionally generates a project brief document in the same call.
+Create a new project for organizing content and context into a workstream. Optionally creates a project brief document in the same call: `project_brief_content` saves finished text as-is (no credits), while `project_brief_instructions` has Marcora write it and uses Studio Credits (charged at completion, typically 1–2; if the team is out of credits the call returns `insufficient_credits` 402 and the project is not created).
 
 **Parameters:**
 
@@ -1856,7 +1865,7 @@ Partial update of a plan: mutable fields and stage transitions. All fields are o
 
 ### `produce_plan`
 
-Produce (generate) the actual content a plan describes — the MCP equivalent of the **Generate** button on the plans board. The plan must be in the `Accepted` stage (transition a `Suggested` plan first with `update_plan` `target_stage: "Accepted"`). Consumes team Studio Credits and typically takes 1–2 minutes; confirm with the user before producing a plan they didn't explicitly ask to produce. The plan's `prompt`, targeting dimensions, context collections, and project association are used as generation inputs — set them via `update_plan` before producing.
+Produce (generate) the actual content a plan describes — the MCP equivalent of the **Generate** button on the plans board. The plan must be in the `Accepted` stage (transition a `Suggested` plan first with `update_plan` `target_stage: "Accepted"`). Consumes team Studio Credits (charged at completion at the model's cost; typically Quick 1–2, Multi-model 6–7; starting needs 1 for Quick, 5 for Multi-model, otherwise `insufficient_credits` 402 and nothing is generated) and takes 1–5 minutes; confirm with the user before producing a plan they didn't explicitly ask to produce. The plan's `prompt`, targeting dimensions, context collections, and project association are used as generation inputs — set them via `update_plan` before producing.
 
 **Both paths are asynchronous** — the call returns immediately with a `generation_id`; poll `get_generation_status`. On completion the backend links the produced content and moves the plan to `In_Process` (then `Complete` when the content reaches ready).
 
@@ -1865,6 +1874,9 @@ Produce (generate) the actual content a plan describes — the MCP equivalent of
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `plan_uuid` | string (uuid) | Yes | UUID of the plan to produce. Must be in `Accepted` stage |
+| `generation_mode` | string | No | `quick` (one model) or `multi_model` (two drafts and a synthesis). Default: `multi_model` for a plan with a blueprint, `quick` for one without |
+| `ai_provider` | string | No | Quick only: which model family writes the document. Allowed values and default are in the tool's input schema. Ignored with `multi_model` |
+| `use_extended_thinking` | boolean | No | Quick only: whether the model reasons at length before writing. Default `true`; slower and costlier. Ignored with `multi_model` |
 
 **Output:**
 
