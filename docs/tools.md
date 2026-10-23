@@ -1294,14 +1294,14 @@ The response always includes `status`, `generation_id`, and `flow_type`, plus `g
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `generation_id` | string (uuid) | Yes | The generation ID returned by `create_content` (with `blueprint_uuid`) or `ask_content_assistant` |
+| `generation_id` | string (uuid) | Yes | The generation ID returned by `create_content` (with `blueprint_uuid` or `generation_mode: "multi_model"`), `produce_plan`, `ask_content_assistant` or `apply_grounding_fix` |
 
 **Output:**
 
 | Field | Type | Description |
 |---|---|---|
 | `generation_id` | string (uuid) | The generation ID being checked |
-| `status` | string | Status of this run. Blueprint flow terminates at `completed`; Content Assistant flow terminates at `complete`; `failed` on error. Intermediate values: `pending`, `processing`, `streaming` |
+| `status` | string | Status of this run. Document generation (`blueprint` or `document` flow) terminates at `completed`; Content Assistant flow terminates at `complete`; `failed` on error. Intermediate values: `pending`, `processing`, `streaming` |
 | `flow_type` | string | `blueprint` (generated from a blueprint), `document` (generated without a blueprint, e.g. Multi-model `create_content` or `produce_plan` without a blueprint) or `ai_assistant` (`ask_content_assistant`) |
 | `generation_mode` | string | `quick` or `multi_model`. Omitted when not recorded |
 | `content` | object \| null | `null` until the run completes. Shape depends on `flow_type` (below) |
