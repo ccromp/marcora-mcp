@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (create_content,
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.7.20
+  version: 0.7.21
 ---
 
 # Marcora AI Workflows
@@ -46,7 +46,7 @@ The Marcora MCP server is hosted; the user's MCP client connects directly. You d
 
 These are Marcora's core nouns. Internalize them before calling any tool.
 
-- **Content** — A document. The unit of output. Created by `marcora:create_content`. Two ways to create one with the same tool. The default: you write the piece yourself from the team's context (`get_relevant_context`) and pass `content` only, which saves your text verbatim. The alternative is Marcora's own writer: pass `instructions` (sync, 1–3 min), or `instructions + blueprint_uuid` for blueprint-driven generation (async, 3–5 min, returns a `generation_id` to poll). Use `instructions` only when the user asks Marcora to write it, a Blueprint is used, or a plan is being fulfilled.
+- **Content** — A document. The unit of output. Created by `marcora:create_content`. Two ways to create one with the same tool. The default: you write the piece yourself from the team's context (`get_relevant_context`) and pass `content` only, which saves your text verbatim. The alternative is Marcora's own writer: pass `instructions` (Quick by default: one model, sync, about 45 s to 3½ min; `generation_mode: "multi_model"` writes two drafts and a synthesis, async, 3–5 min), or `instructions + blueprint_uuid` for blueprint-driven generation (Multi-model by default, async, 3–5 min, returns a `generation_id` to poll). Use `instructions` only when the user asks Marcora to write it, a Blueprint is used, or a plan is being fulfilled.
   **A document's title comes from its first heading — there is no title parameter.** On the `content` path, start the markdown with `# <Title>` on the first line. On the `instructions` path, state the wanted title inside the instructions text. Never send `content` and `instructions` together (that is rejected), not even to carry a title. The title keeps following the first heading unless someone locks it with `update_content name_override`.
 
 - **Blueprint** — A reusable AI template that defines structure, tone, and instructions for a content type (case study, launch one-pager, weekly newsletter, etc.). Has Blueprint DNA — a structural/tonal analysis Marcora uses to guide generation. Multi-format blueprints can produce a coordinated *campaign* (blog + email + in-app) in a single generation.
@@ -128,7 +128,7 @@ The five workflows you'll handle 80% of the time. Two more surfaces — **Workfl
    - **If nothing in the user's library fits**, also check `marcora:list_community_blueprints` (the Blueprint Exchange). If something there fits, propose it: "I don't see a matching template in your library, but '\[name]' on the Blueprint Exchange looks like a fit — want me to import it?" If they say yes: `marcora:get_community_blueprint_details` to confirm fit → `marcora:import_community_blueprint` → use the returned UUID as the `blueprint_uuid` in step 4.
 2. If you don't already know it: `marcora:list_projects`. If the user mentioned an initiative, propose scoping to it.
 3. If the user named an audience attribute and you don't already know the option IDs: `marcora:list_targeting_dimensions`. Pick *option* IDs.
-4. **State your plan** in one sentence — naming the blueprint (or "freeform"), the project (or "no project"), the targeting, and that generation takes 1–3 min sync (freeform) or 3–5 min async (blueprint).
+4. **State your plan** in one sentence — naming the blueprint (or "freeform"), the project (or "no project"), the targeting, and the mode and wait: Quick (freeform default) is sync and takes about 45 s to 3½ min; Multi-model (blueprint default, or `generation_mode: "multi_model"`) is async and takes 3–5 min. Quick costs 1–2 Studio Credits, Multi-model 6–7.
 5. `marcora:create_content` with `instructions` + `blueprint_uuid` (if blueprint) + `project_id` + `dimension_option_ids` + optional `collection_ids` for one-off context. **Do not** pre-fetch context with `get_relevant_context` — the `instructions` path pulls all relevant context internally, including the project's brief when `project_id` is set. (This holds only when *Marcora* writes via `instructions`; when you draft the content yourself you DO fetch context first — see "Writing the content yourself?" in Workflow 5 and the pitfall below.)
 6. **If async** (returned a `generation_id`): poll `marcora:get_generation_status` every ~30s, surface progress to the user every minute. When `status == completed`, the response includes `content.link_url`.
 7. **Hand the user `content.link_url`.** They open it in Marcora. **Do NOT call `get_content` to fetch the body** — they review it, not you.
@@ -205,6 +205,8 @@ The brief is the project's authoritative statement of premise, scope and the str
    - **`content`** — paste markdown directly. Best for short or hand-authored material.
    - **`import_url`** — pass a public URL imported **once**: Marcora fetches it and converts the page to clean markdown, stored as a **static snapshot** that cannot be refreshed. Use for one-off sources — a blog post, a presigned-link export from Google Docs or a connected-app sandbox, etc. Don't `web_browse`/`web_fetch` it into your conversation first just to forward the bytes.
    - **`connected_webpage_url`** — pass a URL to track as a live, refreshable **web page** (`content_type: "webpage"`): the URL is stored so it can be re-pulled later via `update_context(refresh_webpage=true)` or the app's refresh button. Use this for the customer's own pages and anything you'll want to keep current. Dedupes by URL: re-adding a tracked URL updates that item in place and **overwrites** its stored content with the fresh fetch (so `add_context` is marked destructive). **Admin/editor only** — collaborators are rejected.
+
+**Import wait.** `import_url` and `connected_webpage_url` imports wait up to about 25 seconds. If the page loads in that time the result has `import_status: "ready"` (the body is not in the result; `get_context_item` returns it). If the page can't be read, the call returns an error and nothing is added. If the import is still running after 25 seconds, the result has `import_status: "processing"`: poll `get_context_item` until it is `ready`.
 
 **Plan capacity.** When the team's plan limits context items, the `add_context` result carries `capacity` (`used`, `limit`, `remaining`); on a plan with no limit it is absent. At the limit the call returns an error that states the limit; deleting an item makes room.
 
@@ -368,7 +370,7 @@ The **starting stage is set automatically from `source`**, you don't control it 
 - **`get_plan`** — Fetch one plan by `plan_uuid` with all linked params. **Always call before `update_plan`** to avoid overwriting with stale values. `_produced_content` null = no content yet.
 - **`list_plans`** — Discovery + dedup. Results cover only the plans the user can see (an empty result ≠ the team has no plans). Useful filters: `stage` (single-value array, UNDERSCORE form), `project_id`, `assignee_scope` (`me` default | `created_by_me` | `all_visible`). Current limitations: `due_before`, `due_after` and `search_text` are accepted but not yet applied, and for `stage` and `source` only the first value is used — pass single-value arrays.
 - **`update_plan`** — Partial update; only keys you send mutate. Construct a minimal diff after `get_plan`. `reference_document_ids` / `context_collection_ids` / `targeting_dimension_ids` are **full-replace** when non-empty; `[]` is ignored, so they can't be cleared. `null` clears `blueprint_id` / `due_date` but is ignored for `project_id` / `category_id`. Server-managed fields (`source`, `produced_content_id`, timestamps, etc.) are rejected as immutable.
-- **`produce_plan`** — The MCP equivalent of the plans-board **Generate** button. Requires the plan in **Accepted** stage (Suggested → `update_plan target_stage:"Accepted"` first). **⚠️ Consumes Studio Credits and takes 1–2 min — confirm before producing a plan the user didn't explicitly ask to produce.** The plan's `prompt`, targeting, context collections, and project are used as generation inputs — set them via `update_plan` BEFORE producing.
+- **`produce_plan`** — The MCP equivalent of the plans-board **Generate** button. Requires the plan in **Accepted** stage (Suggested → `update_plan target_stage:"Accepted"` first). **⚠️ Consumes Studio Credits and takes 1–5 min — confirm before producing a plan the user didn't explicitly ask to produce.** The plan's `prompt`, targeting, context collections, and project are used as generation inputs — set them via `update_plan` BEFORE producing.
   - **Both paths are ASYNC now** — the tool returns immediately with a `generation_id`; **poll `get_generation_status`**. A plan **with** a blueprint → `path:"blueprint"`; **without** a blueprint → `path:"freeform"`. On completion Marcora links the produced content and flips the plan to `In_Process` (then `Complete` when the content reaches ready).
 
 ### The 6 playbook tools
@@ -433,7 +435,7 @@ The **starting stage is set automatically from `source`**, you don't control it 
 
 - **Async generation is silent unless you poll.** Blueprint-driven `create_content` returns a `generation_id` immediately. Without polling, the user thinks nothing happened. Poll `get_generation_status` every ~30s; surface progress every minute.
 
-- **Sync generation can still take 1–3 minutes.** Freeform `create_content` (no blueprint) returns the full content directly but the wait is real. Tell the user before calling.
+- **Quick generation can take up to about 3½ minutes.** Freeform `create_content` with `instructions` (Quick, no blueprint) returns the full content directly, but the wait is real (about 45 s to 3½ min). Tell the user before calling, and allow a long timeout. `use_extended_thinking: false` is faster.
 
 - **`content` and `instructions` are mutually exclusive on `create_content`.** Pick one mode. `content` cannot combine with `blueprint_uuid` either.
 

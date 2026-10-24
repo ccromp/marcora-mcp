@@ -2,6 +2,18 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-10-24 (generation timings, add_context import wait)
+
+### Changed
+
+- **`add_context` waits for a web-page import.** `import_url` and `connected_webpage_url` now wait up to about 25 seconds. A page that loads in that time returns `import_status: "ready"`. A page that can't be read returns an error and nothing is added. Past 25 seconds the result is `import_status: "processing"`, as before; poll `get_context_item`. Tool definitions did not change.
+- **Generation timings.** `create_content` with `instructions` and no blueprint is Quick: about 45 seconds to 3½ minutes. Multi-model and blueprint generation take 3–5 minutes. `produce_plan` takes 1–5 minutes.
+- **Workflows wording.** The Workflows intro and the run-history `runner_session_id` row no longer name the underlying runner.
+
+### Skill → v0.7.21 · plugin → v1.2.11
+
+- Content glossary entry, the generation plan step, the pitfalls note and the `produce_plan` entry carry the new timings; the Context workflow documents the import wait.
+
 ## 2026-10-24 (the AI client writes new content by default)
 
 ### Changed

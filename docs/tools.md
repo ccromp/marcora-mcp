@@ -275,8 +275,8 @@ Add a new context item to your reference library. Context items are reference ma
 You can supply the body in exactly one of three ways:
 
 - **`content`** — paste the markdown body directly. Best for short or hand-authored material. Creates a plain-text (`manual`) item.
-- **`import_url`** — pass a public URL to import **once**. The backend fetches it and converts it to clean markdown server-side using AI main-content extraction (it isolates the primary page or article body and drops navigation and boilerplate), then stores that markdown as a **static snapshot**. The item is **not** refreshable. Use for one-off imports — a presigned-link export (e.g. a Google Doc, or a connected-app sandbox), a competitor's blog post, or anything you'd otherwise have to pull into your own conversation just to forward. Importing is **asynchronous**: the call returns immediately with the new item's `id` and `import_status: "processing"`, and the content finishes loading a moment later — poll `get_context_item` to confirm (the content appears and `import_status` flips to `"ready"`). Because it returns right away, you can import many URLs back-to-back without anything timing out. If an item is still missing a minute or two later, the fetch didn't succeed — check the URL and try again.
-- **`connected_webpage_url`** — pass a URL to track as a live **web page**. The backend fetches the page, stores it as a `webpage` context item, and **remembers the URL** so it can be re-pulled later (via `update_context` `refresh_webpage`, or the refresh button in the Marcora web app). Use this for the customer's own pages and any page you want to keep current. If the same URL is already tracked, the existing item is **updated in place** (no duplicate) and its stored content is **overwritten** with the fresh fetch. Because of that overwrite, `add_context` is marked as a destructive tool.
+- **`import_url`** — pass a public URL to import **once**. The backend fetches it and converts it to clean markdown server-side using AI main-content extraction (it isolates the primary page or article body and drops navigation and boilerplate), then stores that markdown as a **static snapshot**. The item is **not** refreshable. Use for one-off imports — a presigned-link export (e.g. a Google Doc, or a connected-app sandbox), a competitor's blog post, or anything you'd otherwise have to pull into your own conversation just to forward. The call waits for the import, up to about 25 seconds. If the page loads in that time, it returns the new item's `id` with `import_status: "ready"` (the body is not in this response; `get_context_item` returns it). If the page can't be read, it returns an error and nothing is added; the error says why. If the import is still running after 25 seconds, it returns `import_status: "processing"` and the content lands a moment later: poll `get_context_item` until `import_status` is `"ready"`. A failure after that point shows up as an in-app notification, and no item is saved.
+- **`connected_webpage_url`** — pass a URL to track as a live **web page**. The backend fetches the page, stores it as a `webpage` context item, and **remembers the URL** so it can be re-pulled later (via `update_context` `refresh_webpage`, or the refresh button in the Marcora web app). Use this for the customer's own pages and any page you want to keep current. If the same URL is already tracked, the existing item is **updated in place** (no duplicate) and its stored content is **overwritten** with the fresh fetch. The call waits up to about 25 seconds for the page, the same way `import_url` does: `import_status: "ready"` on success, an error on failure (nothing is added for a new URL, and a tracked URL keeps its saved copy), or `"processing"` if it is still running. Because of that overwrite, `add_context` is marked as a destructive tool.
 
 Providing zero, or more than one, of `content` / `import_url` / `connected_webpage_url` returns a 400.
 
@@ -304,9 +304,9 @@ Providing zero, or more than one, of `content` / `import_url` / `connected_webpa
 | `id` | string | Context item ID |
 | `name` | string | Context item name |
 | `content_type` | string | `manual` (from `content` / `import_url`) or `webpage` (from `connected_webpage_url`) |
-| `content` | string \| null | The stored reference content. `null` for `import_url` items in the immediate response (still loading) — fetch the full body with `get_context_item` |
+| `content` | string \| null | The stored reference content. `null` for `import_url` and `connected_webpage_url` items in this response — fetch the full body with `get_context_item` |
 | `word_count` | integer | Word count of content (`0` while an import is still processing) |
-| `import_status` | string \| null | For `import_url` items: `"processing"` right after the call, `"ready"` once the content has loaded. `null` for pasted content and web pages |
+| `import_status` | string \| null | For `import_url` and `connected_webpage_url` items: `"ready"` when the import finished within the ~25 second wait, `"processing"` if it is still running (poll `get_context_item`). `null` for pasted content |
 | `collection_id` | integer \| null | Collection this item belongs to (null if none) |
 | `project_id` | string \| null | Project association (null if none) |
 | `link_url` | string | Direct URL to view this context item in the Marcora app. Resolves to the project, collection, or reference library view depending on the item's scope |
@@ -2028,7 +2028,7 @@ If `anchor_date` is omitted, the playbook's persisted `anchor_date` (if any) is 
 
 > **Not available in ChatGPT.** In ChatGPT the six workflow tools (`list_workflows`, `get_workflow`, `get_workflow_runs`, `create_workflow`, `update_workflow`, `run_workflow`) are not offered; set workflows up in the Marcora app. Every other client sees them.
 
-Workflows are reusable, multi-step automations that a Managed Agents session executes on demand or on a schedule. Build them with `create_workflow`, set them Active or Inactive and edit them with `update_workflow`, trigger them with `run_workflow`, and inspect run history with `get_workflow_runs`.
+Workflows are reusable, multi-step automations that Marcora runs on demand or on a schedule. Build them with `create_workflow`, set them Active or Inactive and edit them with `update_workflow`, trigger them with `run_workflow`, and inspect run history with `get_workflow_runs`.
 
 > **Two switches, two vocabularies.** A workflow is **Active** or **Inactive** (or Archived). Its schedule, if it has one, is **On** or **Paused**. A scheduled run needs both: the workflow Active **and** the schedule On. A manual run needs only Active. New workflows are saved Inactive and every schedule is saved Paused; no MCP tool can turn a schedule On — the user does that in the Marcora app with **Resume schedule**. When describing a workflow as Active, always say whether its schedule is On, Paused, or absent. The companion **`marcora-mcp`** skill documents authoring patterns (step design, scheduling, deduplication, runner-summary conventions) in its Workflows chapter.
 
@@ -2176,7 +2176,7 @@ Manually run a workflow now. Creates a run record and starts an automated agent 
 | `workflow_template_id` | string (uuid) | Parent workflow UUID |
 | `status` | string | `running`, `failed`, or `skipped` |
 | `trigger_type` | string | How the run was triggered (`manual` here) |
-| `runner_session_id` | string | Managed Agents session ID for the run |
+| `runner_session_id` | string | ID of the session that executed the run |
 | `error_reason` | string/null | Failure cause when `status` is `failed`, else null |
 | `error_summary` | string | Human-readable error summary |
 | `link_url` | string (uri) | Direct URL to view this run in Marcora |
