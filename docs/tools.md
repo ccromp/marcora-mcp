@@ -467,7 +467,7 @@ The IDs you pass here can come from `list_context_items`, `get_project(project_i
 
 ### `get_relevant_context`
 
-Searches the team's context library and returns the passages most relevant to a given prompt,
+Searches the team's context library and returns the passages most relevant to a given prompt, with sources.
 
 **How results are ranked:** each passage is scored on its own and against the whole document it belongs to, and the two scores are blended; weak matches are dropped, so fewer than 10 can come back. `dimension_option_ids` lean the ranking toward the chosen audience, persona or industry. It searches the reference library plus the project, collections and shared collections the user can access.
 
