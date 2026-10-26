@@ -310,7 +310,7 @@ Providing zero, or more than one, of `content` / `import_url` / `connected_webpa
 | `collection_id` | integer \| null | Collection this item belongs to (null if none) |
 | `project_id` | string \| null | Project association (null if none) |
 | `link_url` | string | Direct URL to view this context item in the Marcora app. Resolves to the project, collection, or reference library view depending on the item's scope |
-| `capacity` | object | Present only when the team's plan limits context items: `{used, limit, remaining}` after this add. Absent when the plan has no limit |
+| `capacity` | object | Present only when the team's plan limits context items: `{used, limit, remaining}` after this add. Absent when the plan has no limit. At the limit, a call that would create an item (`content`, `import_url` or a new web page) returns an error stating the limit; re-adding a `connected_webpage_url` the team already tracks still refreshes it |
 
 At the plan's limit the call returns an error stating the limit; deleting an item makes room.
 

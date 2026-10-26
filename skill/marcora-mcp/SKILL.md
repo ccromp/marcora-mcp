@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (create_content,
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.7.21
+  version: 0.7.22
 ---
 
 # Marcora AI Workflows
@@ -208,7 +208,7 @@ The brief is the project's authoritative statement of premise, scope and the str
 
 **Import wait.** `import_url` and `connected_webpage_url` imports wait up to about 25 seconds. If the page loads in that time the result has `import_status: "ready"` (the body is not in the result; `get_context_item` returns it). If the page can't be read, the call returns an error and nothing is added. If the import is still running after 25 seconds, the result has `import_status: "processing"`: poll `get_context_item` until it is `ready`.
 
-**Plan capacity.** When the team's plan limits context items, the `add_context` result carries `capacity` (`used`, `limit`, `remaining`); on a plan with no limit it is absent. At the limit the call returns an error that states the limit; deleting an item makes room.
+**Plan capacity.** When the team's plan limits context items, the `add_context` result carries `capacity` (`used`, `limit`, `remaining`); on a plan with no limit it is absent. At the limit, a call that would create an item (`content`, `import_url` or a new web page) returns an error that states the limit; deleting an item makes room. Re-adding a `connected_webpage_url` the team already tracks still refreshes it.
 
 **Output to user.** "Added: [link]. Want to use this in a content generation now?"
 

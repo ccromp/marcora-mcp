@@ -2,6 +2,16 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-10-25 (add_context at the plan limit)
+
+### Changed
+
+- **`add_context` at the context-item limit.** When the team's plan limits context items and it is full, a call that would create an item (`content`, `import_url` or a new web page) returns an error stating the limit; deleting an item makes room. Re-adding a `connected_webpage_url` the team already tracks still refreshes it, so a full library can keep its tracked pages current. A processing `import_url` counts in the reply but does not reserve the slot: if another add fills it, the import is refused when it finishes and adds nothing. Tool definitions did not change.
+
+### Skill → v0.7.22 · plugin → v1.2.12
+
+- Plan capacity paragraph in the Context workflow carries the at-limit behaviour.
+
 ## 2026-10-24 (generation timings, add_context import wait)
 
 ### Changed
