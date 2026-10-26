@@ -1,28 +1,29 @@
 {
-  "name": "ai.marcora/mcp-server",
-  "title": "Marcora MCP Server",
-  "description": "Hosted MCP server for Marcora — the context layer for GTM teams. One source of truth for brand and company context, blueprints, and AI-generated marketing content, in any AI tool.",
-  "homepage": "https://marcora.ai",
-  "repository": "https://github.com/ccromp/marcora-mcp",
-  "documentation": "https://marcora.ai/mcp",
-  "support": "https://github.com/ccromp/marcora-mcp/issues",
-  "version": "1.0.0",
-  "transport": {
-    "type": "streamable-http",
-    "url": "https://mcp.marcora.ai"
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "ai.marcora/mcp",
+  "title": "Marcora",
+  "description": "On-brand content for GTM teams, grounded in your brand, reference library and project context.",
+  "repository": {
+    "url": "https://github.com/ccromp/marcora-mcp",
+    "source": "github"
   },
-  "authentication": {
-    "required": true,
-    "types": ["oauth2", "apiKey"],
-    "oauth_url": "https://mcp.marcora.ai",
-    "api_key_url": "https://mcp.marcora.ai",
-    "instructions": "See docs/authentication.md"
-  },
-  "capabilities": {
-    "tools": true,
-    "resources": false,
-    "prompts": false
-  },
-  "maintainer": "Marcora",
-  "status": "production"
+  "version": "1.0.5",
+  "websiteUrl": "https://marcora.ai",
+  "icons": [
+    {
+      "src": "https://mcp.marcora.ai/favicon.png",
+      "mimeType": "image/png",
+      "sizes": ["512x512"]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.marcora.ai/"
+    },
+    {
+      "type": "sse",
+      "url": "https://mcp.marcora.ai/"
+    }
+  ]
 }
