@@ -19,11 +19,11 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://mcp.marcora.ai/"
+      "url": "https://mcp.marcora.ai/stream"
     },
     {
       "type": "sse",
-      "url": "https://mcp.marcora.ai/"
+      "url": "https://mcp.marcora.ai/sse"
     }
   ]
 }
