@@ -1320,14 +1320,14 @@ The response always includes `status`, `generation_id`, and `flow_type`, plus `g
 
 **`content` — Content Assistant flow** (`flow_type` = `ai_assistant`):
 
-> `status` is per-run, but `content` is the **current** state: the live document (which may include edits the user made themselves afterward) plus the **most recent** Content Assistant interaction on that document. It is intentionally not a frozen snapshot of this specific generation — a stale snapshot isn't useful, the current version is.
+> `status` is per-run, but `content` is the **current** state: the live document (which may include edits the user made themselves afterward) while `assistant_summary` and `document_updated` describe the Content Assistant turn **this run produced**, as you are allowed to see it. The document is intentionally not a frozen snapshot — a stale snapshot isn't useful, the current version is.
 
 | Field | Type | Description |
 |---|---|---|
 | `content_id` | string (uuid) | The content document the assistant acted on |
 | `name` | string \| null | Document name |
-| `assistant_summary` | string \| null | The most recent assistant reply shown in the document's sidebar thread |
-| `document_updated` | boolean | Whether the most recent interaction changed the document body (false for a reply-only / chat-only response) |
+| `assistant_summary` | string \| null | The assistant reply this run produced, as the sidebar thread shows it. `null` if the run has written no reply, or it was written before runs were tracked; a reply that used sources you cannot open comes back as a notice |
+| `document_updated` | boolean | Whether the turn this run produced changed the document body (false for a reply-only / chat-only response) |
 | `current_content` | string \| null | The document's current markdown |
 | `link_url` | string | Direct URL to view/open in Marcora |
 
