@@ -2,6 +2,12 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-10-27 (assistant reply visibility in get_generation_status)
+
+### Skill → v0.7.23 · plugin → v1.2.13
+
+- The `ask_content_assistant` note now says `assistant_summary` is the latest reply the caller is allowed to see, and that a reply built on sources the caller can't open comes back as "This reply used sources you can't open". Tool definitions did not change.
+
 ## 2026-10-25 (add_context at the plan limit)
 
 ### Changed
