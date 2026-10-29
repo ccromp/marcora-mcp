@@ -2,6 +2,12 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-10-29 (get_generation_status reports the requested run's reply)
+
+### Skill → v0.7.25 · plugin → v1.2.15
+
+- `get_generation_status` on a Content Assistant run returns the assistant reply **that run produced** in `assistant_summary`, and `document_updated` says whether that run's turn changed the document, rather than describing the document's most recent assistant turn. `assistant_summary` is `null` if the run wrote no reply or it predates run tracking, and a reply built on sources the caller can't open still comes back as "This reply used sources you can't open". `content`/`current_content` remain the document's live current state. The skill's `ask_content_assistant` note and `docs/tools.md` are updated to match. Tool definitions did not change.
+
 ## 2026-10-29 (update_context keeps the project; list_context_collections includes empty collections)
 
 ### Changed
