@@ -2,6 +2,17 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-10-29 (update_context keeps the project; list_context_collections includes empty collections)
+
+### Changed
+
+- **`update_context` keeps the item's project when `project_id` is omitted.** Project and collection are independent, so moving an item into a collection (`collection_id` only) no longer takes it out of its project. Pass a project ID to move it to a different project, or `null` to take it out of its project deliberately. Before, an omitted `project_id` wrote `null` and silently detached the item, so a client had to read `get_context_item` and echo the project back on every call. `collection_id` is still required. `refresh_webpage` is unchanged. The input schema is unchanged; the `project_id` and tool descriptions changed.
+- **`list_context_collections` includes empty collections.** A collection with no items is listed with `item_count` 0, so a collection created a moment ago is visible before it holds anything. Before, empty collections were left out.
+
+### Skill → v0.7.24 · plugin → v1.2.14
+
+- The `update_context` row in the decision table no longer tells the agent to echo `project_id` back on every call.
+
 ## 2026-10-27 (assistant reply visibility in get_generation_status)
 
 ### Skill → v0.7.23 · plugin → v1.2.13
