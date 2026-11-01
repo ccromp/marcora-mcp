@@ -124,6 +124,19 @@ All notable changes to the Marcora MCP server will be documented in this file.
 
 - Context section: `add_context` overwrite note. Workflow section: `allowed_tools` wording and the ChatGPT note.
 
+## 2026-11-01 (Only me material, ChatGPT-friendly replies, "being built" reads)
+
+### Added
+
+- **Only me material is fenced on writes.** An item marked `audience: "only_me"` is private to its owner. If a session read one, `create_content` saves the document as private (restricted to its owner), and `update_content` returns a confirmation token instead of writing `content` or `name_override` into a team-visible document. Ask the user; only if they agree, repeat the same call with the new optional `confirm_private_sources` parameter (on both tools) set to that token. The token releases only the items it names, for that document and that one write, and expires in 5 minutes.
+- **`message_for_user` on an empty workspace.** `get_brand_foundation` and `get_relevant_context` now also carry plain text written to the user (alongside `workspace_status: "empty"` and `next_step`) that says the workspace is empty and offers to set it up. Pass it on as it is; it is an offer and nothing is saved without the user's OK.
+- **`brand_foundation_build` on `add_context`.** A `connected_webpage_url` add that queued a build of the team's blank Brand Foundation sections returns `brand_foundation_build: {status: "queued", message}`. Absent otherwise.
+- **`brand_foundation_build` on reads.** While that build is in flight, `get_brand_foundation` and `get_relevant_context` return `brand_foundation_build: {status, message}` (`status` is `queued` or `building`) when a Brand Foundation section is still blank: the sections are being built, not empty, so don't offer to draft them meanwhile. Optional; absent when no build is running.
+
+### Changed
+
+- All fields above are optional additions to existing outputs. No tool name, existing parameter or existing field changed.
+
 ## 2026-10-13 (v1.1: tool metadata, `learn_marcora_tools`, plan-tool fix)
 
 ### Added

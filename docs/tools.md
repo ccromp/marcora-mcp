@@ -166,7 +166,9 @@ By default returns all four elements. Pass `elements` to scope the response to a
 | `writing_examples` | string | Markdown content for Writing Examples. Free-form structure — whatever the user has saved. Empty string if not set. Only present if requested via `elements` |
 | `link_url` | string | Deep-link that opens the Brand Foundation section in the Marcora web app (where the user can toggle between the four elements). Always present |
 | `workspace_status` | string | `"empty"`, present only when the team has no Brand Foundation and nothing in its reference library yet |
+| `message_for_user` | string | Present only with `workspace_status: "empty"`: plain text written to the user, saying the workspace is empty and offering to set it up. Pass it on in your reply as it is. It is an offer: save nothing without their OK |
 | `next_step` | string | Present only with `workspace_status: "empty"`: tell the user the workspace is empty and offer to set it up (their website via `add_context`, or a drafted Company Overview and Brand Voice via `update_brand_foundation`). Save nothing without their OK |
+| `brand_foundation_build` | object | Present only while Marcora is building the team's blank Brand Foundation sections from a website (`{status, message}`; `status` is `queued` or `building`). The blank sections are in progress, not empty: tell the user what `message` says and don't offer to draft them meanwhile. Absent otherwise |
 
 **Example prompts:**
 - "What's my brand foundation?"
@@ -310,6 +312,7 @@ Providing zero, or more than one, of `content` / `import_url` / `connected_webpa
 | `collection_id` | integer \| null | Collection this item belongs to (null if none) |
 | `project_id` | string \| null | Project association (null if none) |
 | `link_url` | string | Direct URL to view this context item in the Marcora app. Resolves to the project, collection, or reference library view depending on the item's scope |
+| `brand_foundation_build` | object | Present only on a `connected_webpage_url` add that queued a build of the team's blank Brand Foundation sections from the website: `{status: "queued", message}`. `message` says what to tell the user (the blank sections are being built and should be ready within about a minute, not empty). Absent otherwise, so never imply a build is running without it |
 | `capacity` | object | Present only when the team's plan limits context items: `{used, limit, remaining}` after this add. Absent when the plan has no limit. At the limit, a call that would create an item (`content`, `import_url` or a new web page) returns an error stating the limit; re-adding a `connected_webpage_url` the team already tracks still refreshes it |
 
 At the plan's limit the call returns an error stating the limit; deleting an item makes room.
@@ -517,6 +520,10 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 > The previous top-level `context_item_ids` field has been **removed** — each entry in `sources` carries its own `context_item_id`, and the union of every source's `context_rag_ids` equals the top-level `context_rag_ids`.
 
 > **Empty workspace:** when the team has no Brand Foundation and nothing in its reference library yet, the response also carries `workspace_status: "empty"` and a `next_step` string, placed first. `next_step` tells you to say the workspace is empty and offer to set it up (add their website with `add_context`, or draft a Company Overview and Brand Voice for `update_brand_foundation`), saving nothing without the user's OK. Both fields are absent otherwise.
+>
+> The response also carries `message_for_user` on an empty workspace: plain text, written to the user, that says the workspace is empty and offers to set it up. Pass it on in your reply as it is; it is an offer, and nothing is saved without their OK.
+>
+> **Brand Foundation being built:** while Marcora is building the team's blank Brand Foundation sections from a website, `get_brand_foundation` and `get_relevant_context` carry an optional `brand_foundation_build` object `{status, message}` (`status` is `queued` or `building`), placed first. The blank sections are in progress, not empty: relay `message`, don't call them empty or offer to draft them meanwhile, and suggest the user look again in about a minute. Absent when no build is running.
 
 **`project_brief` object** (same shape as `get_project`'s `project_brief`):
 
@@ -1249,8 +1256,11 @@ You must provide either `content` or `instructions` (not both).
 | `collection_ids` | array | No | Context collection IDs to include |
 | `dimension_option_ids` | array | No | Targeting dimension option IDs |
 | `use_extended_thinking` | boolean | No | Quick only: whether the model reasons at length before writing. Default `true`; slower and can use more Studio Credits. Pass `false` for a faster run. Ignored with `multi_model` |
+| `confirm_private_sources` | string | No | Pass only after the user agrees. A write that would put **Only me** material this session read into a team-visible document is refused with a confirmation token; repeat the same call with that token here only once the user has said yes. The token releases only the items it names, for that document and that one write, and expires in 5 minutes |
 
 \* You must provide either `content` or `instructions`, but not both.
+
+> **Only me material.** An item marked `audience: "only_me"` is private to its owner. If this session read one, `create_content` saves the document as private (and keeps it restricted to its owner) rather than the team's. Never copy Only me text into a team-visible document without asking the user.
 
 **Output (Quick — synchronous):**
 
@@ -1430,7 +1440,10 @@ Update a content document by `content_id`. Partial-update semantics — every fi
 | `visibility` | string | No | `private` or `team` |
 | `category_id` | integer | No | Category ID from `list_content_categories` |
 | `project_id` | string (uuid) | No | Project UUID to associate with this content. Replaces any existing project association |
+| `confirm_private_sources` | string | No | Pass only after the user agrees. See *Only me material* below |
 | `change_summary` | string | No | What changed and why, shown in the document's AI-assistant history. Format as skimmable markdown — a bulleted list (bold lead + detail) for multi-part edits. Recommended on every call; blank/omitted falls back to a generic label. Only recorded when `content` also changes |
+
+> **Only me material.** If this session read an item marked `audience: "only_me"`, writing `content` or `name_override` into a team-visible document (or into a private one you also make `team`) returns a confirmation token instead of saving. Ask the user; only if they agree, repeat the same call with `confirm_private_sources` set to that token.
 
 **Output:**
 
