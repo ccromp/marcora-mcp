@@ -158,6 +158,16 @@ Don't show the user a UUID like `7b2c4f...` as an identifier. Surface the human-
 
 ---
 
+## E17 — Copying Only me material into a team-visible document
+
+**Symptom.** `update_content` returns a confirmation token instead of saving, or `create_content` saves a document as private when you expected a team document.
+
+**Cause.** An item you read this session is marked `audience: "only_me"`, so it is private to its owner. Marcora will not let it flow into a team-visible document unless the user agrees.
+
+**What to do.** Do not retry blindly and do not copy the Only me text into a team document on your own. Tell the user which material is involved and ask. Only if they agree, repeat the same `update_content` call with `confirm_private_sources` set to the token you were given. The token releases only the items it names, for that document and that one write, and expires in 5 minutes. For `create_content`, the document is saved as private and restricted to its owner; make it team-visible only after the user agrees.
+
+---
+
 ## Linking the user to their Brand Foundation
 
 **Symptom.** You update the user's Brand Foundation, link them to it, and the link 404s — they land on `/home` and the conversation they were in is gone.

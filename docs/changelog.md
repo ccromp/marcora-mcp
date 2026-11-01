@@ -133,6 +133,10 @@ All notable changes to the Marcora MCP server will be documented in this file.
 - **`brand_foundation_build` on `add_context`.** A `connected_webpage_url` add that queued a build of the team's blank Brand Foundation sections returns `brand_foundation_build: {status: "queued", message}`. Absent otherwise.
 - **`brand_foundation_build` on reads.** While that build is in flight, `get_brand_foundation` and `get_relevant_context` return `brand_foundation_build: {status, message}` (`status` is `queued` or `building`) when a Brand Foundation section is still blank: the sections are being built, not empty, so don't offer to draft them meanwhile. Optional; absent when no build is running.
 
+### Skill → v0.7.26 · plugin → v1.2.16
+
+- New pitfall (E17 in the references, one line in the skill): ask the user before Only me material goes into a team-visible document, then retry with `confirm_private_sources`.
+
 ### Changed
 
 - All fields above are optional additions to existing outputs. No tool name, existing parameter or existing field changed.
