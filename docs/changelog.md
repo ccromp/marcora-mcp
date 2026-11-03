@@ -2,6 +2,13 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-03 (skills CLI install)
+
+### Skill → v0.7.28 · plugin → v1.2.18
+
+- The skill's `description` frontmatter is now quoted. A strict YAML parser rejected the unquoted version (it contains `: `), so `npx skills add` skipped the skill. Claude Code was unaffected. The skill text is unchanged.
+- The README documents `npx skills add ccromp/marcora-mcp` and no longer links the retired Smithery listing. Tool definitions did not change.
+
 ## 2026-11-02 (limit refusals: relay as written)
 
 ### Skill → v0.7.27 · plugin → v1.2.17

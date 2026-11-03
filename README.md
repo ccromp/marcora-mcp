@@ -2,9 +2,7 @@
 
 > The context layer for GTM teams — one source of truth for brand and company context, so your whole team produces consistent, on-brand content in any AI tool. Connect your AI tools to [Marcora](https://marcora.ai) through the Model Context Protocol.
 
-[![smithery badge](https://smithery.ai/badge/chris-2acp/marcora)](https://smithery.ai/servers/chris-2acp/marcora)
-
-**Learn more:** [marcora.ai](https://marcora.ai) · **Smithery:** [smithery.ai/servers/chris-2acp/marcora](https://smithery.ai/servers/chris-2acp/marcora)
+**Learn more:** [marcora.ai](https://marcora.ai)
 
 ## About
 
@@ -66,6 +64,14 @@ The **Marcora AI Workflows** Anthropic Skill ships alongside this server. It tea
 | **Marcora AI Workflows** (`marcora-mcp`) | Object model (content, blueprints, projects, context items); content-generation patterns; the 4-layer context model; project-brief mechanics; the content plans board and playbooks; building reusable multi-step workflows; and choosing between similar tools | [`skill/marcora-mcp/`](skill/marcora-mcp/) |
 
 Your AI client picks the skill up on demand based on the task.
+
+### Install with the skills CLI
+
+```bash
+npx skills add ccromp/marcora-mcp
+```
+
+This installs the `marcora-mcp` skill for Claude Code and other agents that read `SKILL.md` skills. To preview first, run `npx skills add ccromp/marcora-mcp --list`.
 
 ### Download
 
