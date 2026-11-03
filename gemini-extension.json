@@ -1,0 +1,10 @@
+{
+  "name": "marcora",
+  "version": "1.0.0",
+  "description": "Marcora is the context layer for go-to-market teams: your positioning, brand voice, and product facts in one source of truth that your AI tools read from.",
+  "mcpServers": {
+    "marcora": {
+      "httpUrl": "https://mcp.marcora.ai/"
+    }
+  }
+}

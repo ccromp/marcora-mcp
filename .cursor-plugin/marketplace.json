@@ -1,0 +1,17 @@
+{
+  "name": "marcora",
+  "owner": {
+    "name": "Marcora",
+    "email": "support@marcora.ai"
+  },
+  "metadata": {
+    "description": "Marcora is the context layer for go-to-market teams: your positioning, brand voice, and product facts in one source of truth that your AI tools read from."
+  },
+  "plugins": [
+    {
+      "name": "marcora",
+      "source": "./directories/cursor/marcora",
+      "description": "Marcora is the context layer for go-to-market teams: your positioning, brand voice, and product facts in one source of truth that your AI tools read from."
+    }
+  ]
+}
