@@ -2,12 +2,12 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "ai.marcora/mcp",
   "title": "Marketing & Brand Context by Marcora",
-  "description": "Brand voice, positioning, and messaging for marketing teams. Write on-brand copy in any AI tool.",
+  "description": "The context layer for go-to-market teams",
   "repository": {
     "url": "https://github.com/ccromp/marcora-mcp",
     "source": "github"
   },
-  "version": "1.0.5",
+  "version": "1.0.6",
   "websiteUrl": "https://marcora.ai",
   "icons": [
     {
