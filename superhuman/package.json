@@ -1,0 +1,13 @@
+{
+  "name": "marcora-superhuman-connector",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Superhuman Go connector wrapping the Marcora MCP server",
+  "scripts": {
+    "validate": "packs validate pack.ts",
+    "build": "packs build pack.ts"
+  },
+  "devDependencies": {
+    "@superhuman/plugins-sdk": "1.19.0"
+  }
+}
