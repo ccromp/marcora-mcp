@@ -1,10 +1,10 @@
 ---
 name: marcora-mcp
 description: "Use this skill BEFORE calling any Marcora MCP tool (create_content, add_context, create_plan, produce_plan, create_workflow, etc.) and whenever the user's request involves Marcora, including any `marcora.ai` URL the user pastes (e.g. an `app.marcora.ai` library or canvas link). It maps the Marcora tools to the standard product-marketing workflows — creating, editing, and sharing content; generating from blueprints; managing projects and briefs; adding reference context; browsing the Blueprint Exchange; answering what's in the library; managing content plans and playbooks; and building reusable, multi-step workflows — and applies Marcora's domain rules so the right artifact lands in the right place. Triggers on Marcora and its objects: blueprints, Marcora projects and project briefs, the Reference Library, Brand Foundation, Targeting Dimensions, Context Collections, content plans, playbooks, and Marcora workflows (including making one recurring or reusable)."
-license: CC-BY-4.0
+license: MIT
 metadata:
   mcp-server: marcora
-  version: 0.7.28
+  version: 0.7.29
 ---
 
 # Marcora AI Workflows

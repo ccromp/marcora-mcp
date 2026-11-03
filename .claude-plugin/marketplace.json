@@ -13,13 +13,13 @@
       "displayName": "Marcora: Brand Context & Writing",
       "source": "./plugin",
       "description": "Your living company context, in Claude and any AI tool or agent that supports MCP: positioning, voice, and product facts, set up once and updated in one place.",
-      "version": "1.2.18",
+      "version": "1.2.19",
       "author": {
         "name": "Marcora"
       },
       "homepage": "https://marcora.ai/mcp",
       "repository": "https://github.com/ccromp/marcora-mcp",
-      "license": "CC-BY-4.0",
+      "license": "MIT",
       "keywords": [
         "marcora",
         "marketing",

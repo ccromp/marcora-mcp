@@ -2,6 +2,13 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-03 (MIT licence, listing wording)
+
+### Skill -> v0.7.29 · plugin -> v1.2.19
+
+- The documentation, skill, and metadata are now licensed under the MIT License (previously CC BY 4.0). The MCP server implementation remains proprietary and is not covered; the README says so.
+- The README description and opening paragraph now use Marcora's current product description, and note the former MarketCore name. Tool definitions did not change.
+
 ## 2026-11-03 (skills CLI install)
 
 ### Skill → v0.7.28 · plugin → v1.2.18

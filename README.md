@@ -1,6 +1,6 @@
 # Marcora MCP Server
 
-> The context layer for GTM teams — one source of truth for brand and company context, so your whole team produces consistent, on-brand content in any AI tool. Connect your AI tools to [Marcora](https://marcora.ai) through the Model Context Protocol.
+> Marcora is the context layer for go-to-market teams: your positioning, brand voice, and product facts in one source of truth that your AI tools read from.
 
 **Learn more:** [marcora.ai](https://marcora.ai)
 
@@ -18,7 +18,9 @@ This is the **public documentation repository** for Marcora's hosted MCP server.
 
 ## What It Does
 
-Marcora is the context layer for go-to-market teams — one source of truth for your brand and company context, so your whole team produces consistent, on-brand content in any AI tool. It stores your brand context, manages reusable content templates (blueprints), and generates marketing documents informed by your full company context. The MCP server brings all of this into your AI assistant — create content, manage context, browse community templates, and organize projects without leaving your chat.
+Marcora is the context layer for go-to-market teams. Build your source of truth once: a Brand Foundation (positioning, brand voice, and writing style) plus a Reference Library of product docs, buyer personas, competitive analysis, and messaging. Claude, ChatGPT, and any AI tool that supports MCP connections read from it, so what you write stays on-brand and accurate.
+
+Marcora was formerly called MarketCore.
 
 Marcora's MCP server enables AI clients to:
 
@@ -203,6 +205,4 @@ See [docs/security.md](docs/security.md) for details on data handling, permissio
 
 ## License
 
-This repository contains documentation and metadata only. The Marcora MCP server implementation is proprietary and not included.
-
-Documentation is licensed under [CC BY 4.0](LICENSE).
+The documentation, skill, and metadata in this repository are licensed under the [MIT License](LICENSE). The Marcora MCP server implementation is proprietary and is not covered by that license or included in this repository.
