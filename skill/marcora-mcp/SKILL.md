@@ -4,7 +4,7 @@ description: Use this skill BEFORE calling any Marcora MCP tool (create_content,
 license: CC-BY-4.0
 metadata:
   mcp-server: marcora
-  version: 0.7.26
+  version: 0.7.27
 ---
 
 # Marcora AI Workflows
@@ -469,7 +469,7 @@ When things go wrong, surface the raw error to the user — don't silently retry
 - **`"Project not found"`** (from `get_relevant_context` with `project_id`) → the project doesn't exist, or belongs to a team other than the active team. Check `list_projects`; if it's in another team, `set_active_team` (tell the user first — it's global). No context or brief comes back.
 - **`"You are not a member of project <id>"`** (from `get_relevant_context` with `project_id`) → the project is private and the user isn't one of its members. Tell the user; they can ask a project member to add them, or you can search without `project_id`. No context or brief comes back.
 - **`"Marcora is already updating this document."`** (from `ask_content_assistant`, or per finding in `apply_grounding_fix`'s `errors[]`) → another run on that document is still in progress. Wait for it to finish (poll `get_generation_status` if you have its `generation_id`), then retry once (for `apply_grounding_fix`, retry just those findings). Don't retry in a tight loop.
-- **`"You have reached your active project limit."`** → the team's plan caps active projects. Tell the user to archive an existing project or upgrade.
+- **A plan-limit or Studio Credits refusal** (e.g. "This team has reached its plan's limit of N active projects", "Your team doesn't have enough Studio Credits") → relay Marcora's message to the user as written; it states the limit or shortfall and what they can do about it. Don't add upgrade or purchase advice of your own, and don't retry.
 - **Auth / `unauthorized` errors** → tell the user to reconnect Marcora in their MCP client's integration settings. Don't try to recover.
 - **Quota / rate-limit errors** → surface to the user with the message text. Don't retry in a tight loop.
 - **Anything else** → tell the user what tool you called and what error came back. Suggest they file an issue at the GitHub repo if it persists.

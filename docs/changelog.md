@@ -2,6 +2,12 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-02 (limit refusals: relay as written)
+
+### Skill → v0.7.27 · plugin → v1.2.17
+
+- The pitfalls list no longer quotes the retired "You have reached your active project limit." message or tells the agent to suggest an upgrade. For any plan-limit or Studio Credits refusal it now says to relay Marcora's message as written: the message states the limit or shortfall and what the user can do. Tool definitions did not change.
+
 ## 2026-10-29 (get_generation_status reports the requested run's reply)
 
 ### Skill → v0.7.25 · plugin → v1.2.15

@@ -81,7 +81,7 @@ The 5 most common workflows are in `SKILL.md`. This file covers less-frequent re
    - `visibility` enum: `team` | `private`
    - `status` enum: `active` | `archived`
 
-**Note.** Setting `status="active"` requires available active-project usage on the team's plan — call returns `"You have reached your active project limit."` if exhausted.
+**Note.** Setting `status="active"` requires available active-project usage on the team's plan — call returns a refusal stating the plan's active-project limit if exhausted; relay it as written.
 
 ---
 
