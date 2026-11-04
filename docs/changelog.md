@@ -2,6 +2,12 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-04 (repository housekeeping)
+
+### Plugin → v1.2.21
+
+- Repository housekeeping: a folder unrelated to the plugin was removed from `main`. The plugin, skill and server did not change.
+
 ## 2026-11-03 (plugin README: no credential example)
 
 ### Plugin → v1.2.20
