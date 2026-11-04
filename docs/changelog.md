@@ -2,6 +2,13 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-03 (plugin README: no credential example)
+
+### Plugin → v1.2.20
+
+- The plugin README no longer shows a command that passes an API token in an `Authorization` header. One sentence now points non-interactive and CI users to the authentication docs.
+- The README's sign-in paragraph no longer names where Claude Code stores the token. The skill and tool definitions did not change.
+
 ## 2026-11-03 (MIT licence, listing wording)
 
 ### Skill -> v0.7.29 · plugin -> v1.2.19

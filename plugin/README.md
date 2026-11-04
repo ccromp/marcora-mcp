@@ -56,13 +56,8 @@ To install the plugin from Claude Code:
 
 Then restart Claude Code or run `/reload-plugins`. The skill runs automatically when a task calls for it, or on demand as `/marcora:marcora-mcp`. Marcora's tools appear as `mcp__marcora__*`.
 
-**Sign in.** The plugin signs in with OAuth, so there's nothing to set up beyond a one-time browser login. On first connect, Claude Code flags marcora for authentication. Run `/mcp`, select **marcora**, and complete the browser login. Claude Code stores the token in your OS keychain (or in `~/.claude/.credentials.json` where no keychain is available) and refreshes it automatically. To sign out, use **Clear authentication** in the `/mcp` menu or run `claude mcp logout marcora`.
+**Sign in.** The plugin signs in with OAuth, so there's nothing to set up beyond a one-time browser login. On first connect, Claude Code flags marcora for authentication. Run `/mcp`, select **marcora**, and complete the browser login. Claude Code stores the token and refreshes it automatically. To sign out, use **Clear authentication** in the `/mcp` menu or run `claude mcp logout marcora`.
 
-**API token for non-interactive or CI use.** Generate a token at [Integration Settings](https://app.marcora.ai/integration-settings) and add your own server entry with an `Authorization` header. Don't add the header to the bundled plugin config, because a present `Authorization` header disables the automatic OAuth sign-in.
-
-```bash
-claude mcp add --transport http marcora https://mcp.marcora.ai \
-  --header "Authorization: Bearer YOUR_API_TOKEN"
-```
+**Non-interactive and CI use.** For setups without a browser, see [Authentication](https://github.com/ccromp/marcora-mcp/blob/main/docs/authentication.md).
 
 To report a problem with the plugin, [open an issue on GitHub](https://github.com/ccromp/marcora-mcp/issues).
