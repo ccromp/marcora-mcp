@@ -2,6 +2,16 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-04 (calls)
+
+### Skill → v0.7.30 · plugin → v1.2.22
+
+- **New tool `find_app`** (read-only): looks up the apps Marcora offers to connect, by name or by what they do, and reports your own connection state, whether the app can bring in calls, and a link to connect it.
+- **`add_context` has a fourth way to add: `import_from`.** Pass `{ toolkit, call_ids }` (`fathom`, `gong` or `fireflies`, 1 to 10 call ids) and Marcora fetches the transcripts through your own connection. The result lists each call as imported, duplicate, not ready or failed, and offers a link to set up automatic import. Transcript text is never returned.
+- **`get_relevant_context` has a new optional `calls` input** to search your team's calls by date, kind and company. A Team call filed in a private project or private collection is treated like an Only me call: its source carries `audience: "only_me"`.
+- **Grounding results:** a supported claim that rests only on calls carries `support_only_calls`, so you can tell the user it rests on conversations rather than a written source.
+- The skill covers all four.
+
 ## 2026-11-04 (repository housekeeping)
 
 ### Plugin → v1.2.21

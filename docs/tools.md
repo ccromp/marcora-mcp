@@ -274,13 +274,17 @@ Create a new context collection to organize your reference materials. Collection
 
 Add a new context item to your reference library. Context items are reference materials that power AI generation — they help the AI produce more accurate, on-brand, and relevant content.
 
-You can supply the body in exactly one of three ways:
+You can supply the body in exactly one of four ways:
 
 - **`content`** — paste the markdown body directly. Best for short or hand-authored material. Creates a plain-text (`manual`) item.
 - **`import_url`** — pass a public URL to import **once**. The backend fetches it and converts it to clean markdown server-side using AI main-content extraction (it isolates the primary page or article body and drops navigation and boilerplate), then stores that markdown as a **static snapshot**. The item is **not** refreshable. Use for one-off imports — a presigned-link export (e.g. a Google Doc, or a connected-app sandbox), a competitor's blog post, or anything you'd otherwise have to pull into your own conversation just to forward. The call waits for the import, up to about 25 seconds. If the page loads in that time, it returns the new item's `id` with `import_status: "ready"` (the body is not in this response; `get_context_item` returns it). If the page can't be read, it returns an error and nothing is added; the error says why. If the import is still running after 25 seconds, it returns `import_status: "processing"` and the content lands a moment later: poll `get_context_item` until `import_status` is `"ready"`. A failure after that point shows up as an in-app notification, and no item is saved.
 - **`connected_webpage_url`** — pass a URL to track as a live **web page**. The backend fetches the page, stores it as a `webpage` context item, and **remembers the URL** so it can be re-pulled later (via `update_context` `refresh_webpage`, or the refresh button in the Marcora web app). Use this for the customer's own pages and any page you want to keep current. If the same URL is already tracked, the existing item is **updated in place** (no duplicate) and its stored content is **overwritten** with the fresh fetch. The call waits up to about 25 seconds for the page, the same way `import_url` does: `import_status: "ready"` on success, an error on failure (nothing is added for a new URL, and a tracked URL keeps its saved copy), or `"processing"` if it is still running. Because of that overwrite, `add_context` is marked as a destructive tool.
 
-Providing zero, or more than one, of `content` / `import_url` / `connected_webpage_url` returns a 400.
+- **`import_from`** — bring in calls from a call-recording app the user has connected: `{ toolkit, call_ids }`, where `toolkit` is `fathom`, `gong` or `fireflies` and `call_ids` is 1 to 10 of that app's own call ids (found with the app's own list or search tool, then passed in this one call). Marcora fetches and cleans each transcript itself through the user's own connection; the agent never retypes or pastes a transcript, and no transcript text is returned. It cannot be combined with `content`, `import_url`, `connected_webpage_url`, `as_call`, `call_date`, `call_kind` or `call_company`. `audience`, `project_id` and `collection_id` work as for calls (Only me and filed in Calls unless you say otherwise; a Collaborator must pass `project_id`; choose one of `project_id` or `collection_id`); `name` is ignored because each call keeps its own title.
+
+Providing zero, or more than one, of `content` / `import_url` / `connected_webpage_url` / `import_from` returns a 400.
+
+To check whether an app is connected, or to get its Connect link before importing, use [`find_app`](#find_app).
 
 > **Web pages require admin or editor role.** `connected_webpage_url` is rejected for collaborators, matching the in-app *Add web page* rule. `content` and `import_url` remain available to collaborators.
 
@@ -294,6 +298,7 @@ Providing zero, or more than one, of `content` / `import_url` / `connected_webpa
 | `connected_webpage_url` | string | Conditional | Public URL tracked as a live, refreshable `webpage` item (URL stored; dedupes by URL; admin/editor only). Provide exactly one of the three body inputs |
 | `collection_id` | integer | No | Collection ID to organize the item (from `list_context_collections` or `create_context_collection`). **Omit it — or pass `0` — to file the item at the top level of the Reference Library** |
 | `project_id` | string | No | Project ID to associate with (from `list_projects`). Omit it to leave the item unassociated |
+| `import_from` | object | Conditional | `{ toolkit, call_ids }`: `toolkit` is `fathom`, `gong` or `fireflies`; `call_ids` is 1 to 10 of the app's own call ids, each once. Alternative to the three body inputs above |
 
 > **Filing an item in the Reference Library:** omitting `collection_id` — or passing `0` — files the item at the top level of the **Reference Library**, where it's returned by `list_context_items`, fetchable via `get_context_item`, and eligible for semantic search. This is the normal path for team-wide reference material.
 >
@@ -313,9 +318,15 @@ Providing zero, or more than one, of `content` / `import_url` / `connected_webpa
 | `project_id` | string \| null | Project association (null if none) |
 | `link_url` | string | Direct URL to view this context item in the Marcora app. Resolves to the project, collection, or reference library view depending on the item's scope |
 | `brand_foundation_build` | object | Present only on a `connected_webpage_url` add that queued a build of the team's blank Brand Foundation sections from the website: `{status: "queued", message}`. `message` says what to tell the user (the blank sections are being built and should be ready within about a minute, not empty). Absent otherwise, so never imply a build is running without it |
+| `import_from` | object | Present only on an `import_from` add: `{ toolkit, app_name }`, the app the calls came from |
+| `results` | array | Present only on an `import_from` add: one entry per requested call, in order. Each has `call_id`, `status` (`imported`, `duplicate` = already in Marcora, `not_ready` = the app has no transcript yet, try later, or `failed`), `message`, and for an imported call `context_item_id`, `name`, `audience`, `filed_in` and `link_url` |
+| `summary` | object | Present only on an `import_from` add: how many calls ended in each state |
+| `automatic_import_link` | string | Present only on an `import_from` add that imported at least one call. Opens the automatic-import rule editor with these choices filled in; nothing is saved until the user saves it |
 | `capacity` | object | Present only when the team's plan limits context items: `{used, limit, remaining}` after this add. Absent when the plan has no limit. At the limit, a call that would create an item (`content`, `import_url` or a new web page) returns an error stating the limit; re-adding a `connected_webpage_url` the team already tracks still refreshes it |
 
 At the plan's limit the call returns an error stating the limit; deleting an item makes room.
+
+**`import_from` errors and edge cases:** if the app is not connected, the call fails with an error that names the app and carries its Connect link; give the user the link and retry once they have connected. A problem with one call's source connection stays in that call's row (`failed`) while the later calls continue. A plan-capacity refusal is a `failed` row carrying the friendly limit message.
 
 **Example prompts:**
 - "Add our brand guidelines to Marcora"
@@ -324,6 +335,37 @@ At the plan's limit the call returns an error stating the limit; deleting an ite
 - "Import these 20 article URLs into my 'Research' collection"
 - "Track our pricing page (https://example.com/pricing) as a web page so I can refresh it later"
 - "Add this product brief to the 'Product Launch' collection"
+- "Import my last three Gong calls with Acme into Marcora"
+
+---
+
+### `find_app`
+
+Looks up the apps Marcora offers to connect (for example Gong or Fathom), by name or by what they do (for example "call recordings"). Read-only: it changes nothing and makes no request to the app itself.
+
+**When to use it:** BEFORE telling the user you can't reach an app, and before sending them to connect one. Say only what it returns, and never claim an app is offered unless it appears in the result. Once an app is connected, use its own tools in your session to find what you need, and `add_context` `import_from` to bring its calls into Marcora.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `query` | string | Yes | An app name, or what it does |
+| `limit` | integer | No | Matches to return, 1 to 20. Default 10 |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `query` | string | The query that was searched |
+| `apps` | array | Matching apps, best match first; empty when Marcora offers no such app. Each has `app` (id, for example `gong`), `name`, `description`, `connection_state`, `brings_in_calls` and `connect_link` |
+| `total_matches` | integer | How many apps matched before the limit |
+| `message` | string | Plain text about the result |
+
+`connection_state` is the user's own: `connected`, `not_connected` (never completed; a connection that was started but not finished reads this way), or `expired` (it worked before and needs renewing). `brings_in_calls` is `true` when `add_context` `import_from` can bring in that app's calls. `connect_link` opens the Integrations page on that app; nothing connects until the user acts. Present it exactly as returned.
+
+**Example prompts:**
+- "Can Marcora connect to Gong?"
+- "Which of my call-recording apps are connected?"
 
 ---
 
@@ -505,6 +547,8 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 | `dimension_option_ids` | array | No | Targeting dimension option IDs that bias relevancy toward an audience / persona / industry |
 | `context_rag_ids` | array | No | Previously returned chunk IDs to exclude (for pagination) |
 | `include_brand_foundation` | boolean | No | When `true`, also returns the team's Brand Foundation in the response. Default `false`. Recommended `true` on the **first** call of a conversation (and when paginating, the first page), then `false`/omit on follow-ups so it isn't re-sent each time |
+| `include_only_me` | boolean | No | Default `false`: only Team items are searched. `true` also searches your own Only me items, including Only me calls, never another member's |
+| `calls` | object | No | Also search the team's calls: `{ date_from, date_to, kinds, companies }`, every field optional (dates `YYYY-MM-DD` or ISO 8601; `kinds` from `customer`, `external`, `team_meeting`, `one_on_one`, `recorded`; `{}` is every call you may use). Each call carries its date, kind and company in its heading. Only Team calls come back, never a teammate's Only me call; `include_only_me: true` adds your own Only me calls. Leave it out and nothing changes |
 | `include_project_brief` | boolean | No | Default `true`. When `project_id` is given, also returns that project's brief as a top-level `project_brief` block. Leave it `true` (or omit it) on the **first** call for a project in a conversation; set `false` on later calls for the same project so the brief isn't re-sent. Ignored when `project_id` is omitted |
 
 **Output:**
@@ -524,6 +568,8 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 > The response also carries `message_for_user` on an empty workspace: plain text, written to the user, that says the workspace is empty and offers to set it up. Pass it on in your reply as it is; it is an offer, and nothing is saved without their OK.
 >
 > **Brand Foundation being built:** while Marcora is building the team's blank Brand Foundation sections from a website, `get_brand_foundation` and `get_relevant_context` carry an optional `brand_foundation_build` object `{status, message}` (`status` is `queued` or `building`), placed first. The blank sections are in progress, not empty: relay `message`, don't call them empty or offer to draft them meanwhile, and suggest the user look again in about a minute. Absent when no build is running.
+
+> **Calls and audience:** a Team call filed in a private project or private collection reads as Only me: its source carries `audience: "only_me"`. If you write material read from an Only me source into a team-visible document, the write is refused until the user agrees.
 
 **`project_brief` object** (same shape as `get_project`'s `project_brief`):
 
@@ -882,12 +928,14 @@ You never compose the fix yourself. Every finding already stores its recommended
 | `link_url` | string | Opens the document with its grounding panel open — hand this to the user |
 | `summary` | object | `supported`, `conflicts`, `gaps`, `total_claims`, plus `corpus_freshness` |
 | `findings` | array | See below |
-| `claims` | array | Each extracted claim: `claim_text`, `subject`, `value`, `bucket` (`supported`/`conflict`/`gap`), `refs[]`, `confidence` (a **string**) |
+| `claims` | array | Each extracted claim: `claim_text`, `subject`, `value`, `bucket` (`supported`/`conflict`/`gap`), `refs[]`, `confidence` (a **string**). A supported claim may also carry `support_only_calls` |
 | `corpus_items` | array | The context items the scan was checked against: `context_item_id`, `name`, `source`, `content_category`, `link_url` |
 | `details_visible` | boolean | `false` when you are not the document's creator — you get counts only |
 | `coverage_complete` | boolean | `false` means some context items were not read, so a claim reported as a gap may still have support in an unread item. `true` does not by itself mean every context item was read: `excluded_items` lists any item the check left out, and it can be present even when `coverage_complete` is `true`. See [Coverage](#coverage) |
 | `coverage_reason` | string \| null | Why coverage is incomplete. `null` when `coverage_complete` is `true` |
 | `excluded_items` | array | Present only when the check skipped at least one context item. Each entry: `id`, `reason`, `source` |
+
+`support_only_calls` appears on a supported claim only when every supporting source is a call: one entry per call, with its `date`, `kind` and `company`. It is absent when any support is not a call, and absent for calls you cannot see. Tell the user such a claim rests only on calls, which are one conversation's word rather than a written source.
 
 Each entry in `findings[]`:
 
