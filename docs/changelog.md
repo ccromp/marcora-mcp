@@ -2,6 +2,15 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-09 (community blueprints index, Google Meet & Wispr Flow call imports, team-save rule, grounding errors)
+
+### Skill → v0.7.31 · plugin → v1.2.23
+
+- **Google Meet and Wispr Flow call imports (Beta):** `add_context` `import_from` adds Google Meet (`googlemeet`) and Wispr Flow (`wispr_flow_mcp`), both Beta. Documents provider IDs (`conferenceRecords/{id}` bare ID or `doc:{document_id}` for Meet; recorded meeting IDs from search for Wispr), same-user connection requirements, recent and saved Meet transcript limits, and Wispr recorded-meeting search limits.
+- **`list_community_blueprints` is now a compact, paged index:** returns `community_blueprints` (`id`, `slug`, `name`, `category`, `is_featured`), `total`, and `next_offset`, with optional `category`, `limit` (default 150, max 300), and `offset` inputs. Summary, contributor details, input instructions, and full sample content are fetched on demand with `get_community_blueprint_details(blueprint_exchange_id)`.
+- **`add_context` team-audience rule and readable input refusals:** pass `audience: "team"` on ordinary context items (`content`, `import_url`, `connected_webpage_url`) whenever the user asks to save for the team, even with a `collection_id` or `project_id`. If the target collection or project is private, the call is refused with a readable tool error (`isError: true`) and nothing is saved. Input, placement, and webpage/provider import refusals also return readable tool errors (`isError: true`).
+- **Grounding and call-search error messages:** `get_grounding_result` returns `"Grounding result not found."` (tool error) when no accessible scan or document result exists for that `scan_id` or `content_id` in the team. `check_content_grounding` returns readable tool errors when a `content_id` cannot be opened in the team or when a shared document relies on private sources that have not been shared. `get_relevant_context` `calls.companies` matches the whole company name ignoring case and spaces and refuses empty or non-text values.
+
 ## 2026-11-04 (calls)
 
 ### Skill → v0.7.30 · plugin → v1.2.22

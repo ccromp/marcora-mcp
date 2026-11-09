@@ -280,29 +280,38 @@ You can supply the body in exactly one of four ways:
 - **`import_url`** — pass a public URL to import **once**. The backend fetches it and converts it to clean markdown server-side using AI main-content extraction (it isolates the primary page or article body and drops navigation and boilerplate), then stores that markdown as a **static snapshot**. The item is **not** refreshable. Use for one-off imports — a presigned-link export (e.g. a Google Doc, or a connected-app sandbox), a competitor's blog post, or anything you'd otherwise have to pull into your own conversation just to forward. The call waits for the import, up to about 25 seconds. If the page loads in that time, it returns the new item's `id` with `import_status: "ready"` (the body is not in this response; `get_context_item` returns it). If the page can't be read, it returns an error and nothing is added; the error says why. If the import is still running after 25 seconds, it returns `import_status: "processing"` and the content lands a moment later: poll `get_context_item` until `import_status` is `"ready"`. A failure after that point shows up as an in-app notification, and no item is saved.
 - **`connected_webpage_url`** — pass a URL to track as a live **web page**. The backend fetches the page, stores it as a `webpage` context item, and **remembers the URL** so it can be re-pulled later (via `update_context` `refresh_webpage`, or the refresh button in the Marcora web app). Use this for the customer's own pages and any page you want to keep current. If the same URL is already tracked, the existing item is **updated in place** (no duplicate) and its stored content is **overwritten** with the fresh fetch. The call waits up to about 25 seconds for the page, the same way `import_url` does: `import_status: "ready"` on success, an error on failure (nothing is added for a new URL, and a tracked URL keeps its saved copy), or `"processing"` if it is still running. Because of that overwrite, `add_context` is marked as a destructive tool.
 
-- **`import_from`** — bring in calls from a call-recording app the user has connected: `{ toolkit, call_ids }`, where `toolkit` is `fathom`, `gong` or `fireflies` and `call_ids` is 1 to 10 of that app's own call ids (found with the app's own list or search tool, then passed in this one call). Marcora fetches and cleans each transcript itself through the user's own connection; the agent never retypes or pastes a transcript, and no transcript text is returned. It cannot be combined with `content`, `import_url`, `connected_webpage_url`, `as_call`, `call_date`, `call_kind` or `call_company`. `audience`, `project_id` and `collection_id` work as for calls (Only me and filed in Calls unless you say otherwise; a Collaborator must pass `project_id`; choose one of `project_id` or `collection_id`); `name` is ignored because each call keeps its own title.
+- **`import_from`** — bring in calls from a call-recording app the user has connected: `{ toolkit, call_ids }`, where `toolkit` is `fathom`, `gong`, `fireflies`, `googlemeet` or `wispr_flow_mcp` and `call_ids` is 1 to 10 of that app's own call ids (found with the app's own list or search tool, then passed in this one call). Marcora fetches and cleans each transcript itself through the user's own connection; the agent never retypes or pastes a transcript, and no transcript text is returned. It cannot be combined with `content`, `import_url`, `connected_webpage_url`, `as_call`, `call_date`, `call_kind` or `call_company`. `audience`, `project_id` and `collection_id` work as for calls (Only me and filed in Calls unless you say otherwise; a Collaborator must pass `project_id`; choose one of `project_id` or `collection_id`); `name` is ignored because each call keeps its own title.
+
+Google Meet and Wispr Flow imports are Beta. For Google Meet, pass the bare ID from conferenceRecords/{id}, or doc:{document_id} for a saved transcript. Recent discovery is organizer-only within 30 days; a known conference record still requires access. Saved transcripts require your own active Google Meet and Google Docs connections in the same team; discovery also requires Google Drive and searches by document creation window. The document must contain a date and timestamped speaker-labelled transcript, not just Gemini notes. Meet supplies no original meeting title or participant emails; automatic Meet imports stay Only me and do not support attendance filters. For Wispr Flow, use a meeting ID from search: recorded meetings only, not dictation or scratchpad. Wispr attendee search uses calendar invitees; narrow a search that reaches 1,000 matches.
 
 Providing zero, or more than one, of `content` / `import_url` / `connected_webpage_url` / `import_from` returns a 400.
 
 To check whether an app is connected, or to get its Connect link before importing, use [`find_app`](#find_app).
 
 > **Web pages require admin or editor role.** `connected_webpage_url` is rejected for collaborators, matching the in-app *Add web page* rule. `content` and `import_url` remain available to collaborators.
+>
+> **Team audience on ordinary items:** when the user asks for the item to be saved for the team, pass `audience: "team"` (on `content`, `import_url` or `connected_webpage_url`), even with a `collection_id` or `project_id`. It is accepted when the item will be team-visible. In a private collection or private project it is refused with a readable tool error (`isError: true`) and nothing is saved: tell the user why and offer a shared collection, a team-visible project or the Reference Library. Never fall back to a private save without asking the user.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | Yes | Descriptive name for the context item |
-| `content` | string | Conditional | Markdown body (creates a `manual` item). Provide exactly one of `content` / `import_url` / `connected_webpage_url` |
-| `import_url` | string | Conditional | Public URL imported **once** as a static markdown snapshot (a static snapshot, not refreshable). Provide exactly one of the three body inputs |
-| `connected_webpage_url` | string | Conditional | Public URL tracked as a live, refreshable `webpage` item (URL stored; dedupes by URL; admin/editor only). Provide exactly one of the three body inputs |
-| `collection_id` | integer | No | Collection ID to organize the item (from `list_context_collections` or `create_context_collection`). **Omit it — or pass `0` — to file the item at the top level of the Reference Library** |
+| `content` | string | Conditional | Markdown body (creates a `manual` item, or a call transcript when saved as a call). Provide exactly one of `content` / `import_url` / `connected_webpage_url` / `import_from` |
+| `import_url` | string | Conditional | Public URL imported **once** as a static markdown snapshot (a static snapshot, not refreshable). Provide exactly one of the four body inputs |
+| `connected_webpage_url` | string | Conditional | Public URL tracked as a live, refreshable `webpage` item (URL stored; dedupes by URL; admin/editor only). Provide exactly one of the four body inputs |
+| `collection_id` | integer \| null | No | Collection ID to organize the item (from `list_context_collections` or `create_context_collection`). **Omit it — or pass `0` — to file the item at the top level of the Reference Library** |
 | `project_id` | string | No | Project ID to associate with (from `list_projects`). Omit it to leave the item unassociated |
-| `import_from` | object | Conditional | `{ toolkit, call_ids }`: `toolkit` is `fathom`, `gong` or `fireflies`; `call_ids` is 1 to 10 of the app's own call ids, each once. Alternative to the three body inputs above |
+| `audience` | string | No | Who can see it (`only_me` or `team`). For a call: `only_me` (default; visible only to the person who added it) or `team`. For an ordinary context item: pass `team` when the user wants it saved for the team, even with a `collection_id` or `project_id`; in a private collection or project it is refused and nothing is saved, so tell the user and offer a shared collection, a team-visible project or the Reference Library, and never save privately without asking. `only_me` is rejected on an ordinary item |
+| `as_call` | boolean | No | Whether to save `content` as a call transcript in Calls. Omit and Marcora decides (`true` forces a call; `false` forces an ordinary item). Only valid with `content` |
+| `call_date` | string | No | Calls only (`YYYY-MM-DD` or ISO 8601). Omit to take the date from the transcript |
+| `call_kind` | string | No | Calls only: `customer`, `external`, `team_meeting`, `one_on_one`, or `recorded`. Omit to work it out from who spoke |
+| `call_company` | string \| null | No | Calls only: the other company on the call (`null` for none). Omit to take the company from the transcript |
+| `import_from` | object | Conditional | `{ toolkit, call_ids }`: `toolkit` is `fathom`, `gong`, `fireflies`, `googlemeet` or `wispr_flow_mcp`; `call_ids` is 1 to 10 of the app's own call ids, each once. Alternative to the three body inputs above |
 
 > **Filing an item in the Reference Library:** omitting `collection_id` — or passing `0` — files the item at the top level of the **Reference Library**, where it's returned by `list_context_items`, fetchable via `get_context_item`, and eligible for semantic search. This is the normal path for team-wide reference material.
 >
-> Unlike `update_context`, this tool's `collection_id` is typed as a bare `integer` in the input schema, so a strict MCP client **cannot** send a literal `null` here. You don't need one: `collection_id` is optional on `add_context`, so simply **omitting** it is the idiomatic way to file at the top level. (The server treats an explicit `null` the same as omitted/`0`, but only clients that don't validate against the schema can send it.)
+> Both `add_context` and `update_context` type `collection_id` as `["integer", "null"]` in the input schema, and omitting `collection_id` (or passing `0` or `null`) on `add_context` files the item at the top level.
 
 **Output:**
 
@@ -310,13 +319,16 @@ To check whether an app is connected, or to get its Connect link before importin
 |---|---|---|
 | `id` | string | Context item ID |
 | `name` | string | Context item name |
-| `content_type` | string | `manual` (from `content` / `import_url`) or `webpage` (from `connected_webpage_url`) |
-| `content` | string \| null | The stored reference content. `null` for `import_url` and `connected_webpage_url` items in this response — fetch the full body with `get_context_item` |
+| `content_type` | string | `manual` (from `content` / `import_url`), `webpage` (from `connected_webpage_url`), or `call_transcript` (a call) |
+| `content` | string \| null | The stored reference content. `null` for `import_url`, `connected_webpage_url`, and pasted content in this response — fetch the full body with `get_context_item` |
 | `word_count` | integer | Word count of content (`0` while an import is still processing) |
 | `import_status` | string \| null | For `import_url` and `connected_webpage_url` items: `"ready"` when the import finished within the ~25 second wait, `"processing"` if it is still running (poll `get_context_item`). `null` for pasted content |
 | `collection_id` | integer \| null | Collection this item belongs to (null if none) |
 | `project_id` | string \| null | Project association (null if none) |
 | `link_url` | string | Direct URL to view this context item in the Marcora app. Resolves to the project, collection, or reference library view depending on the item's scope |
+| `saved_as_call` | boolean | True when saved as a call |
+| `call` | object | Present only on call items: `{ audience, company, date, kind, people, summary_status }`. The summary is written after the save; `call.summary_status` shows where it is, and `get_context_item` returns the summary once ready |
+| `message` | string | Calls only: where it went and who can see it; tell the user |
 | `brand_foundation_build` | object | Present only on a `connected_webpage_url` add that queued a build of the team's blank Brand Foundation sections from the website: `{status: "queued", message}`. `message` says what to tell the user (the blank sections are being built and should be ready within about a minute, not empty). Absent otherwise, so never imply a build is running without it |
 | `import_from` | object | Present only on an `import_from` add: `{ toolkit, app_name }`, the app the calls came from |
 | `results` | array | Present only on an `import_from` add: one entry per requested call, in order. Each has `call_id`, `status` (`imported`, `duplicate` = already in Marcora, `not_ready` = the app has no transcript yet, try later, or `failed`), `message`, and for an imported call `context_item_id`, `name`, `audience`, `filed_in` and `link_url` |
@@ -324,7 +336,7 @@ To check whether an app is connected, or to get its Connect link before importin
 | `automatic_import_link` | string | Present only on an `import_from` add that imported at least one call. Opens the automatic-import rule editor with these choices filled in; nothing is saved until the user saves it |
 | `capacity` | object | Present only when the team's plan limits context items: `{used, limit, remaining}` after this add. Absent when the plan has no limit. At the limit, a call that would create an item (`content`, `import_url` or a new web page) returns an error stating the limit; re-adding a `connected_webpage_url` the team already tracks still refreshes it |
 
-At the plan's limit the call returns an error stating the limit; deleting an item makes room.
+At the plan's limit the call returns an error stating the limit; deleting an item makes room. Input, placement, and webpage/provider import refusals come back as readable tool errors (`isError: true`) rather than generic protocol faults.
 
 **`import_from` errors and edge cases:** if the app is not connected, the call fails with an error that names the app and carries its Connect link; give the user the link and retry once they have connected. A problem with one call's source connection stays in that call's row (`failed`) while the later calls continue. A plan-capacity refusal is a `failed` row carrying the friendly limit message.
 
@@ -336,6 +348,8 @@ At the plan's limit the call returns an error stating the limit; deleting an ite
 - "Track our pricing page (https://example.com/pricing) as a web page so I can refresh it later"
 - "Add this product brief to the 'Product Launch' collection"
 - "Import my last three Gong calls with Acme into Marcora"
+- "Import this saved Google Meet transcript into Marcora, visible only to me"
+- "Import my recorded Wispr meeting into Marcora"
 
 ---
 
@@ -548,7 +562,7 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 | `context_rag_ids` | array | No | Previously returned chunk IDs to exclude (for pagination) |
 | `include_brand_foundation` | boolean | No | When `true`, also returns the team's Brand Foundation in the response. Default `false`. Recommended `true` on the **first** call of a conversation (and when paginating, the first page), then `false`/omit on follow-ups so it isn't re-sent each time |
 | `include_only_me` | boolean | No | Default `false`: only Team items are searched. `true` also searches your own Only me items, including Only me calls, never another member's |
-| `calls` | object | No | Also search the team's calls: `{ date_from, date_to, kinds, companies }`, every field optional (dates `YYYY-MM-DD` or ISO 8601; `kinds` from `customer`, `external`, `team_meeting`, `one_on_one`, `recorded`; `{}` is every call you may use). Each call carries its date, kind and company in its heading. Only Team calls come back, never a teammate's Only me call; `include_only_me: true` adds your own Only me calls. Leave it out and nothing changes |
+| `calls` | object | No | Also search the team's calls: `{ date_from, date_to, kinds, companies }`, every field optional (dates `YYYY-MM-DD` or ISO 8601; `kinds` from `customer`, `external`, `team_meeting`, `one_on_one`, `recorded`; `companies` match the whole company name ignoring case and spaces, and empty or non-text values are refused; `{}` is every call you may use). Each call carries its date, kind and company in its heading. Only Team calls come back, never a teammate's Only me call; `include_only_me: true` adds your own Only me calls. Leave it out and nothing changes |
 | `include_project_brief` | boolean | No | Default `true`. When `project_id` is given, also returns that project's brief as a top-level `project_brief` block. Leave it `true` (or omit it) on the **first** call for a project in a conversation; set `false` on later calls for the same project so the brief isn't re-sent. Ignored when `project_id` is omitted |
 
 **Output:**
@@ -823,7 +837,8 @@ Passing neither is an error.
 **Errors:**
 - **Provide either 'content_id' or 'content'** (400) — neither was supplied.
 - **Not a valid UUID** (400) — malformed `content_id`.
-- **Content not found** (404) — no such document in your team.
+- **Content not found. Check the content_id — it must be a document you can open in this team.** (tool error)
+- **This check cannot use the document’s private sources. Sharing the document does not share them.** (tool error) — the document is shared with you but relies on private sources that haven't been shared.
 - **ci_not_eligible** (403) — the team is not on the Command plan, has no active subscription, or is out of Studio Credits.
 
 **Example prompts:**
@@ -857,7 +872,7 @@ Read the result of a grounding scan. The poll companion to `check_content_ground
 
 **Errors:**
 - **Provide 'scan_id' or 'content_id'** (400) — neither was supplied.
-- **Scan not found** (404) — no such grounding scan in your team.
+- **Grounding result not found.** (tool error) — no accessible grounding scan or document result for that `scan_id` or `content_id` in your team.
 - **scan_id and content_id refer to different content** (400) — pass `scan_id` alone.
 
 **Example prompts:**
@@ -1189,15 +1204,29 @@ Finalize (publish) a previously created blueprint draft into a full, usable blue
 
 ### `list_community_blueprints`
 
-Browse community blueprints available for import. Returns blueprints shared by Marcora users, including name, summary, contributor info, and category.
+Browse community blueprints available for import as a compact index: `id`, `slug`, `name`, `category`, and `is_featured` (featured first, then newest). Find a blueprint by its name or category here.
 
-**Parameters:** None
+Summary, contributor, input instructions, and the full content are not in this list — pass the returned `id` to `get_community_blueprint_details` first. Large catalogs come back in pages of up to 150 (max 300); when `next_offset` is not `null`, call again with `offset: next_offset`. Pass `category` to narrow the list.
 
-**Output:** An object with a single `community_blueprints` key holding an array of community blueprints. Each item carries `id`, `slug`, `name`, `summary`, `is_featured`, `input_instructions`, `visibility`, `contributor_name`, `contributor_company`, `category`, and `category_short`.
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `category` | string | No | Category name filter (contains, any case) |
+| `limit` | integer | No | Page size (default `150`, min `1`, max `300`) |
+| `offset` | integer | No | Entries to skip; pass `next_offset` from the previous page (min `0`) |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `community_blueprints` | array | Page of community blueprints. Each item carries `id` (uuid — pass to `get_community_blueprint_details` or `import_community_blueprint`), `slug`, `name`, `category`, and `is_featured` |
+| `total` | integer | Number of blueprints matching the request across all pages |
+| `next_offset` | integer \| null | Offset to pass for the next page, or `null` when this page is the last |
 
 **Example prompts:**
 - "Show me community blueprints"
-- "What templates has the community shared?"
+- "What case study templates has the community shared?"
 - "Browse blueprints from other users"
 
 ---

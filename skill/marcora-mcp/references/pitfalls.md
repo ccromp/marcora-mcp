@@ -70,7 +70,7 @@ The high-frequency pitfalls are in `SKILL.md` (§ Pitfalls and conventions). Thi
 
 **Symptom.** Import fails with an invalid ID error.
 
-**Cause.** `marcora:list_community_blueprints` returns items with their own `blueprint_exchange_id` — distinct from a regular blueprint UUID. Use that exchange ID for `get_community_blueprint_details` and `import_community_blueprint`. The imported blueprint then has a fresh team-level UUID.
+**Cause.** `marcora:list_community_blueprints` returns items with their own exchange `id` (passed as `blueprint_exchange_id` to `get_community_blueprint_details` and `import_community_blueprint`) — distinct from a regular team blueprint UUID. The imported blueprint then has a fresh team-level UUID.
 
 ---
 

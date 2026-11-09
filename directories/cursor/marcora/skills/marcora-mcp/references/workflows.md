@@ -25,10 +25,10 @@ The 5 most common workflows are in `SKILL.md`. This file covers less-frequent re
 **Goal.** Pull a community-published blueprint into the user's library.
 
 **Steps.**
-1. `marcora:list_community_blueprints` — returns blueprints with names, summaries, contributor info, and `blueprint_exchange_id`.
-2. For details on a specific one: `marcora:get_community_blueprint_details(blueprint_exchange_id)`.
+1. `marcora:list_community_blueprints` (optional `category`, `limit` default 150 max 300, `offset`) — returns a compact index of `community_blueprints` (`id`, `slug`, `name`, `category`, `is_featured`), plus `total` and `next_offset` (when `next_offset` is not `null`, call again with `offset=next_offset`).
+2. For summary, contributor info, input instructions, and full sample content on a specific one: `marcora:get_community_blueprint_details(blueprint_exchange_id=<id>)` using the returned `id`.
 3. **State your plan** (this clones the blueprint into the user's library).
-4. `marcora:import_community_blueprint(blueprint_exchange_id)` — returns the new team-level `uuid` for use with `create_content`.
+4. `marcora:import_community_blueprint(blueprint_exchange_id=<id>)` — returns the new team-level `uuid` for use with `create_content`.
 
 ---
 
