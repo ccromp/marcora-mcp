@@ -22,7 +22,7 @@ Marcora is built for product marketers and go-to-market teams at B2B SaaS compan
 - **Share and export.** Publish content as a trackable, branded share link or export it to Word.
 - **Automate repeat work.** Turn a multi-step process into a reusable Workflow that runs on demand or on a schedule.
 
-On the Command plan, **Context Intelligence** keeps it all current: Marcora checks web-sourced context for freshness, scans for drift as your messaging evolves, and suggests one-click fixes. Through 200+ integrations, the tools where your work already lives become context for your content.
+**Context Intelligence** keeps it all current: Marcora checks web-sourced context for freshness, scans for drift as your messaging evolves, and suggests one-click fixes. Through 200+ integrations, the tools where your work already lives become context for your content.
 
 ## What's in the Plugin
 
@@ -36,7 +36,7 @@ On the Command plan, **Context Intelligence** keeps it all current: Marcora chec
 3. Ask Claude something that needs your context, like "What's our positioning against our top competitor?" or "Draft a launch email for our newest feature."
 4. The first time Claude uses each Marcora tool, it asks for your permission. Choose **Always allow** to skip the prompt next time.
 
-Marcora's free plan is permanent, not a trial. One person gets context access, their own Brand Foundation, and a one-time set of credits to try content generation, and reading your context is always free. Paid plans add team sharing, monthly credits for content generation, and 200+ integrations. The Command plan adds Context Intelligence, Content Grounding, and branded share links. [See pricing](https://marcora.ai/pricing).
+Marcora's free plan is permanent, not a trial. One person gets context access, their own Brand Foundation, and a one-time set of Studio Credits to try content generation, Content Grounding, and Context Intelligence, and reading your context is always free. Paid plans (Solo, Team, and Enterprise) add full library capacity, connected apps, team sharing, and optional monthly Studio Credit subscriptions. [See pricing](https://marcora.ai/pricing).
 
 ## Support and Links
 

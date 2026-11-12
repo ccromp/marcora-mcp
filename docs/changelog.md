@@ -2,6 +2,20 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-12 (two-pass grounding, battle-card attribution, Studio Credit wording, setup hold)
+
+### Skill → v0.7.33 · plugin → v1.2.24
+
+- **Two-pass content grounding (`check_content_grounding`, `get_grounding_result`, `apply_grounding_fix`):**
+  - **Pass 1 (built-from sources) vs. Pass 2 (other collections):** conflicts come only from what the document was built from (pass 1). Other accessible collections checked in pass 2 can support a claim or add a note (`bucket: "note"` when note-only; `summary.notes` count; `claims[].notes[]` with `kind: "other_collection_disagrees"`), never a conflict.
+  - **Recorded research as a source:** recorded web research (`source: "web_research"`, `urls[]`) and connected-app records (`source: "connected_app"`, `app_sources[]`) used during generation appear alongside `context_item`, `project_brief` and `brand_foundation` in `claims[].refs[]`, `claims[].notes[].refs[]` and `corpus_items[]`, with `pass: 1 | 2` and collection/source identity metadata. Grounding itself never browses.
+  - **Battle-card claim subject and conflict scope (`claim_subject`, `conflict_scope`):** each claim and finding reports `claim_subject` (`{ kind: "team" | "company" | "general" | "unknown", company_name, confidence }`). A claim about another named company is checked against material about that company. On conflicts, `conflict_scope` is `"team_facts"` or `"company_material"`. A company conflict's fix revises the document, never your facts, and a company gap offers no add-to-library (`add_to_library_eligible: false`; the backend refuses it).
+  - **New `coverage_reason` values:** `source_access_changed`, `source_content_changed`, `support_lookup_incomplete`. The existing `library_token_budget` value (and the matching `excluded_items` reason) is now documented too.
+  - **Errors documented precisely:** `get_grounding_result` returns `Not a valid UUID` (400) for a malformed `scan_id`/`content_id` and a 403 for a collaborator; `check_content_grounding` needs an editor or admin role (403 otherwise). `get_relevant_context` `sources[]` now lists `audience`.
+- **Studio Credit estimate and admission wording:** grounding and the Context Intelligence health audit (`trigger_health_audit_scan`) use team Studio Credits. Marcora estimates the cost first and won't start a run the team's balance can't cover. `get_team_info` credit fields (`ai_credits_available`, `ai_credits_max`) describe the team's current balance and allowance rather than a billing-period limit. Teams still on a legacy plan keep that plan's existing eligibility rules.
+- **First-call setup hold (pitfall E14):** while a new account's website setup is actively running, the server holds a tool call for up to 30 seconds and answers it normally if setup finishes. If setup is still running afterwards, the reply says to wait about a minute and make the same call again; agents retry on their own without asking the user.
+- The companion skill (`Workflow 6`, `Recipe I`, pitfalls E14 and E16) and `docs/tools.md` carry all of the above.
+
 ## 2026-11-09 (community blueprints index, Google Meet & Wispr Flow call imports, team-save rule, grounding errors)
 
 ### Skill → v0.7.31 · plugin → v1.2.23

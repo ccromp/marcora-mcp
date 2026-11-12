@@ -25,8 +25,8 @@ Returns profile and subscription information for the currently authenticated use
 | `plan_name` | string | Subscription plan display name |
 | `plan_slug` | string | Subscription plan identifier |
 | `subscription_status` | string | Current subscription status |
-| `ai_credits_available` | integer | Studio Credits remaining this billing period (limit minus used) |
-| `ai_credits_max` | integer | Studio Credit limit for this billing period |
+| `ai_credits_available` | integer | Studio Credits remaining on the team's current balance |
+| `ai_credits_max` | integer | Studio Credit allowance for the team |
 
 **Example prompts:**
 - "What plan am I on?"
@@ -610,6 +610,7 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 |---|---|---|
 | `context_item_id` | string (uuid) | The parent context item's ID |
 | `context_item_name` | string \| null | The item's name |
+| `audience` | string | Who can see the item: `team`, or `only_me` (yours alone; returned only when `include_only_me` is `true`) |
 | `content_type` | string \| null | One of `file`, `manual`, `webpage`, `canvas`, `deliverable`, `integration_data`, `call_transcript` |
 | `content_category` | string \| null | How the item is classified for grounding: `company_authoritative` (the team's own source of truth), `reference_material`, or `unclassified`. Authoritative sources outrank reference material when they disagree |
 | `is_stale` | boolean \| null | `true` when the item is flagged as out of date — treat its claims with caution and prefer a fresher source |
@@ -754,7 +755,7 @@ Start a Context Intelligence **health audit** — a library-wide AI sweep of you
 
 The scan runs in the **background**: the response returns immediately with a `scan_run_id`, and findings land as the scan progresses — check `list_ci_findings` afterwards.
 
-**⚠️ Cost + gating:** the scan consumes team Studio Credits and is gated. It requires the **Command plan** (active subscription) with at least **50 credits** remaining. Only one health audit can run at a time, and a cooldown applies after each completed run. **Starting a new audit clears the previous health-audit findings.**
+**⚠️ Cost + gating:** the scan uses team Studio Credits — Marcora estimates the cost first and won't start a run the team's balance can't cover. Only one health audit can run at a time, and a cooldown applies after each completed run. **Starting a new audit clears the previous health-audit findings.**
 
 **Parameters:** None
 
@@ -767,7 +768,7 @@ The scan runs in the **background**: the response returns immediately with a `sc
 | `message` | string | Human-readable status message |
 
 **Errors:**
-- **`ci_not_eligible` (403)** — plan / subscription / credits gate failed (JSON error body with reason + credit numbers).
+- **`ci_not_eligible` (403)** — Studio Credits or Context Intelligence availability check failed (JSON error body with reason + credit numbers).
 - **A health check is already running** — wait for it to finish.
 - **Health check ran recently** — you can run it again after the cooldown (the message says when).
 
@@ -796,13 +797,19 @@ Three tools:
 1. **Grounding is asynchronous.** `check_content_grounding` waits about 20 seconds inline; a fresh scan usually needs 120–150. If it comes back `running`, **poll `get_grounding_result` with the `scan_id`** — calling `check_content_grounding` again starts a *second*, redundant scan.
 2. **Review before applying.** Each finding carries its full `suggested_fix`. Show it to the user and get a decision. `apply_grounding_fix` writes to their library.
 
-Grounding requires the **Command plan** with an active subscription and available Studio Credits.
+Grounding uses team Studio Credits — Marcora estimates the cost first and won't start a run the team's balance can't cover.
 
 ---
 
 ### `check_content_grounding`
 
-Run a grounding scan on a piece of content and get back its claims, findings, and the context items it was checked against.
+Run a two-pass grounding scan on a piece of content and get back its claims, findings, notes, and the sources it was checked against.
+
+**How two-pass grounding works:**
+- **Pass 1 (built-from sources):** checks the sources the document was built from (`context_item`, `project_brief`, `brand_foundation`, plus recorded `web_research` and `connected_app` material used during generation). **Conflicts come only from what the document was built from.**
+- **Pass 2 (other collections):** checks other accessible collections for support on remaining claims. **Other collections can support a claim or add a note** (`notes[]` with `kind: "other_collection_disagrees"` when another collection says something different), never a conflict.
+- **Claim subject and battle-card rule:** each claim and finding reports `claim_subject` (`{ kind: "team" | "company" | "general" | "unknown", company_name, confidence }`). A claim about the user's own company (`team`) is checked only against material about their company; a claim about another named company (`company`) is checked against material about that company, which can support or contradict it. On conflict claims and conflict findings, `conflict_scope` is `"team_facts"` (disagrees with your own facts) or `"company_material"` (disagrees with your material about that company, not your own facts). A company conflict's fix revises the document (`context_item_id: null`), never your facts, and a company gap offers no add-to-library (`add_to_library_eligible: false`; the backend refuses it).
+- **Recorded research appears as a source; grounding itself never browses.**
 
 **When to use:** the user wants to know whether a document is accurate and consistent with what the company has already said — "check this against our context", "is this on-message", "fact-check this draft". Also the natural second step after you draft something for them.
 
@@ -839,7 +846,8 @@ Passing neither is an error.
 - **Not a valid UUID** (400) — malformed `content_id`.
 - **Content not found. Check the content_id — it must be a document you can open in this team.** (tool error)
 - **This check cannot use the document’s private sources. Sharing the document does not share them.** (tool error) — the document is shared with you but relies on private sources that haven't been shared.
-- **ci_not_eligible** (403) — the team is not on the Command plan, has no active subscription, or is out of Studio Credits.
+- **You are not authorized to perform this action** (403) — the token's user lacks an editor or admin role on the team.
+- **ci_not_eligible** (403) — Studio Credits or Context Intelligence availability check failed. On the current plans (Free, Solo, Team, Enterprise) this typically means the team's Studio Credit balance can't cover the estimate. Teams still on a legacy plan keep that plan's existing requirements (for a legacy plan, the message names the Command plan, an active subscription and available Studio Credits).
 
 **Example prompts:**
 - "Ground this draft against our context library"
@@ -850,7 +858,7 @@ Passing neither is an error.
 
 ### `get_grounding_result`
 
-Read the result of a grounding scan. The poll companion to `check_content_grounding`. It never starts a scan and never charges credits.
+Read the two-pass grounding result of a scan (`supported`, `conflict`, `gap`, `note`). The poll companion to `check_content_grounding`. It never starts a scan, never browses, and never charges credits. Conflicts come only from what the document was built from (pass 1); other collections can support a claim or add a note (pass 2), each claim and finding reports `claim_subject` (`team | company | general | unknown`) and (on conflicts) `conflict_scope` (`team_facts | company_material`), and recorded research (`web_research`, `connected_app`) appears as a source.
 
 **When to use:** `check_content_grounding` returned `running`, or you want to re-read a document's last grounding result without paying for a new scan.
 
@@ -872,6 +880,8 @@ Read the result of a grounding scan. The poll companion to `check_content_ground
 
 **Errors:**
 - **Provide 'scan_id' or 'content_id'** (400) — neither was supplied.
+- **Not a valid UUID** (400) — malformed `scan_id` or `content_id`.
+- **You are not authorized to perform this action** (403) — the token's user has a collaborator role (collaborators can't read grounding results).
 - **Grounding result not found.** (tool error) — no accessible grounding scan or document result for that `scan_id` or `content_id` in your team.
 - **scan_id and content_id refer to different content** (400) — pass `scan_id` alone.
 
@@ -889,7 +899,7 @@ Apply Marcora's recommended fix for one or more findings — "yes, do recommenda
 
 You never compose the fix yourself. Every finding already stores its recommended update, so applying is purely a reference by `finding_id`. This is the same action as the Apply button in the Marcora app: same permissions, same billing, same result.
 
-**Works on both finding families** — content-grounding findings and Context Intelligence health-audit recommendations.
+**Works on both finding families** — content-grounding findings (where conflicts come only from what the document was built from in pass 1, while pass-2 disagreements from other collections surface as non-actionable `claims[].notes[]` rather than findings; a `conflict_scope: "company_material"` conflict means the document disagrees with your material about another company and its fix revises the document, never your facts; a company gap offers no add-to-library because `add_to_library_eligible` is `false` and the backend refuses it; and recorded research appears as a source while grounding itself never browses) and Context Intelligence health-audit recommendations.
 
 **Where each fix lands:** by default the context item named in that finding's `context_item_id`. A `null` `context_item_id` means the fix targets the document itself. Pass `context_item_overrides` to send a specific fix somewhere else.
 
@@ -941,14 +951,19 @@ You never compose the fix yourself. Every finding already stores its recommended
 | `scan_id` | string (uuid) \| null | The scan run. Poll with this |
 | `status` | string | `running`, `complete`, `failed`, or `none` |
 | `link_url` | string | Opens the document with its grounding panel open — hand this to the user |
-| `summary` | object | `supported`, `conflicts`, `gaps`, `total_claims`, plus `corpus_freshness` |
-| `findings` | array | See below |
-| `claims` | array | Each extracted claim: `claim_text`, `subject`, `value`, `bucket` (`supported`/`conflict`/`gap`), `refs[]`, `confidence` (a **string**). A supported claim may also carry `support_only_calls` |
-| `corpus_items` | array | The context items the scan was checked against: `context_item_id`, `name`, `source`, `content_category`, `link_url` |
+| `summary` | object | `supported`, `conflicts`, `gaps`, `notes` (optional count of note-only claims, disjoint from `supported`/`conflicts`/`gaps`), `total_claims`, plus `corpus_freshness` |
+| `findings` | array | Actionable conflict and gap recommendations — see below |
+| `claims` | array | Each extracted claim: `claim_text`, `subject`, `value`, `bucket` (`supported`/`conflict`/`gap`/`note`), optional `claim_subject` (`{ kind: "team" \| "company" \| "general" \| "unknown", company_name, confidence }`), optional `conflict_scope` (`"team_facts" \| "company_material"`, on conflict claims only), `refs[]`, `confidence` (a **string**), plus optional `notes[]` (`{ kind: "other_collection_disagrees", message, refs[] }`), `add_to_library_eligible` (boolean — `true` only when the claim is a completely searched, nowhere-supported true gap eligible to be added to the library; `false` for company gaps, notes, supported claims with notes, or incomplete checks), and `support_only_calls` |
+| `corpus_items` | array | The sources the scan was checked against (`context_item`, `project_brief`, `brand_foundation`, `web_research`, `connected_app`) with `pass` (`1` or `2`), `link_url`, and source provenance fields (`collection`, `core_context_item_id`, `research_id`, `research_turn_id`, `owner_id`, `urls`, `app_sources`) |
 | `details_visible` | boolean | `false` when you are not the document's creator — you get counts only |
-| `coverage_complete` | boolean | `false` means some context items were not read, so a claim reported as a gap may still have support in an unread item. `true` does not by itself mean every context item was read: `excluded_items` lists any item the check left out, and it can be present even when `coverage_complete` is `true`. See [Coverage](#coverage) |
-| `coverage_reason` | string \| null | Why coverage is incomplete. `null` when `coverage_complete` is `true` |
-| `excluded_items` | array | Present only when the check skipped at least one context item. Each entry: `id`, `reason`, `source` |
+| `coverage_complete` | boolean | `false` means some sources were not read, so a claim reported as a gap may still have support in an unread item. `true` does not by itself mean every context item was read: `excluded_items` lists any item the check left out, and it can be present even when `coverage_complete` is `true`. See [Coverage](#coverage) |
+| `coverage_reason` | string \| null | Why coverage is incomplete (`library_catch_up`, `library_extraction_failed`, `library_token_budget`, `source_access_changed`, `source_content_changed`, `support_lookup_incomplete`). `null` when `coverage_complete` is `true` |
+| `excluded_items` | array | Present only when the check skipped at least one context item. Each entry: `id`, `reason` (`sync_lock` — the item was being edited during the check; or `library_token_budget` — the reference library was larger than one check can read), `source` (`context_item` or `project_brief`), and `name` (only for the person who ran the check; everyone else, including the content's creator, gets ids only) |
+
+Each source reference in `claims[].refs[]`, `claims[].notes[].refs[]`, and `corpus_items[]` carries:
+- `source`: `context_item`, `project_brief`, `brand_foundation`, `web_research`, or `connected_app`
+- `pass`: `1` (built-from sources) or `2` (other collections checked for support)
+- Identity metadata by source kind: `collection` (`{ id, name }` for own-team collections or `{ shared_collection_id, name }` for imported shared collections), `core_context_item_id` (for Brand Foundation), `research_id`, `research_turn_id`, `owner_id`, `urls` (`[{ url, title }]` for web research), and `app_sources` (`[{ app, title, record_id?, url? }]` for connected apps).
 
 `support_only_calls` appears on a supported claim only when every supporting source is a call: one entry per call, with its `date`, `kind` and `company`. It is absent when any support is not a call, and absent for calls you cannot see. Tell the user such a claim rests only on calls, which are one conversation's word rather than a written source.
 
@@ -963,6 +978,8 @@ Each entry in `findings[]`:
 | `recommendation` | string \| null | What Marcora suggests doing |
 | `severity` | string \| null | How serious |
 | `status` | string \| null | `pending`, `acknowledged`, `dismissed`, `resolved` |
+| `claim_subject` | object | Optional: `{ kind: "team" \| "company" \| "general" \| "unknown", company_name, confidence }` (non-null `company_name` only for `team`/`company`; omitted on older scans) |
+| `conflict_scope` | string | Optional (on conflict findings only): `"team_facts"` (disagrees with your own facts) or `"company_material"` (disagrees with your material about another company, not your own facts) |
 | `suggested_fix` | object \| null | The **full** recommended update — review this before applying |
 | `context_item_id` | string (uuid) \| null | Where applying would write. `null` = the document itself |
 | `link_url` | string \| null | Opens the finding |
@@ -975,9 +992,13 @@ A gap means the check found nothing in the reference library that backs a claim.
 
 | Value | Meaning | What to do |
 |---|---|---|
-| `null` | Every context item was ready to be checked | Treat gaps as unsupported claims, unless `excluded_items` lists items the check left out |
+| `null` | Every source was ready to be checked | Treat gaps as unsupported claims, unless `excluded_items` lists items the check left out |
 | `library_catch_up` | Some context items have not been prepared for grounding yet, so this check did not use them | Re-run the check to include more of them. Until coverage is complete, describe gaps as "not yet confirmed", not "unsupported" |
 | `library_extraction_failed` | Some context items could not be prepared, so this check could not use them | Tell the user the check is incomplete; don't call those gaps unsupported |
+| `library_token_budget` | The reference library is larger than one check can read, so this check did not use every item | Tell the user the check is incomplete; don't call those gaps unsupported. `excluded_items` lists the unread items (`reason: "library_token_budget"`) |
+| `source_access_changed` | One or more sources the document was built from are no longer accessible to the scan | Tell the user a built-from source is no longer accessible, so coverage is incomplete |
+| `source_content_changed` | The document or a source this check read was edited after the check completed | Re-run the check to refresh the results |
+| `support_lookup_incomplete` | Pass-2 support lookup across other collections did not complete | Tell the user pass-2 support lookup was incomplete; don't call remaining gaps unsupported |
 
 `excluded_items` lists context items the check skipped because they were being edited while it ran (`reason`: `sync_lock`). `source` is `context_item` or `project_brief`. Entries identify each item by `id`. An item's name is never shown to anyone except the person who ran the check; everyone else, including the content's creator, gets ids only. A skipped item can be present even when `coverage_complete` is `true`, so check both fields.
 
