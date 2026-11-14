@@ -66,11 +66,11 @@ The high-frequency pitfalls are in `SKILL.md` (§ Pitfalls and conventions). Thi
 
 ---
 
-## E6 — `import_community_blueprint` requires the exchange ID, not a blueprint UUID
+## E6 — `import_community_blueprint` and `get_community_blueprint_details` require the exchange UUID `id`, not `slug` or a team blueprint UUID
 
-**Symptom.** Import fails with an invalid ID error.
+**Symptom.** Calling `get_community_blueprint_details` or `import_community_blueprint` fails with `"blueprint_exchange_id must be the UUID in the \`id\` field of a list_community_blueprints item, not its \`slug\`..."` (`isError: true`).
 
-**Cause.** `marcora:list_community_blueprints` returns items with their own exchange `id` (passed as `blueprint_exchange_id` to `get_community_blueprint_details` and `import_community_blueprint`) — distinct from a regular team blueprint UUID. The imported blueprint then has a fresh team-level UUID.
+**Cause.** `marcora:list_community_blueprints` returns items with both a UUID `id` and a human-readable `slug`. Both `get_community_blueprint_details` and `import_community_blueprint` require that UUID `id` as `blueprint_exchange_id` — passing `slug` (or a regular team blueprint UUID) is refused. Once imported, `import_community_blueprint` returns a fresh team-level `uuid` to pass as `blueprint_uuid` to `create_content`.
 
 ---
 
@@ -152,19 +152,21 @@ Don't show the user a UUID like `7b2c4f...` as an identifier. Surface the human-
 
 **Symptom.** You tell the user a claim has no support in their reference library, and it turns out a context item covers it.
 
-**Cause.** The check did not read every context item. `coverage_complete` was `false` (some context items had not been prepared yet, `coverage_reason: "library_catch_up"`, or could not be prepared, `library_extraction_failed`, or the reference library was larger than one check can read, `library_token_budget`), or `excluded_items` listed items skipped because they were being edited (`sync_lock`) or over the read budget (`library_token_budget`) during the check. A gap only means "nothing in what was checked backs this".
+**Cause.** The check did not read every context item. `coverage_complete` was `false` (some context items had not been prepared yet, `coverage_reason: "library_catch_up"`, or could not be prepared, `library_extraction_failed`; the reference library was larger than one check can read, `library_token_budget`; access to a source changed after the scan, `source_access_changed`; the document or a read source changed after the scan, `source_content_changed`; you can read fewer sources than the person who ran the check, `reader_scope_narrower`; or pass-2 support lookup across other collections did not complete, `support_lookup_incomplete`), or `excluded_items` listed items skipped because they were being edited (`sync_lock`) or over the read budget (`library_token_budget`) during the check. A gap only means "nothing in what was checked backs this".
 
-**What to do.** Read `coverage_complete` and `excluded_items` before reporting gaps. If coverage is incomplete, say the gaps are not yet confirmed. For `library_catch_up`, re-run the check to include more context items. Treat gaps as unsupported only when `coverage_complete` is `true` and there are no `excluded_items`.
+**What to do.** Read `coverage_complete` and `excluded_items` before reporting gaps. If coverage is incomplete, say the gaps are not yet confirmed. For `library_catch_up`, re-run the check to include more context items; for `source_content_changed` or `reader_scope_narrower`, re-check to refresh. Treat gaps as unsupported only when `coverage_complete` is `true` and there are no `excluded_items`.
 
 ---
 
-## E17 — Copying Only me material into a team-visible document
+## E17 — Copying Only me material into a team-visible document (or writing after private-source access changed)
 
-**Symptom.** `update_content` returns a confirmation token instead of saving, or `create_content` saves a document as private when you expected a team document.
+**Symptom.** `update_content` or `create_content` returns a confirmation token (`private_sources_confirmation_required`) instead of saving, or `create_content` saves a document as private when you expected a team document.
 
-**Cause.** An item you read this session is marked `audience: "only_me"`, so it is private to its owner. Marcora will not let it flow into a team-visible document unless the user agrees.
+**Cause.** An item you read this session is marked `audience: "only_me"` (or comes from a private project or collection), so Marcora will not let it flow into a team-visible document unless the user agrees. In addition:
+- If you read private material in this session to which the user has since lost access (or that changed after the read), `create_content` and `update_content` ask for confirmation (`confirm_private_sources`) even when writing to a document that stays private to the user (`scope` omitted/private: consent-only, nothing is shared, the document stays private).
+- Calling `get_content` on a document derived from pending (unreleased) private sources records those sources as read in this session so a subsequent write cannot move that material into a wider document without confirmation.
 
-**What to do.** Do not retry blindly and do not copy the Only me text into a team document on your own. Tell the user which material is involved and ask. Only if they agree, repeat the same `update_content` call with `confirm_private_sources` set to the token you were given. The token releases only the items it names, for that document and that one write, and expires in 5 minutes. For `create_content`, the document is saved as private and restricted to its owner; make it team-visible only after the user agrees.
+**What to do.** Do not retry blindly and do not copy private material into a wider document on your own. Tell the user which material is involved and ask. Only if they agree, repeat the same `create_content` or `update_content` call with `confirm_private_sources` set to the token you were given. The token covers only the items it names, for that document and that one write, and expires in 5 minutes. For `create_content` when the user still has access to all read private sources and `scope` is omitted, the document is saved as private and restricted to its owner; make it team-visible only after the user agrees.
 
 ---
 

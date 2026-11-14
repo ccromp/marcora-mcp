@@ -16,7 +16,7 @@
 **Cause:** Your account doesn't have permission to perform the requested action.
 
 **Solutions:**
-- Check your team role — some actions may require owner or admin permissions
+- Check your team role — some actions require an admin or editor (creator) seat. In particular, Connected Apps (`find_app`, `add_context` `import_from`) and Webhooks require an active creator or admin license; collaborators receive `creator_license_required` (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*), and paused/disabled members or users with no active team receive a 403 access-denied error
 - Verify you're on the correct active team
 - Private content/collections are only accessible by their creator
 
@@ -43,10 +43,11 @@
 
 ### Invalid UUID / ID not found
 
-**Cause:** Passing an incorrect or stale ID to a tool (e.g., `blueprint_uuid`, `content_id`, `project_id`).
+**Cause:** Passing an incorrect or stale ID to a tool (e.g., `blueprint_uuid`, `content_id`, `project_id`), or passing a community blueprint's `slug` instead of its UUID `id` to `get_community_blueprint_details` or `import_community_blueprint`.
 
 **Solutions:**
 - Use the corresponding list tool to get fresh IDs (e.g., `list_blueprints` before `get_blueprint`)
+- For `get_community_blueprint_details` and `import_community_blueprint`, pass the UUID in the `id` field of the `list_community_blueprints` item — not its `slug` (passing `slug` returns a readable `isError: true` error telling you to pass `id`)
 - IDs are UUIDs — ensure you're passing the full string, not a truncated version
 
 ### "Project not found" / "You are not a member of project …"
@@ -70,13 +71,24 @@ Neither error returns any context or the project's brief.
 - To make several changes to one document, send them one at a time, or combine them into one `prompt`.
 - Do not retry in a tight loop.
 
+### Grounding and Context Intelligence finding errors
+
+**Cause:**
+- **`"Finding not found."`** — returned as a tool error (`isError: true`) by `get_ci_finding` when the `finding_id` is unknown or belongs to another team, or per finding in `apply_grounding_fix`'s `errors[]` when a `finding_id` is unknown or unreadable to the caller (that finding is skipped while the remaining findings in the call still run).
+- **`"Nothing was applied. This document has private source history..."`** — returned as a tool error (`isError: true`) by `apply_grounding_fix` when a fix on a document with private source history would update a context item in your Reference Library.
+- **`"This check cannot use the document’s private sources..."`** — returned as a tool error (`isError: true`) by `check_content_grounding` when the document was built from Only me sources, which are never sent to an AI app.
+
+**Solutions:**
+- For `"Nothing was applied. This document has private source history..."`, follow the next step named in the message: call `apply_grounding_fix` again with the same `finding_ids` and without `context_item_overrides` when that fixes the document itself; otherwise revise the document with `update_content`, then re-check.
+- For `"This check cannot use the document’s private sources..."`, when the private sources are the caller's own, the message includes a link to check the document privately in Marcora; relay that link to the user.
+
 ### Content generation timeout
 
 **Cause:** Content generation can take a few minutes: Quick up to about 3½ minutes, Multi-model and blueprint generation 3–5 minutes.
 
 **Solutions:**
 - This is normal behavior, not an error. Wait for the response to complete.
-- For blueprint-based and Multi-model generation (`generation_mode: "multi_model"`), `create_content` returns a `generation_id` — use `get_generation_status` to poll for completion. `produce_plan` always returns one
+- For blueprint-based and Multi-model generation (`generation_mode: "multi_model"`), `create_content` returns a `generation_id` (and on the `blueprint_uuid` path, also the draft's `content_id` and `link_url` at start) — use `get_generation_status` to poll for completion. `produce_plan` always returns one
 - Do not retry the call while a generation is in progress
 
 ### Invalid category_id or dimension_option_ids

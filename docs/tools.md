@@ -290,7 +290,9 @@ To check whether an app is connected, or to get its Connect link before importin
 
 > **Web pages require admin or editor role.** `connected_webpage_url` is rejected for collaborators, matching the in-app *Add web page* rule. `content` and `import_url` remain available to collaborators.
 >
-> **Team audience on ordinary items:** when the user asks for the item to be saved for the team, pass `audience: "team"` (on `content`, `import_url` or `connected_webpage_url`), even with a `collection_id` or `project_id`. It is accepted when the item will be team-visible. In a private collection or private project it is refused with a readable tool error (`isError: true`) and nothing is saved: tell the user why and offer a shared collection, a team-visible project or the Reference Library. Never fall back to a private save without asking the user.
+> **Connected Apps require a creator or admin seat.** `import_from` (and `find_app`) require an active creator or admin license on the workspace; collaborators receive a 403 `creator_license_required` error (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*), and paused/disabled members or users with no active team receive a 403 access-denied error.
+>
+> **Team audience on ordinary items:** when the user asks for the item to be saved for the team, pass `audience: "team"` (on `content`, `import_url` or `connected_webpage_url`), even with a `collection_id` or `project_id`. It is accepted when the item will be team-visible. In a private collection or private project it is refused with a readable tool error (`isError: true`) and nothing is saved: tell the user why and offer a shared collection, a team-visible project or the Reference Library. Never fall back to a private save without asking the user. Every successful save returns `audience` (`"team"`, `"project_members"`, or `"only_me"`): who can actually see the item, whether or not you passed `audience`. Tell the user that plainly.
 
 **Parameters:**
 
@@ -325,6 +327,7 @@ To check whether an app is connected, or to get its Connect link before importin
 | `import_status` | string \| null | For `import_url` and `connected_webpage_url` items: `"ready"` when the import finished within the ~25 second wait, `"processing"` if it is still running (poll `get_context_item`). `null` for pasted content |
 | `collection_id` | integer \| null | Collection this item belongs to (null if none) |
 | `project_id` | string \| null | Project association (null if none) |
+| `audience` | string | Who can see the saved item: `"team"`, `"project_members"`, or `"only_me"`. Returned on every successful save (ordinary items and calls), whether or not `audience` was passed. Tell the user |
 | `link_url` | string | Direct URL to view this context item in the Marcora app. Resolves to the project, collection, or reference library view depending on the item's scope |
 | `saved_as_call` | boolean | True when saved as a call |
 | `call` | object | Present only on call items: `{ audience, company, date, kind, people, summary_status }`. The summary is written after the save; `call.summary_status` shows where it is, and `get_context_item` returns the summary once ready |
@@ -358,6 +361,8 @@ At the plan's limit the call returns an error stating the limit; deleting an ite
 Looks up the apps Marcora offers to connect (for example Gong or Fathom), by name or by what they do (for example "call recordings"). Read-only: it changes nothing and makes no request to the app itself.
 
 **When to use it:** BEFORE telling the user you can't reach an app, and before sending them to connect one. Say only what it returns, and never claim an app is offered unless it appears in the result. Once an app is connected, use its own tools in your session to find what you need, and `add_context` `import_from` to bring its calls into Marcora.
+
+> **Creator or admin seat required.** Connected Apps (`find_app` and `add_context` `import_from`) and Webhooks require an active creator or admin seat on the workspace; collaborators receive a 403 `creator_license_required` error (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*), and paused/disabled members or users with no active team receive a 403 access-denied error.
 
 **Parameters:**
 
@@ -708,7 +713,8 @@ The `suggested_fix` object (when present) contains the proposed replacement cont
 | `resolved_by` | integer \| null | User ID who resolved it, or `null` |
 
 **Errors:**
-- **Finding not found** / **You do not have access to this finding** — the UUID is unknown or belongs to another team.
+- **Not a valid UUID** (400, tool error `isError: true`) — malformed `finding_id`.
+- **Finding not found.** (404, tool error `isError: true`) — the UUID is unknown or belongs to another team.
 
 **Example prompts:**
 - "Show me the full details of that finding"
@@ -845,7 +851,7 @@ Passing neither is an error.
 - **Provide either 'content_id' or 'content'** (400) — neither was supplied.
 - **Not a valid UUID** (400) — malformed `content_id`.
 - **Content not found. Check the content_id — it must be a document you can open in this team.** (tool error)
-- **This check cannot use the document’s private sources. Sharing the document does not share them.** (tool error) — the document is shared with you but relies on private sources that haven't been shared.
+- **This check cannot use the document’s private sources** (an `isError` result) — the document was built from Only me sources, which are never sent to an AI app. When they are the caller's own, the message adds a link to check the document privately in Marcora; relay it to the user.
 - **You are not authorized to perform this action** (403) — the token's user lacks an editor or admin role on the team.
 - **ci_not_eligible** (403) — Studio Credits or Context Intelligence availability check failed. On the current plans (Free, Solo, Team, Enterprise) this typically means the team's Studio Credit balance can't cover the estimate. Teams still on a legacy plan keep that plan's existing requirements (for a legacy plan, the message names the Command plan, an active subscription and available Studio Credits).
 
@@ -927,12 +933,14 @@ You never compose the fix yourself. Every finding already stores its recommended
 | `errors` | array | Per finding: `finding_id`, `error` |
 
 **Errors:**
-- **Missing param: finding_ids** (400) — pass `finding_id` values from a prior findings response.
-- **finding_ids must be finding_id UUIDs** (400).
-- **context_item_overrides names a finding not in finding_ids** (400) — the override would be ignored, so it is rejected rather than silently dropped.
+- **Missing param: finding_ids** (400, tool error `isError: true`) — pass `finding_id` values from a prior findings response.
+- **finding_ids must be finding_id UUIDs** (400, tool error `isError: true`).
+- **context_item_overrides names a finding not in finding_ids** (400, tool error `isError: true`) — the override would be ignored, so it is rejected rather than silently dropped.
 - **You are not authorized to perform this action** (403) — applying requires an admin or editor role.
 - Per-finding failures (already resolved, not a grounding finding) arrive in `errors[]`, not as a thrown error.
+- **Finding not found.** — per finding, in `errors[]`: a `finding_id` that is unknown or that you cannot read. That finding is skipped; the others still run.
 - **Marcora is already updating this document.** — per finding, in `errors[]`: another run on that document (for example the user's own Content Assistant request, or an earlier `apply_grounding_fix` call) is still in progress. Wait for it to finish, then retry those findings.
+- **Nothing was applied. This document has private source history** (an `isError` result) — a fix on such a document cannot update a context item in your reference library. The message names the next step that will work: call again with the same `finding_ids` and without `context_item_overrides` when that fixes the document itself; otherwise revise the document with `update_content`, then re-check.
 
 **Example prompts:**
 - "Fix the pricing conflict it found"
@@ -957,7 +965,7 @@ You never compose the fix yourself. Every finding already stores its recommended
 | `corpus_items` | array | The sources the scan was checked against (`context_item`, `project_brief`, `brand_foundation`, `web_research`, `connected_app`) with `pass` (`1` or `2`), `link_url`, and source provenance fields (`collection`, `core_context_item_id`, `research_id`, `research_turn_id`, `owner_id`, `urls`, `app_sources`) |
 | `details_visible` | boolean | `false` when you are not the document's creator — you get counts only |
 | `coverage_complete` | boolean | `false` means some sources were not read, so a claim reported as a gap may still have support in an unread item. `true` does not by itself mean every context item was read: `excluded_items` lists any item the check left out, and it can be present even when `coverage_complete` is `true`. See [Coverage](#coverage) |
-| `coverage_reason` | string \| null | Why coverage is incomplete (`library_catch_up`, `library_extraction_failed`, `library_token_budget`, `source_access_changed`, `source_content_changed`, `support_lookup_incomplete`). `null` when `coverage_complete` is `true` |
+| `coverage_reason` | string \| null | Why coverage is incomplete (`library_catch_up`, `library_extraction_failed`, `library_token_budget`, `source_access_changed`, `source_content_changed`, `reader_scope_narrower`, `support_lookup_incomplete`). `null` when `coverage_complete` is `true` |
 | `excluded_items` | array | Present only when the check skipped at least one context item. Each entry: `id`, `reason` (`sync_lock` — the item was being edited during the check; or `library_token_budget` — the reference library was larger than one check can read), `source` (`context_item` or `project_brief`), and `name` (only for the person who ran the check; everyone else, including the content's creator, gets ids only) |
 
 Each source reference in `claims[].refs[]`, `claims[].notes[].refs[]`, and `corpus_items[]` carries:
@@ -998,6 +1006,7 @@ A gap means the check found nothing in the reference library that backs a claim.
 | `library_token_budget` | The reference library is larger than one check can read, so this check did not use every item | Tell the user the check is incomplete; don't call those gaps unsupported. `excluded_items` lists the unread items (`reason: "library_token_budget"`) |
 | `source_access_changed` | One or more sources the document was built from are no longer accessible to the scan | Tell the user a built-from source is no longer accessible, so coverage is incomplete |
 | `source_content_changed` | The document or a source this check read was edited after the check completed | Re-run the check to refresh the results |
+| `reader_scope_narrower` | You can read fewer sources than the person who ran the check, so results may be incomplete for you | Re-run the check to refresh the results for your access scope |
 | `support_lookup_incomplete` | Pass-2 support lookup across other collections did not complete | Tell the user pass-2 support lookup was incomplete; don't call remaining gaps unsupported |
 
 `excluded_items` lists context items the check skipped because they were being edited while it ran (`reason`: `sync_lock`). `source` is `context_item` or `project_brief`. Entries identify each item by `id`. An item's name is never shown to anyone except the person who ran the check; everyone else, including the content's creator, gets ids only. A skipped item can be present even when `coverage_complete` is `true`, so check both fields.
@@ -1260,7 +1269,7 @@ Get the full details for a specific community blueprint, including complete cont
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `blueprint_exchange_id` | string | No | Blueprint exchange ID from `list_community_blueprints` |
+| `blueprint_exchange_id` | string (uuid) | Yes | The UUID from the `id` field of a `list_community_blueprints` result. The `slug` returned alongside it will not resolve (passing a slug returns a readable `isError: true` error telling you to pass `id`). Pass the same value to `import_community_blueprint` |
 
 **Output:**
 
@@ -1294,7 +1303,7 @@ Import a blueprint from the Marcora community exchange into your team's library.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `blueprint_exchange_id` | string | No | Blueprint exchange ID from `list_community_blueprints` |
+| `blueprint_exchange_id` | string (uuid) | Yes | UUID of the community blueprint to import: the `id` field of a `list_community_blueprints` item (the same value `get_community_blueprint_details` takes). Not the `slug` (passing a slug returns a readable `isError: true` error telling you to pass `id`) |
 
 **Output:**
 
@@ -1331,7 +1340,7 @@ You must provide either `content` or `instructions` (not both).
 - **With `content`** (synchronous): Saves your supplied text directly as a document — no AI generation. Returns immediately.
 - **With `instructions`** (Quick, synchronous): Marcora writes the document with one model. Takes about 45 seconds to 3½ minutes (allow a long timeout). Returns the content object.
 - **With `instructions` + `generation_mode: "multi_model"`** (no blueprint, asynchronous): Marcora writes two drafts and a synthesis. Returns a `generation_id` to poll via `get_generation_status`. Takes 3–5 minutes.
-- **With `instructions` + `blueprint_uuid`** (asynchronous): Generates content from a blueprint template. Returns a `generation_id` to poll via `get_generation_status`. Takes 3–5 minutes. Runs Multi-model by default.
+- **With `instructions` + `blueprint_uuid`** (asynchronous): Generates content from a blueprint template. Returns a `generation_id` **plus** the draft's `content_id` and `link_url` (the draft saves itself when generation completes, and `link_url` opens it from then on); poll `get_generation_status` until `"completed"`. Takes 3–5 minutes. Runs Multi-model by default.
 
 **Generation modes.** Pass `generation_mode` to choose how Marcora writes: `quick` (one model) or `multi_model` (two drafts and a synthesis). When you omit it, a call with a blueprint runs Multi-model and a call without one runs Quick. For Quick only, `ai_provider` picks which model family writes the document (the allowed values and the default are in the tool's input schema) and `use_extended_thinking` (default `true`) turns extended thinking on or off — slower and can use more Studio Credits when on; pass `false` for a faster run. Provider and thinking are ignored with Multi-model. All three apply to the `instructions` paths only.
 
@@ -1354,11 +1363,11 @@ You must provide either `content` or `instructions` (not both).
 | `collection_ids` | array | No | Context collection IDs to include |
 | `dimension_option_ids` | array | No | Targeting dimension option IDs |
 | `use_extended_thinking` | boolean | No | Quick only: whether the model reasons at length before writing. Default `true`; slower and can use more Studio Credits. Pass `false` for a faster run. Ignored with `multi_model` |
-| `confirm_private_sources` | string | No | Pass only after the user agrees. A write that would put **Only me** material this session read into a team-visible document is refused with a confirmation token; repeat the same call with that token here only once the user has said yes. The token releases only the items it names, for that document and that one write, and expires in 5 minutes |
+| `confirm_private_sources` | string | No | Pass only after the user agrees. A write that would put **Only me** material this session read into a team-visible document — or any write after the user lost access to a private source read in this session (or that source changed after the read) — is refused with a confirmation token; repeat the same call with that token here only once the user has said yes. The token covers only the items it names, for that document and that one write, and expires in 5 minutes |
 
 \* You must provide either `content` or `instructions`, but not both.
 
-> **Only me material.** An item marked `audience: "only_me"` is private to its owner. If this session read one, `create_content` saves the document as private (and keeps it restricted to its owner) rather than the team's. Never copy Only me text into a team-visible document without asking the user.
+> **Only me material.** An item marked `audience: "only_me"` is private to its owner. If this session read one (and the user still has access to all read private sources), `create_content` saves the document as private (and keeps it restricted to its owner) rather than the team's; if this session read private material to which the user has since lost access (or that changed after the read), `create_content` returns `private_sources_confirmation_required` (`confirm_private_sources`) even when the document stays private (consent-only; nothing is shared and the document stays private). Never copy Only me text into a team-visible document without asking the user.
 
 **Output (Quick — synchronous):**
 
@@ -1374,6 +1383,8 @@ You must provide either `content` or `instructions` (not both).
 | Field | Type | Description |
 |---|---|---|
 | `generation_id` | string (uuid) | ID to track async generation — pass to `get_generation_status` |
+| `content_id` | string (uuid) | Present with `blueprint_uuid` (the draft's ID, which saves itself when generation completes); absent for `multi_model` without a blueprint |
+| `link_url` | string | Present with `blueprint_uuid` (the draft's link, which opens the draft once generation completes); absent for `multi_model` without a blueprint |
 
 **Example prompts:**
 - "Save this document to Marcora" (with `content`)
@@ -1467,6 +1478,7 @@ Lists the team's content that the current user can see, as a single unified arra
 | `category` | object \| null | `{id, name}` or null if uncategorized |
 | `created_by` | string | Name of the creator |
 | `projects` | string[] | Project names this content belongs to |
+| `blueprint` | object \| null | `{ blueprint_uuid, name }` of the blueprint the content was generated from, or `null` for freeform content or if the blueprint was deleted |
 | `web_url` | string | Direct URL to view this content in Marcora |
 | `relevance_score` | number | Present only when a `search` query is supplied. Cosine similarity (`0`–`1`, higher = more similar) of the row to the query |
 
@@ -1484,6 +1496,8 @@ Retrieves the full markdown body of a specific document by its `content_id` (UUI
 **Always warranted: reading a project's brief.** When `get_project` or `get_relevant_context` returns a `project_brief` block with `truncated: true`, call `get_content` with that block's `content_id` before drafting, revising, assessing or critiquing anything in that project. The brief states the project's premise and the structural decisions already taken, and work produced without it is likely to contradict them.
 
 **Otherwise, use it only when you need to read the body to answer a question about it** — for example "summarize what my latest case study says about pricing" or "does this messaging doc mention HIPAA?". The user can already open the document in Marcora from its link, so don't call this after `create_content` (or after `get_generation_status` returns `completed`) just to show them what was generated.
+
+> **Only me provenance:** if the document was built from pending (unreleased) private sources, calling `get_content` records those sources as read in this session so a subsequent `create_content` or `update_content` write cannot move that material into a wider document without confirmation.
 
 **Links:** present `link_url` to the user exactly as returned — copy it character for character.
 
@@ -1541,7 +1555,7 @@ Update a content document by `content_id`. Partial-update semantics — every fi
 | `confirm_private_sources` | string | No | Pass only after the user agrees. See *Only me material* below |
 | `change_summary` | string | No | What changed and why, shown in the document's AI-assistant history. Format as skimmable markdown — a bulleted list (bold lead + detail) for multi-part edits. Recommended on every call; blank/omitted falls back to a generic label. Only recorded when `content` also changes |
 
-> **Only me material.** If this session read an item marked `audience: "only_me"`, writing `content` or `name_override` into a team-visible document (or into a private one you also make `team`) returns a confirmation token instead of saving. Ask the user; only if they agree, repeat the same call with `confirm_private_sources` set to that token.
+> **Only me material.** If this session read an item marked `audience: "only_me"`, writing `content` or `name_override` into a team-visible document (or into a private one you also make `team`) returns a confirmation token instead of saving. In addition, if this session read private material to which the user has since lost access (or that changed after the read), `update_content` returns that confirmation token even when the document stays private (consent-only; nothing is shared and the document stays private). Ask the user; only if they agree, repeat the same call with `confirm_private_sources` set to that token.
 
 **Output:**
 

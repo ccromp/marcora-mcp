@@ -2,6 +2,23 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-13 (grounding coverage & private-source errors, blueprint start links, list_content blueprint, add_context audience, revoked-reader consent, creator-seat integrations)
+
+### Skill → v0.7.35 · plugin → v1.2.26
+
+- **Grounding coverage and error precision (`check_content_grounding`, `get_grounding_result`, `apply_grounding_fix`, `get_ci_finding`):**
+  - `coverage_reason` adds `reader_scope_narrower` (*"you can read fewer sources than the person who ran the check, so results may be incomplete for you; re-check to refresh"*).
+  - `apply_grounding_fix` documents per-finding `"Finding not found."` in `errors[]` (unknown or unreadable `finding_id` is skipped while the remaining findings still run), plus the `isError: true` refusal `"Nothing was applied. This document has private source history..."` when a fix on a document with private source history would update a Reference Library context item (with the exact recovery step).
+  - `check_content_grounding` documents the `isError: true` refusal `"This check cannot use the document’s private sources..."` when a document was built from Only me sources, including the owner link to check the document privately in Marcora.
+  - 400 and 404 refusals on `apply_grounding_fix` and `get_ci_finding` return as readable `isError: true` tool results.
+- **Community blueprint exchange IDs (`get_community_blueprint_details`, `import_community_blueprint`):** `blueprint_exchange_id` is required and must be the UUID in the `id` field of a `list_community_blueprints` item, not its `slug` (passing `slug` returns a readable `isError: true` error telling you to pass `id`).
+- **`create_content` start-time draft ID and link on blueprint runs, plus `list_content` blueprint field:**
+  - On the `instructions` + `blueprint_uuid` async path, `create_content` returns `generation_id` **plus** the draft's `content_id` and `link_url` at start (the draft saves itself when generation completes, and `link_url` opens it from then on; `multi_model` without a blueprint returns `generation_id` only).
+  - `list_content` items include `blueprint: { blueprint_uuid, name } | null` (the blueprint the content was generated from, or `null` for freeform content or if the blueprint was deleted).
+- **`add_context` returned `audience`:** every successful `add_context` save (ordinary items and calls) returns top-level `audience` (`"team"`, `"project_members"`, or `"only_me"`) showing who can actually see the saved item, whether or not `audience` was passed.
+- **Private-source consent after access changes (`create_content`, `update_content`, `get_content`):** if a session read private material to which the user has since lost access (or that changed after the read), `create_content` and `update_content` return `private_sources_confirmation_required` (`confirm_private_sources`) even when writing to a document that stays private (consent-only; nothing is shared). Calling `get_content` on a document derived from pending private sources records those sources as read in the session so a subsequent write cannot move that material into a wider document without confirmation.
+- **Creator seat required for Connected Apps and Webhooks:** Connected Apps (`find_app`, `add_context` `import_from`) and Webhooks require an active creator or admin seat on the workspace; collaborators receive 403 `creator_license_required`, and paused/disabled members or users with no active team receive 403 access denied.
+
 ## 2026-11-13 (share-link activity)
 
 ### Added
