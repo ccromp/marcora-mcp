@@ -160,7 +160,7 @@ Don't show the user a UUID like `7b2c4f...` as an identifier. Surface the human-
 
 ## E17 — Copying Only me material into a team-visible document (or writing after private-source access changed)
 
-**Symptom.** `update_content` or `create_content` returns a confirmation token (`private_sources_confirmation_required`) instead of saving, or `create_content` saves a document as private when you expected a team document.
+**Symptom.** `update_content` or `create_content` returns a confirmation token instead of saving, or `create_content` saves a document as private when you expected a team document.
 
 **Cause.** An item you read this session is marked `audience: "only_me"` (or comes from a private project or collection), so Marcora will not let it flow into a team-visible document unless the user agrees. In addition:
 - If you read private material in this session to which the user has since lost access (or that changed after the read), `create_content` and `update_content` ask for confirmation (`confirm_private_sources`) even when writing to a document that stays private to the user (`scope` omitted/private: consent-only, nothing is shared, the document stays private).

@@ -16,7 +16,7 @@
 **Cause:** Your account doesn't have permission to perform the requested action.
 
 **Solutions:**
-- Check your team role — some actions require an admin or editor (creator) seat. In particular, Connected Apps (`find_app`, `add_context` `import_from`) and Webhooks require an active creator or admin license; collaborators receive `creator_license_required` (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*), and paused/disabled members or users with no active team receive a 403 access-denied error
+- Check your team role — some actions require an admin or editor (creator) seat. In particular, Connected Apps (`find_app`, `add_context` `import_from`) and Webhooks require a creator or admin seat (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*)
 - Verify you're on the correct active team
 - Private content/collections are only accessible by their creator
 

@@ -290,7 +290,7 @@ To check whether an app is connected, or to get its Connect link before importin
 
 > **Web pages require admin or editor role.** `connected_webpage_url` is rejected for collaborators, matching the in-app *Add web page* rule. `content` and `import_url` remain available to collaborators.
 >
-> **Connected Apps require a creator or admin seat.** `import_from` (and `find_app`) require an active creator or admin license on the workspace; collaborators receive a 403 `creator_license_required` error (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*), and paused/disabled members or users with no active team receive a 403 access-denied error.
+> **Connected Apps require a creator or admin seat.** `import_from` (and `find_app`) require a creator or admin seat on the workspace (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*).
 >
 > **Team audience on ordinary items:** when the user asks for the item to be saved for the team, pass `audience: "team"` (on `content`, `import_url` or `connected_webpage_url`), even with a `collection_id` or `project_id`. It is accepted when the item will be team-visible. In a private collection or private project it is refused with a readable tool error (`isError: true`) and nothing is saved: tell the user why and offer a shared collection, a team-visible project or the Reference Library. Never fall back to a private save without asking the user. Every successful save returns `audience` (`"team"`, `"project_members"`, or `"only_me"`): who can actually see the item, whether or not you passed `audience`. Tell the user that plainly.
 
@@ -362,7 +362,7 @@ Looks up the apps Marcora offers to connect (for example Gong or Fathom), by nam
 
 **When to use it:** BEFORE telling the user you can't reach an app, and before sending them to connect one. Say only what it returns, and never claim an app is offered unless it appears in the result. Once an app is connected, use its own tools in your session to find what you need, and `add_context` `import_from` to bring its calls into Marcora.
 
-> **Creator or admin seat required.** Connected Apps (`find_app` and `add_context` `import_from`) and Webhooks require an active creator or admin seat on the workspace; collaborators receive a 403 `creator_license_required` error (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*), and paused/disabled members or users with no active team receive a 403 access-denied error.
+> **Creator or admin seat required.** Connected Apps (`find_app` and `add_context` `import_from`) and Webhooks require a creator or admin seat on the workspace (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*).
 
 **Parameters:**
 
@@ -1367,7 +1367,7 @@ You must provide either `content` or `instructions` (not both).
 
 \* You must provide either `content` or `instructions`, but not both.
 
-> **Only me material.** An item marked `audience: "only_me"` is private to its owner. If this session read one (and the user still has access to all read private sources), `create_content` saves the document as private (and keeps it restricted to its owner) rather than the team's; if this session read private material to which the user has since lost access (or that changed after the read), `create_content` returns `private_sources_confirmation_required` (`confirm_private_sources`) even when the document stays private (consent-only; nothing is shared and the document stays private). Never copy Only me text into a team-visible document without asking the user.
+> **Only me material.** An item marked `audience: "only_me"` is private to its owner. If this session read one (and the user still has access to all read private sources), `create_content` saves the document as private (and keeps it restricted to its owner) rather than the team's; if this session read private material to which the user has since lost access (or that changed after the read), `create_content` returns a confirmation token (`confirm_private_sources`) even when the document stays private (consent-only; nothing is shared and the document stays private). Never copy Only me text into a team-visible document without asking the user.
 
 **Output (Quick — synchronous):**
 
