@@ -44,7 +44,7 @@ Both authentication methods grant access to all tools within the scope of your M
 - You can access data belonging to your **active team**
 - Your role on the team (e.g. owner, member) determines what actions you can perform
 - Private content and collections are only visible to their creator
-- Team-visible content is accessible to all team members
+- Team-visible content is accessible to team members (Collaborators see only documents in the projects they belong to, plus their own)
 
 ## Revoking Access
 

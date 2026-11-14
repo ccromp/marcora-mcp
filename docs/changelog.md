@@ -2,6 +2,14 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-14 (Collaborator document privacy, blueprint draft finalization, and generation status access)
+
+### Changed
+
+- **Collaborator content visibility (`list_content`, `get_content`, `ask_content_assistant`):** Collaborators now see only documents in the projects they belong to (plus their own); documents outside their projects are omitted from `list_content` and return not found on `get_content` and `ask_content_assistant`.
+- **`finalize_blueprint_draft` draft and access checks:** `finalize_blueprint_draft` finalizes drafts only and checks document access and active non-Viewer membership first (Creators included, Viewers refused). Calling it on another team's draft (which previously returned `"belongs to a different team"`), a non-draft document, an unreadable draft, or as a Viewer now returns not found.
+- **`get_generation_status` team and document access:** a removed or disabled team member, and anyone polling someone else's generation run that has no document (or a Collaborator polling a run for a document outside their projects), now receives `"Generation not found"`.
+
 ## 2026-11-13 (grounding coverage & private-source errors, blueprint start links, list_content blueprint, add_context audience, revoked-reader consent, creator-seat integrations)
 
 ### Skill → v0.7.35 · plugin → v1.2.26
