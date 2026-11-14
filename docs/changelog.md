@@ -2,6 +2,18 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-13 (share-link activity)
+
+### Added
+
+- **New tool `get_share_link_activity`** (read-only): checks one share link by URL or token: whether it was opened, lifetime opens, recorded viewers, first and last open, and per viewer an approximate place, network and device and whether they came back, plus a paged open log. Viewers are anonymous numbers, never names. Opens recorded before Marcora kept open details are counted but have no viewer details: `opens_without_details` and `coverage_note` say so. Automated opens (email scanners, data centers) are shown separately and never counted. Checking never counts as an open.
+- **New tool `list_share_link_activity`** (read-only): lists the active workspace's share links with their activity, filterable by `opened` / `not_opened` and by content title, with workspace counts and a 7-day summary.
+- Both are for workspace admins and editors who can open the shared document, and return `tracking_locked: true` on plans without open tracking.
+
+### Skill → v0.7.34 · plugin → v1.2.25
+
+- Recipe D (share content) gains a follow-up step for checking a link's activity, and "Choosing between similar tools" gains a row for it, including the historical-coverage and anonymous-viewer caveats.
+
 ## 2026-11-12 (two-pass grounding, battle-card attribution, Studio Credit wording, setup hold)
 
 ### Skill → v0.7.33 · plugin → v1.2.24

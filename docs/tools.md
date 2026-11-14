@@ -1639,6 +1639,80 @@ Creates a public share link for content, with optional expiration. Accessible pu
 
 ---
 
+### `get_share_link_activity`
+
+Checks what happened to one share link: whether it was opened, how many times, how many recorded viewers, and when. Pass the link you sent (`https://app.marcora.ai/s/<token>`) or just its token. Read-only: checking never counts as an open and never notifies anyone.
+
+`opened` and `opens` come from the link's lifetime counter. Opens recorded before Marcora kept open details have no viewer, place or device, so `opens` can be higher than the viewers and log show: `opens_without_details` says how many and `coverage_note` explains it. An empty viewer list does not mean the link was never opened. Viewers are numbered, never named: a viewer number stands for an anonymous browser identifier, not a verified person, so these stats cannot confirm that a particular recipient opened the link. Place is approximate and comes from the network. Automated opens (email scanners, data centers) are reported separately and are never counted.
+
+Only workspace admins and editors who can open the link's document can use it; a link in another of your workspaces works if you have that access there. Anything else, including a link that does not exist, returns the same "Share link not found" error. Workspaces whose plan does not include open tracking get `tracking_locked: true` and no activity.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `share_link` | string | Yes | The share link (`https://app.marcora.ai/s/<token>`) or just the token |
+| `limit` | integer | No | Open-log page size, 1–100 (default 50) |
+| `offset` | integer | No | Open-log rows to skip (default 0) |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `opened` | boolean | Whether anyone has opened the link (lifetime counter) |
+| `summary` | string | Plain-language summary |
+| `coverage_note` | string \| null | Set when some opens have no details; explains what the viewer and log figures cover |
+| `link` | object | `share_url`, `status` (`active` \| `expired` \| `off`), `shared_at`, `expires_at`, `shared_by`, `content_id`, `content_title` |
+| `workspace` | object | `name`, `is_active` (whether it is your active workspace) |
+| `opens` | integer | Lifetime counted opens (automated opens excluded) |
+| `unique_viewers` | integer | Distinct recorded viewer identifiers; not a verified count of people |
+| `first_opened_at` / `last_opened_at` | string \| null | First and last counted open (ISO 8601), or null if never opened |
+| `opens_without_details` | integer | Counted opens with no viewer, place or device; 0 when fully covered |
+| `viewers` | array | Per viewer: `viewer` (number), `opens`, `first_opened_at`, `last_opened_at`, `place` (`city`, `region`, `country`), `network` (`name`, `kind`), `device`, `returning` |
+| `automated` | object | Automated opens, not counted: `opens`, `last_at`, `network` |
+| `open_log` | object | `total`, `limit`, `offset`, `items[]` newest first: `viewed_at`, `device`, `viewer`, `returning`, `place`, `network`, `likely_automated` |
+| `tracking_locked` | boolean | `true` when the plan has no open tracking; only `workspace` and `message` are returned |
+
+**Example prompts:**
+- "Has anyone opened the link I sent?"
+- "Did anyone come back to that document?"
+- "Show the latest opens for this share link"
+
+---
+
+### `list_share_link_activity`
+
+Lists the active workspace's share links with their activity, newest activity first, like the Shared tab in Marcora: for each link its content, status, lifetime opens, number of viewers and the last open. Use it to find which links were opened or not opened, or to find a link when you don't have its URL; use `get_share_link_activity` for one link's full detail. Read-only.
+
+`opens` is the lifetime counter, while `viewers` counts only opens that have details, so older links can show opens with no viewers: that is missing history, not no activity. Automated opens are never counted. Only links whose content you can open are listed. Available to workspace admins and editors; workspaces whose plan does not include open tracking get `tracking_locked: true` and no links.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `filter` | string | No | `opened` or `not_opened` (lifetime counter) |
+| `query` | string | No | Match the content title (max 100 characters) |
+| `limit` | integer | No | Links per page, 1–100 (default 25) |
+| `offset` | integer | No | Matching links to skip (default 0) |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `workspace` | object | `name`, `is_active` |
+| `counts` | object | `all`, `opened`, `not_opened` |
+| `summary_7d` | object | `opens_7d`, `viewers_7d`, `returning_viewers_7d`, `not_opened_count` (active links nobody has opened), `oldest_not_opened_shared_at` |
+| `links` | array | Per link: `share_url`, `content_id`, `content_title`, `status`, `shared_at`, `expires_at`, `shared_by`, `opened`, `opens`, `viewers`, `last_open` (most recent counted open with details, or null) |
+| `note` | string | Explanatory note |
+| `tracking_locked` | boolean | `true` when the plan has no open tracking; only `workspace` and `message` are returned |
+
+**Example prompts:**
+- "Which of our shared documents were opened?"
+- "Show links nobody has opened yet"
+- "Find the share activity for my proposal"
+
+---
+
 ### `convert_markdown_to_word_doc`
 
 Export a markdown document as a downloadable Word (.docx) file. Returns a download URL.

@@ -4,7 +4,7 @@ description: "Use this skill BEFORE calling any Marcora MCP tool (create_content
 license: MIT
 metadata:
   mcp-server: marcora
-  version: 0.7.33
+  version: 0.7.34
 ---
 
 # Marcora AI Workflows
@@ -433,6 +433,7 @@ The **starting stage is set automatically from `source`**, you don't control it 
 | To read the team's Brand Foundation (company overview, brand voice, writing style, writing examples) | `marcora:get_brand_foundation` | `get_relevant_context` searches the Reference Library, not Brand Foundation. Auto-pulled into `create_content` when Marcora writes via `instructions`. When you write it yourself, `get_relevant_context(include_brand_foundation=true)` returns it together with the context in one call. |
 | To change one of the four Brand Foundation elements | `marcora:update_brand_foundation` | Brand Foundation lives at the team level, not as Context items — `update_context` won't touch it. Always full-replace; fetch first with `get_brand_foundation` to confirm what's being replaced. Hand the user the returned `link_url` — never build a Brand Foundation URL yourself. |
 | To find a teammate's numeric `user_id` (to assign a plan/content to them) | `marcora:get_team_info` | `get_current_user_info` is only *you*. `get_team_info` lists every team you're in + each member's numeric `user_id` — the value `assigned_to` / `update_plan(assigned_to=…)` expects. Pending invites show `user_id: null` (can't be assigned yet). |
+| To find out whether a share link was opened, by how many viewers, and when | `marcora:get_share_link_activity(share_link)` with the URL or token; `marcora:list_share_link_activity` when the user doesn't have the link, or wants every link (`filter: "opened"` / `"not_opened"`, `query` on the title) | Don't open the share URL yourself to check: that would record an open. `opened` / `opens` are the lifetime counter; an empty viewer list or log with `opened: true` means older opens without details (`opens_without_details`, `coverage_note`), never "not opened". Viewers are anonymous numbers, not people: don't tell the user a named recipient opened it. Automated opens are excluded from the counts. |
 | To switch which team you're working in | `marcora:set_active_team` | Changes your active team for **all** subsequent calls. ⚠️ Global — it applies everywhere for the account (app tabs, Marcora agent sessions, other clients). Tell the user first; capture the returned `previous_team_id` and switch back when done. |
 
 ---

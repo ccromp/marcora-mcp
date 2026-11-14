@@ -157,6 +157,8 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Content | `update_content` | Update a content document |
 | Content | `ask_content_assistant` | Run the in-document Content Assistant on a document |
 | Sharing & Export | `create_external_share` | Create a public share link |
+| Sharing & Export | `get_share_link_activity` | Check whether a share link was opened, by how many viewers, and when |
+| Sharing & Export | `list_share_link_activity` | List the workspace's share links with their activity |
 | Sharing & Export | `convert_markdown_to_word_doc` | Export markdown as Word doc |
 | Projects | `list_projects` | List all projects |
 | Projects | `get_project` | Get project details, including its brief |

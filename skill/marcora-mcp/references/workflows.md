@@ -53,6 +53,7 @@ The 5 most common workflows are in `SKILL.md`. This file covers less-frequent re
 **Steps.**
 1. `marcora:create_external_share(content_id, expires_at?)` — `expires_at` is an optional Unix timestamp.
 2. Hand the returned `share_link` to the user.
+3. Later, when the user asks whether it was opened: `marcora:get_share_link_activity(share_link)` with the link or its token, or `marcora:list_share_link_activity(filter?, query?)` to see every link in the active workspace. Report `summary`; if `opened` is true but the viewer list is short or empty, say some opens predate open details (`coverage_note`). Viewers are anonymous numbers, so never name who opened it. Never open the link yourself to check.
 
 **Precondition.** Content must be `completed` — async generations need to finish first.
 
