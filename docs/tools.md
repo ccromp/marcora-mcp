@@ -25,8 +25,8 @@ Returns profile and subscription information for the currently authenticated use
 | `plan_name` | string | Subscription plan display name |
 | `plan_slug` | string | Subscription plan identifier |
 | `subscription_status` | string | Current subscription status |
-| `ai_credits_available` | integer | Studio Credits remaining on the team's current balance |
-| `ai_credits_max` | integer | Studio Credit allowance for the team |
+| `ai_credits_available` | integer | Studio Credits the team can spend right now on credit-gated actions: the current period's remaining allowance plus any unexpired granted credits |
+| `ai_credits_max` | integer | The team's Studio Credit allowance for the current period. Excludes granted credits, so `ai_credits_available` can exceed it |
 
 **Example prompts:**
 - "What plan am I on?"
