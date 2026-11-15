@@ -170,6 +170,46 @@ Don't show the user a UUID like `7b2c4f...` as an identifier. Surface the human-
 
 ---
 
+## E18 — Treating `create_blueprint`, `create_blueprint_draft`, or `finalize_blueprint_draft` as synchronous
+
+**Symptom.** Calling `create_blueprint`, `create_blueprint_draft`, or `finalize_blueprint_draft` returns `status: "processing"`, or calling `create_content(blueprint_uuid=…)` / `finalize_blueprint_draft(draft_uuid=…)` immediately fails because processing is still running.
+
+**Cause.** All three blueprint tools run asynchronously, returning `status: "processing"`, `generation_id`, and start-time identifiers (`blueprint_uuid`, `name`, `link_url` on `create_blueprint` and `finalize_blueprint_draft`; `uuid`, `title`, `link_url` on `create_blueprint_draft`).
+
+**What to do.** Poll `marcora:get_generation_status(generation_id)` (or `marcora:get_blueprint(blueprint_uuid)`) until `status` is `"completed"` (`flow_type: "blueprint_item"` or `"blueprint_draft"`), or report `error_message` on `"failed"`.
+
+---
+
+## E19 — Multi-collection context placement (`collection_ids`, `add_collection_id`, `remove_collection_id`)
+
+**Symptom.** Assigning a collection removes an item from the top-level Reference Library, or `update_context(collection_ids=[...])` replaces existing collection memberships when you only meant to attach one more collection.
+
+**Cause.** Reference Library (`collection_ids: []`, `collection_id: null`) and collections (`collection_ids` ordered array with `collection_id` primary, plus `collections` `{id, name}` entries) are mutually exclusive. On `update_context`, `collection_ids` replaces the full collection set; `collection_ids: []` or `collection_id: null` / `0` returns the item to the Reference Library.
+
+**What to do.** Pass `add_collection_id` or `remove_collection_id` on `marcora:update_context` to attach or detach one collection without replacing other memberships; use `collection_ids` only for full replacement.
+
+---
+
+## E20 — Updating or manually running a teammate's workflow (`update_workflow` / `run_workflow`)
+
+**Symptom.** `marcora:update_workflow` or `marcora:run_workflow` returns an access-denied error even though the caller is an Admin or Creator.
+
+**Cause.** Only the workflow's creator (`created_by_user_id`) can update it or run it manually; anyone else gets an access-denied error.
+
+**What to do.** Check `created_by_user_id` on `get_workflow` / `list_workflows` against `get_current_user_info`. Explain that only the workflow's creator can update or manually run it, or offer to create a new workflow (`create_workflow`).
+
+---
+
+## E21 — Role-gated workspace actions (`Admin` / `Creator` vs. Collaborator)
+
+**Symptom.** A Collaborator gets a 403 access-denied or `creator_license_required` error on `add_context(connected_webpage_url=…)`, `update_context(refresh_webpage=true)`, `update_ci_finding_status`, `apply_grounding_fix`, `get_share_link_activity`, `list_share_link_activity`, or `find_app`.
+
+**Cause.** Workspace-level context management, grounding/CI fixes, share-link analytics, and integrations require an active `Admin` or `Creator` role (`create_project` `team_visibility: "team"` makes a project visible to team Admins, Creators, and Viewers). Collaborators can read and update project-scoped content (`get_content`, `update_content`) in their projects.
+
+**What to do.** Check `marcora:get_current_user_info` (`role`), explain that an Admin or Creator role is required, and suggest asking a workspace Admin to upgrade their role if needed.
+
+---
+
 ## Linking the user to their Brand Foundation
 
 **Symptom.** You update the user's Brand Foundation, link them to it, and the link 404s — they land on `/home` and the conversation they were in is gone.

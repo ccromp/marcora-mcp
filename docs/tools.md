@@ -463,8 +463,13 @@ Each returned item carries its `collection_id` (primary collection ID, or `null`
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `search` | string | No | Optional natural-language query. When provided, every item is scored by its best-matching passage and the list is sorted by that score instead of recency; each item gains a `relevance_score`. Nothing is dropped, so the response is still the whole library. Omit or leave empty for the normal recency-ordered list |
 | `reference_library_only` | boolean | No | When `true`, returns only items not in any project or collection (`collection_ids: []` and `project_id: null`). Default `false` returns everything |
+| `search` | string | No | Optional natural-language query. When provided, every item you can see is scored by its best-matching passage and the list is sorted by that score instead of recency; each item gains a `relevance_score`. Nothing is dropped, so the response is still the whole library. Omit or leave empty for the normal recency-ordered list. To retrieve the passages relevant to a question, use `get_relevant_context` |
+| `content_type` | string | No | Return only items of this type, for example `call_transcript` (calls), `manual` (pasted text), or `webpage`. Omit for every type |
+| `date_from` | string | No | Return only items dated on or after this, as `YYYY-MM-DD` or ISO 8601. Compared with the call's own date (when it happened) for calls, and the created date (when it was added) for every other item. A call with no known date does not match a date bound (`date_from` must not be after `date_to`) |
+| `date_to` | string | No | Return only items dated on or before this, as `YYYY-MM-DD` (the whole day counts) or ISO 8601. A call with no known date does not match a date bound (`date_from` must not be after `date_to`) |
+| `kinds` | array (string) | No | Calls only (`customer`, `external`, `team_meeting`, `one_on_one`, `recorded`): keep calls of these kinds (`customer` — a customer call; `external` — a meeting with people outside the team; `team_meeting`; `one_on_one`; `recorded` — a recorded talk or other single-speaker recording). Setting it returns calls only; non-array values or unknown call kinds are rejected |
+| `company` | string | No | Calls only: keep calls with this company (a case-insensitive part of the company name, or its exact domain). Setting it returns calls only |
 
 **Output:** An object with a single `context_items` key holding an array of context items. Each item has:
 
@@ -473,17 +478,20 @@ Each returned item carries its `collection_id` (primary collection ID, or `null`
 | `id` | string (uuid) | Context item ID. Pass to `get_context_item` to fetch full markdown |
 | `name` | string | Context item name |
 | `content_intro` | string | Short truncation of the content for previews |
-| `content_type` | string | One of `manual`, `webpage`, `canvas`, `deliverable`, `integration_data`, `call_transcript`, `file` |
+| `content_type` | string | Item type (e.g. `manual`, `webpage`, `integration_data`, `call_transcript`, `file`) |
 | `source_url` | string \| null | For `webpage` items, the tracked page URL (re-pull it with `update_context` `refresh_webpage`); `null` for all other item types |
 | `word_count` | integer | Word count of the full content |
 | `created_at` | integer | Unix timestamp of creation |
 | `updated_at` | integer \| null | Unix timestamp of last update |
 | `added_by` | object | `{id, name}` of the user who added the item |
-| `relevancy_processed_status` | string | RAG indexing status (`unprocessed`, `provisional`, `complete`) |
+| `relevancy_processed_status` | string | Targeting-dimension processing state (`unprocessed`, `provisional`, `complete`), for Reference Library items only (omitted for items in a project or collection) |
 | `collection_id` | integer \| null | Primary (home) collection ID this item lives in, or `null` when in the Reference Library |
 | `collection_ids` | array (integer) | All accessible collection IDs this item belongs to (primary collection first; `[]` when in the Reference Library) |
 | `collections` | array (`{id, name}`) | All accessible collections this item belongs to (primary collection first; `[]` when in the Reference Library) |
 | `project_id` | string (uuid) \| null | Project this item is associated with, or `null` |
+| `link_url` | string | URL to view this context item in the Marcora web app |
+| `audience` | string | Present (`"only_me"`) only on an Only me item, visible to its owner alone; Team items omit it |
+| `call` | object | Call details (`date`, `kind`, `company`, `people`, `visibility`); present only on call items |
 | `relevance_score` | number \| null | Present only when a `search` query is supplied. Cosine similarity (`0`–`1`, higher = more similar) of the item's best-matching passage to the query; `null` when the item has no indexed passage yet |
 
 **Other ways to discover context-item IDs:**
