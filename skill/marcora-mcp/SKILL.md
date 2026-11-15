@@ -78,7 +78,7 @@ These are Marcora's core nouns. Internalize them before calling any tool.
 
 - A **Project** contains many **Content** items and many **Context items**, plus optionally one **Project brief** (which is itself a Content item, pinned).
 - A **Content** item may belong to a Project (`project_id`) and may be generated from a **Blueprint** (`blueprint_uuid`).
-- A **Context item** lives at the team level (Reference Library or one or more Context Collections, never both) OR at the project level — never both at once.
+- A **Context item** is either in the top-level **Reference Library** (`collection_ids: []`, `collection_id: null`) or in **one or more Context Collections** (`collection_ids`, `collections`, with `collection_id` set to the primary collection) — never both. Project placement (`project_id`) and collection placement are independent for ordinary context items: an item can belong to a project and to one or more collections at once (calls stay single-destination: either a project, one collection, or the Reference Library).
 - The **Project brief** is a Content item, attached to the project and pinned as its brief. It is NOT a context item — different model, different tool. That is also why relevancy search never surfaces it as a chunk: it reaches you as a dedicated `project_brief` block instead.
 
 ### Lifecycle states worth knowing
@@ -196,12 +196,12 @@ The brief is the project's authoritative statement of premise, scope and the str
 
 **Steps.**
 1. **Disambiguate scope.** Ask if it's not obvious from context:
-   - Top-level (Reference Library) → available across all projects.
-   - Project-scoped → only for one initiative.
+   - Top-level (Reference Library) → available across all projects (`collection_ids: []`, `collection_id: null`, `project_id: null`).
+   - Collection-organized (`collection_id` / `collection_ids`) and/or project-scoped (`project_id`) → project and collection placement are independent on ordinary items, so an item can belong to a project, to one or more collections, or to both at once.
    - Project brief → strategic anchor for a project (use Workflow 2, not this one).
    - Document-specific (one-off context for a single generation) → don't store; pass `collection_ids` or `dimension_option_ids` on `create_content` instead.
-2. If top-level + the user wants it organized: `marcora:list_context_collections`. Use existing collection if a fit; otherwise `marcora:create_context_collection`.
-3. `marcora:add_context` with `name` and the body, plus optional `collection_id` or `collection_ids` (top-level; pass `collection_ids` to file an item in multiple shared team collections at once, where `collection_ids[0]` is the primary collection, or omit both to keep the item in the Reference Library — an item is either in the Reference Library or in one or more collections, never both) or `project_id` (project-scoped). Pick the body argument based on what you have — provide **exactly one** of these four (zero or more than one → 400):
+2. If the user wants it in a collection: `marcora:list_context_collections`. Use an existing collection if a fit; otherwise `marcora:create_context_collection`.
+3. `marcora:add_context` with `name` and the body, plus optional `collection_id` / `collection_ids` (pass `collection_ids` to file an item in multiple shared team collections at once, where `collection_ids[0]` is the primary collection unless `collection_id` is also set, or omit both to keep the item in the Reference Library — an item is either in the Reference Library or in one or more collections, never both) and/or optional `project_id` (project and collection placement are independent on ordinary items and on `update_context`, so an item can belong to a project and to one or more collections at once). Pick the body argument based on what you have — provide **exactly one** of these four (zero or more than one → 400):
    - **`content`** — paste markdown directly. Best for short or hand-authored material.
    - **`import_url`** — pass a public URL imported **once**: Marcora fetches it and converts the page to clean markdown, stored as a **static snapshot** that cannot be refreshed. Use for one-off sources — a blog post, a presigned-link export from Google Docs or a connected-app sandbox, etc. Don't `web_browse`/`web_fetch` it into your conversation first just to forward the bytes.
    - **`connected_webpage_url`** — pass a URL to track as a live, refreshable **web page** (`content_type: "webpage"`): the URL is stored so it can be re-pulled later via `update_context(refresh_webpage=true)` or the app's refresh button. Use this for the customer's own pages and anything you'll want to keep current. Dedupes by URL: re-adding a tracked URL updates that item in place and **overwrites** its stored content with the fresh fetch (so `add_context` is marked destructive). **Admin/Creator only** — collaborators are rejected.
