@@ -24,7 +24,7 @@ The Marcora MCP server acts as a bridge between your AI client and your Marcora 
 
 Access is scoped to your Marcora account and active team:
 
-- **Team role** — Your role (owner, admin, editor/creator, collaborator) determines what actions you can perform. Integrations (Connected Apps and Webhooks) require an active creator or admin seat on the workspace; collaborators, paused members, and users with no active team are refused with 403
+- **Team role** — Your role (Admin, Creator, Viewer, or Collaborator) determines what actions you can perform. Integrations (Connected Apps and Webhooks) require an active Creator or Admin seat on the workspace; Collaborators, paused members, and users with no active team are refused with 403
 - **Visibility** — Content and collections can be `private` (creator-only) or `team` (team-visible; Collaborators see only content documents in the projects they belong to, plus their own)
 - **Read/write** — Active team members can read team-visible data within their role and project scope (for Collaborators, `list_content`, `get_content`, and `ask_content_assistant` cover only documents in their own projects, plus their own). Write operations (creating content, adding context) respect your team role and visibility settings
 

@@ -14,7 +14,7 @@ This is the primary URL for connecting to the Marcora MCP Server. It uses **OAut
 
 ## Alternative API Key Access
 
-For MCP clients where supplying an API key directly is simpler than OAuth, connect to the same URL (`https://mcp.marcora.ai`) and pass your key in an `Authorization: Bearer <your-api-key>` header — the server negotiates the right transport automatically. You can create and manage your MCP API keys in [Integration Settings](https://app.marcora.ai/integration-settings).
+For MCP clients where supplying an API key directly is simpler than OAuth, connect to the same URL (`https://mcp.marcora.ai`) and pass your key in an `Authorization: Bearer <your-api-key>` header — the server negotiates the right transport automatically. You can create, rename, and manage your MCP connections and API keys in [Integration Settings](https://app.marcora.ai/integration-settings) (`Settings → Integrations → MCP`), which also shows which app connected (`Claude`, `ChatGPT`, `HubSpot`, `Cursor`, `Gong`, or `Other app`).
 
 ## Who Is This For?
 

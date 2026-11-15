@@ -16,7 +16,7 @@
 **Cause:** Your account doesn't have permission to perform the requested action.
 
 **Solutions:**
-- Check your team role — some actions require an admin or editor (creator) seat. In particular, Connected Apps (`find_app`, `add_context` `import_from`) and Webhooks require a creator or admin seat (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*)
+- Check your team role — some actions require an Admin or Creator seat. In particular, Connected Apps (`find_app`, `add_context` `import_from`) and Webhooks require a Creator or Admin seat (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*), and `update_workflow` and `run_workflow` can only be called by the workflow's creator (`created_by_user_id`)
 - Verify you're on the correct active team
 - Private content/collections are only accessible by their creator
 
@@ -84,11 +84,11 @@ Neither error returns any context or the project's brief.
 
 ### Content generation timeout
 
-**Cause:** Content generation can take a few minutes: Quick up to about 3½ minutes, Multi-model and blueprint generation 3–5 minutes.
+**Cause:** Content and blueprint generation can take a few minutes: Quick content up to about 3½ minutes, Multi-model and blueprint content 3–5 minutes, and blueprint creation/drafting 1–3 minutes.
 
 **Solutions:**
 - This is normal behavior, not an error. Wait for the response to complete.
-- For blueprint-based and Multi-model generation (`generation_mode: "multi_model"`), `create_content` returns a `generation_id` (and on the `blueprint_uuid` path, also the draft's `content_id` and `link_url` at start) — use `get_generation_status` to poll for completion. `produce_plan` always returns one
+- For blueprint-based and Multi-model generation (`generation_mode: "multi_model"`), `create_content` returns a `generation_id` (and on the `blueprint_uuid` path, also the draft's `content_id` and `link_url` at start) — use `get_generation_status` to poll for completion. `produce_plan`, `create_blueprint`, `create_blueprint_draft`, and `finalize_blueprint_draft` also return a `generation_id` immediately (`status: "processing"`) for polling via `get_generation_status`
 - Do not retry the call while a generation is in progress
 
 ### Invalid category_id or dimension_option_ids

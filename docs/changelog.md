@@ -2,6 +2,28 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-15 (async blueprint creation & draft finalization, multi-collection context items, creator-only workflow updates & runs, Creator/Admin role alignment, and MCP connection labels & rename)
+
+### Skill → v0.7.36 · plugin → v1.2.27
+
+- **Asynchronous blueprint creation and draft finalization (`create_blueprint`, `create_blueprint_draft`, `finalize_blueprint_draft`, `get_blueprint`, `get_generation_status`):**
+  - `create_blueprint`, `create_blueprint_draft`, and `finalize_blueprint_draft` now run asynchronously in the background and return immediately with `status: "processing"`, `generation_id`, and start-time identifiers and links (`blueprint_uuid`, `name`, `link_url` on `create_blueprint` and `finalize_blueprint_draft`; `uuid`, `title`, `link_url` on `create_blueprint_draft`).
+  - Poll `get_generation_status` with `generation_id` (or `get_blueprint` with `blueprint_uuid` for blueprint creation/finalization) until `status` is `"completed"` (or `"failed"`).
+  - `get_generation_status` adds `flow_type: "blueprint_item"` (`create_blueprint` and `finalize_blueprint_draft`) and `flow_type: "blueprint_draft"` (`create_blueprint_draft`), returns top-level `error_message` when `status` is `"failed"`, and populates `content` with the completed blueprint or blueprint-draft fields.
+  - `get_blueprint` adds optional `status` (`"processing"` or `"failed"`) and `error_message` fields while a blueprint is still processing or if processing failed.
+  - All three blueprint creation tools are offered to Slack MCP clients again.
+- **Multi-collection context items (`add_context`, `update_context`, `get_context_item`, `list_context_items`, `list_context_collections`, `get_relevant_context`):**
+  - A context item can now belong to multiple shared team collections at once (`collection_ids`, `collections`, with `collection_id` set to the primary home collection).
+  - **Placement rule:** a context item is either in the Reference Library (`collection_ids: []`, `collection_id: null`) or in one or more collections — never both. Private collections and call transcripts remain single-collection.
+  - `add_context` accepts `collection_ids` (first ID becomes the primary collection; `[]` leaves the item in the Reference Library).
+  - `update_context` accepts `collection_ids` (replaces the full list), `add_collection_id` (adds one collection), and `remove_collection_id` (removes one collection), and `collection_id` is now optional when collection membership is not changing.
+  - `get_context_item`, `list_context_items`, and `get_relevant_context` (`sources[]`) return `collection_ids` (`integer[]`) and `collections` (`{ id, name }[]`) alongside primary `collection_id`.
+  - `list_context_collections` `item_count` counts distinct context items across both primary and secondary memberships.
+- **Creator-only workflow updates and manual runs (`update_workflow`, `run_workflow`):** only the workflow's creator (`created_by_user_id`) can update a workflow (`update_workflow`) or run it manually (`run_workflow`); anyone else receives an access-denied error.
+- **Creator and Admin role alignment (`get_content`, `update_content`, `add_context`, `update_context`, `update_ci_finding_status`, `apply_grounding_fix`, `check_content_grounding`, `get_grounding_result`, `get_share_link_activity`, `list_share_link_activity`, `create_project`):**
+  - Role checks across MCP content, context, grounding, Context Intelligence, and share-link tools admit Creators alongside Admins, and tool descriptions, schemas, and documentation use the canonical `Admin`, `Creator`, `Viewer`, and `Collaborator` role names (`create_project` `team` visibility includes team `Admins, Creators, and Viewers` as well as explicit project members).
+- **MCP connection app labels and renaming (`Settings → Integrations → MCP`):** in the Marcora web app (`/integration-settings`), each connected MCP client shows which app connected (`Claude`, `ChatGPT`, `HubSpot`, `Cursor`, `Gong`, or `Other app`), and the connection owner can rename their connection (1–64 characters) via **Rename** → **Rename connection** → **Save name**.
+
 ## 2026-11-14 (Collaborator document privacy, blueprint draft finalization, and generation status access)
 
 ### Changed

@@ -91,7 +91,7 @@ Roles: **creator** (a full team member who can create and edit content), **admin
 | `teams[].team_id` | integer | Numeric team id. Pass to `set_active_team` |
 | `teams[].team_name` | string | Team name |
 | `teams[].is_active` | boolean | True for the caller's currently active team (exactly one) |
-| `teams[].your_role` | string | The caller's role in this team (e.g. `admin`, `editor`, `viewer`) |
+| `teams[].your_role` | string | The caller's role in this team (e.g. `admin`, `creator`, `viewer`, `collaborator`) |
 | `teams[].members` | array | The team's members |
 | `teams[].members[].user_id` | integer \| null | Numeric user id (what `assigned_to` expects). `null` for a pending invite |
 | `teams[].members[].name` | string | Member name (or the invited email for pending invites) |
@@ -222,17 +222,19 @@ Overwrites one of the team's four Brand Foundation elements with new content. **
 
 Returns all context collections accessible to the current user. Collections organize reference materials (context items) that inform AI-generated content. Empty collections are included (`item_count` 0), so a collection you just created shows up before you add anything to it.
 
+> **Placement rule:** a context item is either in the reference library (not in any collection) or in one or more collections — never both; private collections and call transcripts stay single-collection and cannot be combined with other collections, and Library source collections are added as secondary collections only via Library authoring.
+
 **Parameters:** None
 
 **Output:** An object with a single `collections` key holding an array of context collections. Each item:
 
 | Field | Type | Description |
 |---|---|---|
-| `id` | integer | Collection ID. Pass to `add_context` or `get_relevant_context` |
+| `id` | integer | Collection ID. Pass to `add_context`, `update_context`, or `get_relevant_context` |
 | `name` | string | Collection name |
 | `description` | string | Collection description |
 | `is_private` | boolean | Whether this collection is private to the creator |
-| `item_count` | integer | Number of context items in this collection |
+| `item_count` | integer | Number of distinct context items in this collection (whether primary or secondary) |
 | `link_url` | string | Direct URL to view this collection in the Marcora app |
 
 **Example prompts:**
@@ -272,7 +274,7 @@ Create a new context collection to organize your reference materials. Collection
 
 ### `add_context`
 
-Add a new context item to your reference library. Context items are reference materials that power AI generation — they help the AI produce more accurate, on-brand, and relevant content.
+Add a new context item to your reference library or to one or more context collections. Context items are reference materials that power AI generation — they help the AI produce more accurate, on-brand, and relevant content.
 
 You can supply the body in exactly one of four ways:
 
@@ -288,9 +290,9 @@ Providing zero, or more than one, of `content` / `import_url` / `connected_webpa
 
 To check whether an app is connected, or to get its Connect link before importing, use [`find_app`](#find_app).
 
-> **Web pages require admin or editor role.** `connected_webpage_url` is rejected for collaborators, matching the in-app *Add web page* rule. `content` and `import_url` remain available to collaborators.
+> **Web pages require Admin or Creator role.** `connected_webpage_url` is rejected for Collaborators, matching the in-app *Add web page* rule. `content` and `import_url` remain available to Collaborators.
 >
-> **Connected Apps require a creator or admin seat.** `import_from` (and `find_app`) require a creator or admin seat on the workspace (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*).
+> **Connected Apps require a Creator or Admin seat.** `import_from` (and `find_app`) require a Creator or Admin seat on the workspace (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*).
 >
 > **Team audience on ordinary items:** when the user asks for the item to be saved for the team, pass `audience: "team"` (on `content`, `import_url` or `connected_webpage_url`), even with a `collection_id` or `project_id`. It is accepted when the item will be team-visible. In a private collection or private project it is refused with a readable tool error (`isError: true`) and nothing is saved: tell the user why and offer a shared collection, a team-visible project or the Reference Library. Never fall back to a private save without asking the user. Every successful save returns `audience` (`"team"`, `"project_members"`, or `"only_me"`): who can actually see the item, whether or not you passed `audience`. Tell the user that plainly.
 
@@ -301,8 +303,9 @@ To check whether an app is connected, or to get its Connect link before importin
 | `name` | string | Yes | Descriptive name for the context item |
 | `content` | string | Conditional | Markdown body (creates a `manual` item, or a call transcript when saved as a call). Provide exactly one of `content` / `import_url` / `connected_webpage_url` / `import_from` |
 | `import_url` | string | Conditional | Public URL imported **once** as a static markdown snapshot (a static snapshot, not refreshable). Provide exactly one of the four body inputs |
-| `connected_webpage_url` | string | Conditional | Public URL tracked as a live, refreshable `webpage` item (URL stored; dedupes by URL; admin/editor only). Provide exactly one of the four body inputs |
-| `collection_id` | integer \| null | No | Collection ID to organize the item (from `list_context_collections` or `create_context_collection`). **Omit it — or pass `0` — to file the item at the top level of the Reference Library** |
+| `connected_webpage_url` | string | Conditional | Public URL tracked as a live, refreshable `webpage` item (URL stored; dedupes by URL; Admin or Creator only). Provide exactly one of the four body inputs |
+| `collection_id` | integer \| null | No | Single collection ID to file the item in (from `list_context_collections` or `create_context_collection`). For ordinary items, omit it — or pass `null` or `0` — to file the item in the Reference Library (`collection_ids: []`). On call paths (`as_call` or `import_from`), `null` or `0` keeps the default (`Calls`); pass a positive `collection_id` or `collection_ids` to change a call's placement |
+| `collection_ids` | array (integer) | No | Full list of collection IDs to file the item in. The first ID becomes the primary (`collection_id`) collection and the remaining IDs are secondary memberships; pass `[]` to leave the item in the Reference Library. If sent alongside `collection_id`, `collection_id` must match `collection_ids[0] ?? null` (or `0` when `collection_ids` is `[]`). Private collections and call transcripts stay single-collection; Library source collections are attached as secondary collections only via Library authoring |
 | `project_id` | string | No | Project ID to associate with (from `list_projects`). Omit it to leave the item unassociated |
 | `audience` | string | No | Who can see it (`only_me` or `team`). For a call: `only_me` (default; visible only to the person who added it) or `team`. For an ordinary context item: pass `team` when the user wants it saved for the team, even with a `collection_id` or `project_id`; in a private collection or project it is refused and nothing is saved, so tell the user and offer a shared collection, a team-visible project or the Reference Library, and never save privately without asking. `only_me` is rejected on an ordinary item |
 | `as_call` | boolean | No | Whether to save `content` as a call transcript in Calls. Omit and Marcora decides (`true` forces a call; `false` forces an ordinary item). Only valid with `content` |
@@ -311,9 +314,7 @@ To check whether an app is connected, or to get its Connect link before importin
 | `call_company` | string \| null | No | Calls only: the other company on the call (`null` for none). Omit to take the company from the transcript |
 | `import_from` | object | Conditional | `{ toolkit, call_ids }`: `toolkit` is `fathom`, `gong`, `fireflies`, `googlemeet` or `wispr_flow_mcp`; `call_ids` is 1 to 10 of the app's own call ids, each once. Alternative to the three body inputs above |
 
-> **Filing an item in the Reference Library:** omitting `collection_id` — or passing `0` — files the item at the top level of the **Reference Library**, where it's returned by `list_context_items`, fetchable via `get_context_item`, and eligible for semantic search. This is the normal path for team-wide reference material.
->
-> Both `add_context` and `update_context` type `collection_id` as `["integer", "null"]` in the input schema, and omitting `collection_id` (or passing `0` or `null`) on `add_context` files the item at the top level.
+> **Placement rule:** a context item is either in the **Reference Library** (`collection_ids: []`, `collection_id: null`) or in **one or more collections** (`collection_ids`, `collections`, with `collection_id` set to the primary collection) — never both. Private collections and call transcripts stay single-collection and cannot be combined with other collections, and Library source collections are added as secondary collections only via Library authoring.
 
 **Output:**
 
@@ -325,7 +326,9 @@ To check whether an app is connected, or to get its Connect link before importin
 | `content` | string \| null | The stored reference content. `null` for `import_url`, `connected_webpage_url`, and pasted content in this response — fetch the full body with `get_context_item` |
 | `word_count` | integer | Word count of content (`0` while an import is still processing) |
 | `import_status` | string \| null | For `import_url` and `connected_webpage_url` items: `"ready"` when the import finished within the ~25 second wait, `"processing"` if it is still running (poll `get_context_item`). `null` for pasted content |
-| `collection_id` | integer \| null | Collection this item belongs to (null if none) |
+| `collection_id` | integer \| null | Primary (home) collection ID this context item belongs to, or `null` when it is in the Reference Library |
+| `collection_ids` | array (integer) | All accessible collection IDs this context item belongs to (primary collection first; `[]` when in the Reference Library) |
+| `collections` | array (`{id, name}`) | All accessible collections this context item belongs to (primary collection first; `[]` when in the Reference Library) |
 | `project_id` | string \| null | Project association (null if none) |
 | `audience` | string | Who can see the saved item: `"team"`, `"project_members"`, or `"only_me"`. Returned on every successful save (ordinary items and calls), whether or not `audience` was passed. Tell the user |
 | `link_url` | string | Direct URL to view this context item in the Marcora app. Resolves to the project, collection, or reference library view depending on the item's scope |
@@ -394,7 +397,7 @@ Update an existing context item — change its name, content, or move it between
 
 Like `add_context`, you can supply a new body either as inline `content` or as an `import_url` the backend fetches and converts to markdown server-side. Pass at most one — providing both returns a 400. Omit both to leave the body untouched (e.g. when you're only renaming the item or moving it between collections).
 
-To **re-pull a tracked web-page item** from its stored URL — the same action as the refresh button in the Marcora web app — pass **`refresh_webpage: true`**. No content is needed; the content comes from re-fetching the page, and `name` / `content` / `import_url` are ignored when it's set. `refresh_webpage` only works on items added via `add_context` `connected_webpage_url` (content type `webpage`); on any other item it returns a clear error. Requires admin or editor role.
+To **re-pull a tracked web-page item** from its stored URL — the same action as the refresh button in the Marcora web app — pass **`refresh_webpage: true`**. No content is needed; the content comes from re-fetching the page, and `name` / `content` / `import_url` are ignored when it's set. `refresh_webpage` only works on items added via `add_context` `connected_webpage_url` (content type `webpage`); on any other item it returns a clear error. Requires Admin or Creator role.
 
 > **`import_url` vs `refresh_webpage`:** `import_url` replaces the body with a fresh **one-off snapshot** and does not establish a tracked URL. To keep a web-page item in sync with its source over time, use `refresh_webpage` on an item that was created with `connected_webpage_url`.
 
@@ -403,20 +406,21 @@ To **re-pull a tracked web-page item** from its stored URL — the same action a
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `context_item_id` | string (uuid) | Yes | The context item to update |
-| `refresh_webpage` | boolean | No | Set `true` to re-pull a `webpage` item's content from its stored URL. Ignores `name` / `content` / `import_url`. Errors on non-webpage items. Admin/editor only |
+| `refresh_webpage` | boolean | No | Set `true` to re-pull a `webpage` item's content from its stored URL. Ignores `name` / `content` / `import_url`. Errors on non-webpage items. Admin or Creator only |
 | `name` | string | No | If provided, updates the name. Omit to leave unchanged. Ignored when `refresh_webpage` is true |
 | `content` | string | No | New markdown body. Omit to leave unchanged. Triggers RAG re-embedding. Mutually exclusive with `import_url`. Ignored when `refresh_webpage` is true |
 | `import_url` | string | No | Public URL — backend fetches and converts to clean markdown server-side, then stores it as a fresh one-off snapshot body. Mutually exclusive with `content`. Ignored when `refresh_webpage` is true |
-| `collection_id` | integer \| null | **Yes (nullable)** | Pass the current ID to keep the item in its collection, pass a different ID to move it, or pass `null` (`0` works too) to move it back to the top level of the Reference Library. Not read at all when `refresh_webpage` is true, so it is not required on that branch |
-| `project_id` | string (uuid) \| null | No | Omit it to leave the item's project exactly as it is. Project and collection are independent: an item can sit in a project and a collection at once, and moving it into a collection changes `collection_id` only. Pass a project ID to move the item to that project (same team only). Pass `null` only when the user asked to take the item out of its project. Not read at all when `refresh_webpage` is true |
+| `collection_id` | integer \| null | No | Single-collection placement (legacy compatible). Omit to keep current collection memberships unchanged. Pass `null` (`0` works too) to remove the item from all collections and move it to the Reference Library; pass an ID already in the item's collections as a no-op that preserves all memberships; pass a new collection ID to replace the primary collection while keeping any secondary memberships. Mutually exclusive with `add_collection_id` and `remove_collection_id` |
+| `collection_ids` | array (integer) | No | Full list of collection IDs this context item should belong to after the update. The first ID becomes the primary (`collection_id`) collection and the remaining IDs are secondary memberships; pass `[]` to remove the item from all collections and move it to the Reference Library. Omit to keep current collections unchanged. Mutually exclusive with `add_collection_id` and `remove_collection_id` |
+| `add_collection_id` | integer | No | Collection ID to add this context item to without restating its existing collections. If the item is currently in the Reference Library, this collection becomes its primary collection; otherwise it is added as a secondary collection (idempotent if already in the collection). Mutually exclusive with `collection_ids`, `remove_collection_id`, and `collection_id` |
+| `remove_collection_id` | integer | No | Collection ID to remove this context item from without restating its remaining collections. If the removed collection was the primary collection and secondary collections remain, the earliest secondary collection is promoted to primary; if no collections remain, the item returns to the Reference Library (`collection_ids: []`, `collection_id: null`). Idempotent if not in that collection. Mutually exclusive with `collection_ids`, `add_collection_id`, and `collection_id` |
+| `project_id` | string (uuid) \| null | No | Omit it to leave the item's project exactly as it is. Project and collection placement are independent: an item can sit in a project and in one or more collections at once, and changing collection memberships does not touch `project_id`. Pass a project ID to move the item to that project (same team only). Pass `null` only when the user asked to take the item out of its project. Not read at all when `refresh_webpage` is true |
 
-> **Placement:** `collection_id` is required on every call (omitting it returns a `Missing param` error): pass the item's current ID to keep it where it is while changing something else. `project_id` is optional: omitting it keeps the item's project. Moving an item into a collection does not need `project_id` at all, and sending `project_id: null` for that would take the item out of its project.
+> **Placement rule:** a context item is either in the **Reference Library** (`collection_ids: []`, `collection_id: null`) or in **one or more collections** (`collection_ids`, `collections`, with `collection_id` set to the primary collection) — never both. Private collections and call transcripts stay single-collection and cannot be combined with other collections, and Library source collections are attached as secondary collections only via Library authoring.
 >
-> **Exception — `refresh_webpage: true`:** that branch reads **neither** field. `collection_id` is not required there, and the item's project and collection are left exactly as they were.
+> **Collection update modes:** pass `collection_ids` to replace the full set of collections (`[]` moves the item to the Reference Library), `add_collection_id` to add one collection without restating existing ones, `remove_collection_id` to remove one collection without restating remaining ones, or `collection_id` for single-collection updates (`null` or `0` moves the item to the Reference Library). Omitting all collection parameters leaves current collection memberships unchanged. When `refresh_webpage: true` is set, neither project nor collection placement is read or changed.
 
-> **Why the input schema lists `collection_id` as required but not `project_id`:** the server rejects a missing `collection_id` on the update path, while a missing `project_id` is accepted and leaves the project as it is. The schema declares what the server enforces; JSON Schema cannot express the `refresh_webpage` carve-out for `collection_id` without a top-level combinator that MCP clients reject.
-
-Both fields accept a JSON `null` — the tool's input schema types them as `["integer","null"]` / `["string","null"]`, so strict MCP clients can send `null` directly. Use it to move an item **out of a collection and back to the top level of the Reference Library**, or, when the user asked for it, to **take it out of its project**. For `collection_id`, `0` is accepted as an alias for `null`.
+Both `collection_id` and `project_id` accept a JSON `null` — the tool's input schema types them as `["integer","null"]` / `["string","null"]`, so strict MCP clients can send `null` directly. For `collection_id`, `0` is accepted as an alias for `null`.
 
 **Output:**
 
@@ -426,7 +430,9 @@ Both fields accept a JSON `null` — the tool's input schema types them as `["in
 | `name` | string | Updated context item name |
 | `content` | string | Updated reference content |
 | `content_intro` | string | Truncated content intro used in listings |
-| `collection_id` | integer \| null | Collection this item belongs to (null if none) |
+| `collection_id` | integer \| null | Primary (home) collection ID this context item belongs to, or `null` when in the Reference Library |
+| `collection_ids` | array (integer) | All accessible collection IDs this context item belongs to (primary collection first; `[]` when in the Reference Library) |
+| `collections` | array (`{id, name}`) | All accessible collections this context item belongs to (primary collection first; `[]` when in the Reference Library) |
 | `project_id` | string \| null | Project this item is associated with (null if none) |
 | `word_count` | integer | Word count of updated content |
 | `updated_at` | integer | Unix timestamp of last update |
@@ -436,6 +442,7 @@ Both fields accept a JSON `null` — the tool's input schema types them as `["in
 **Example prompts:**
 - "Rename that brand voice context item to 'Brand Voice v2'"
 - "Move the competitive analysis out of the 'Archive' collection"
+- "Add that competitor analysis item to the 'Enterprise Deals' collection as well"
 - "Update our pricing context with the new Enterprise tier info"
 - "I updated our pricing page — refresh that web-page context item"
 - "Re-import the Acme snapshot from https://example.com/competitor-pricing"
@@ -444,9 +451,9 @@ Both fields accept a JSON `null` — the tool's input schema types them as `["in
 
 ### `list_context_items`
 
-Lists the context items in the team's reference library, newest first. Use it to browse and filter the library and to find context-item IDs. By default returns all items the user can see (across projects, collections, and the reference library). Set `reference_library_only=true` to return only items that are not in any project or collection — these are the items shown in the "Reference Library" section of the Marcora web app.
+Lists the context items in the team's reference library, newest first. Use it to browse and filter the library and to find context-item IDs. By default returns all items the user can see (across projects, collections, and the reference library). Set `reference_library_only=true` to return only items that are not in any project or collection (`collection_ids: []` and `project_id: null`) — these are the items shown in the "Reference Library" section of the Marcora web app.
 
-Each returned item carries its own `collection_id` and `project_id` (both nullable), so you always know where it lives. To get the full markdown content of any item, pass its id to `get_context_item`.
+Each returned item carries its `collection_id` (primary collection ID, or `null`), `collection_ids` (all accessible collection IDs, primary first), `collections` (`{id, name}` entries), and `project_id` (nullable), so you always know where it lives. A context item is either in the Reference Library (`collection_ids: []`, `collection_id: null`) or in one or more collections — never both. To get the full markdown content of any item, pass its id to `get_context_item`.
 
 **Privacy:** items in private collections (where you are not the creator) and items in private projects (where you are not a member) are filtered out — they will not appear in the response.
 
@@ -457,7 +464,7 @@ Each returned item carries its own `collection_id` and `project_id` (both nullab
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `search` | string | No | Optional natural-language query. When provided, every item is scored by its best-matching passage and the list is sorted by that score instead of recency; each item gains a `relevance_score`. Nothing is dropped, so the response is still the whole library. Omit or leave empty for the normal recency-ordered list |
-| `reference_library_only` | boolean | No | When `true`, returns only items not in any project or collection. Default `false` returns everything |
+| `reference_library_only` | boolean | No | When `true`, returns only items not in any project or collection (`collection_ids: []` and `project_id: null`). Default `false` returns everything |
 
 **Output:** An object with a single `context_items` key holding an array of context items. Each item has:
 
@@ -473,7 +480,9 @@ Each returned item carries its own `collection_id` and `project_id` (both nullab
 | `updated_at` | integer \| null | Unix timestamp of last update |
 | `added_by` | object | `{id, name}` of the user who added the item |
 | `relevancy_processed_status` | string | RAG indexing status (`unprocessed`, `provisional`, `complete`) |
-| `collection_id` | integer \| null | Collection this item lives in, or `null` |
+| `collection_id` | integer \| null | Primary (home) collection ID this item lives in, or `null` when in the Reference Library |
+| `collection_ids` | array (integer) | All accessible collection IDs this item belongs to (primary collection first; `[]` when in the Reference Library) |
+| `collections` | array (`{id, name}`) | All accessible collections this item belongs to (primary collection first; `[]` when in the Reference Library) |
 | `project_id` | string (uuid) \| null | Project this item is associated with, or `null` |
 | `relevance_score` | number \| null | Present only when a `search` query is supplied. Cosine similarity (`0`–`1`, higher = more similar) of the item's best-matching passage to the query; `null` when the item has no indexed passage yet |
 
@@ -492,7 +501,7 @@ Each returned item carries its own `collection_id` and `project_id` (both nullab
 
 Opens a single context item by ID and returns its full markdown content and metadata. Use it when you already have an item's ID and need to read the whole item — `list_context_items` only returns `content_intro` (a short truncation), and `get_relevant_context` returns matched passages. It does not search; to find material relevant to a question, use `get_relevant_context`.
 
-The IDs you pass here can come from `list_context_items`, `get_project(project_id).context_items`, `list_context_collections`, or `get_relevant_context`.
+The IDs you pass here can come from `list_context_items`, `get_project(project_id).context_items`, `list_context_collections`, or `get_relevant_context`. A context item is either in the Reference Library (`collection_ids: []`, `collection_id: null`) or in one or more collections (`collection_ids`, `collections`, with `collection_id` set to the primary collection) — never both.
 
 **Parameters:**
 
@@ -515,7 +524,9 @@ The IDs you pass here can come from `list_context_items`, `get_project(project_i
 | `updated_at` | integer \| null | Unix timestamp of last update |
 | `added_by` | object | `{id, name}` of the user who added the item |
 | `relevancy_processed_status` | string | RAG indexing status |
-| `collection_id` | integer \| null | Collection this item lives in, or `null` |
+| `collection_id` | integer \| null | Primary (home) collection ID this item lives in, or `null` when in the Reference Library |
+| `collection_ids` | array (integer) | All accessible collection IDs this item belongs to (primary collection first; `[]` when in the Reference Library) |
+| `collections` | array (`{id, name}`) | All accessible collections this item belongs to (primary collection first; `[]` when in the Reference Library) |
 | `project_id` | string (uuid) \| null | Project this item is associated with, or `null` |
 | `link_url` | string | Direct URL to view this context item in the Marcora app |
 
@@ -621,7 +632,9 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 | `is_stale` | boolean \| null | `true` when the item is flagged as out of date — treat its claims with caution and prefer a fresher source |
 | `link_url` | string \| null | Deep-link that opens this item in the Marcora app (present for every source) |
 | `source_url` | string | Original external page URL — **present only for `webpage` items**, omitted otherwise |
-| `collection_id` | integer \| null | Collection the item belongs to, if any |
+| `collection_id` | integer \| null | Primary (home) collection ID the item belongs to, or `null` when in the Reference Library |
+| `collection_ids` | array (integer) | All accessible collection IDs the item belongs to (primary collection first; `[]` when in the Reference Library) |
+| `collections` | array (`{id, name}`) | All accessible collections the item belongs to (primary collection first; `[]` when in the Reference Library) |
 | `project_id` | string (uuid) \| null | Project the item belongs to, if any |
 | `last_updated` | string (date) \| null | Date of the item's last update, `YYYY-MM-DD` (`null` if never updated) |
 | `context_rag_ids` | array (uuid) | The chunk IDs in this response that came from this item |
@@ -742,7 +755,7 @@ Status meanings:
 
 The updated finding row, including the new `status` (and `resolved_at` / `resolved_by` when resolved).
 
-**Authorization:** requires **admin or editor** role. Confirm with the user before dismissing or resolving a finding they haven't explicitly decided on.
+**Authorization:** requires **Admin or Creator** role. Confirm with the user before dismissing or resolving a finding they haven't explicitly decided on.
 
 **Errors:**
 - **Invalid status** — must be one of `acknowledged`, `dismissed`, `resolved`.
@@ -852,7 +865,7 @@ Passing neither is an error.
 - **Not a valid UUID** (400) — malformed `content_id`.
 - **Content not found. Check the content_id — it must be a document you can open in this team.** (tool error)
 - **This check cannot use the document’s private sources** (an `isError` result) — the document was built from Only me sources, which are never sent to an AI app. When they are the caller's own, the message adds a link to check the document privately in Marcora; relay it to the user.
-- **You are not authorized to perform this action** (403) — the token's user lacks an editor or admin role on the team.
+- **You are not authorized to perform this action** (403) — the token's user lacks a Creator or Admin role on the team.
 - **ci_not_eligible** (403) — Studio Credits or Context Intelligence availability check failed. On the current plans (Free, Solo, Team, Enterprise) this typically means the team's Studio Credit balance can't cover the estimate. Teams still on a legacy plan keep that plan's existing requirements (for a legacy plan, the message names the Command plan, an active subscription and available Studio Credits).
 
 **Example prompts:**
@@ -936,7 +949,7 @@ You never compose the fix yourself. Every finding already stores its recommended
 - **Missing param: finding_ids** (400, tool error `isError: true`) — pass `finding_id` values from a prior findings response.
 - **finding_ids must be finding_id UUIDs** (400, tool error `isError: true`).
 - **context_item_overrides names a finding not in finding_ids** (400, tool error `isError: true`) — the override would be ignored, so it is rejected rather than silently dropped.
-- **You are not authorized to perform this action** (403) — applying requires an admin or editor role.
+- **You are not authorized to perform this action** (403) — applying requires an Admin or Creator role.
 - Per-finding failures (already resolved, not a grounding finding) arrive in `errors[]`, not as a thrown error.
 - **Finding not found.** — per finding, in `errors[]`: a `finding_id` that is unknown or that you cannot read. That finding is skipped; the others still run.
 - **Marcora is already updating this document.** — per finding, in `errors[]`: another run on that document (for example the user's own Content Assistant request, or an earlier `apply_grounding_fix` call) is still in progress. Wait for it to finish, then retry those findings.
@@ -1098,7 +1111,7 @@ Get all blueprints in your team's library as a flat list. Each blueprint include
 
 ### `get_blueprint`
 
-Retrieve the full details of a specific blueprint by its UUID, including content, AI-generated analysis, and metadata.
+Retrieve the full details of a specific blueprint by its UUID, including content, AI-generated analysis, and metadata. Can also be used to check whether an asynchronous `create_blueprint` or `finalize_blueprint_draft` call is still processing or failed.
 
 **Parameters:**
 
@@ -1122,6 +1135,8 @@ Retrieve the full details of a specific blueprint by its UUID, including content
 | `exchange_visibility` | string | Community exchange visibility |
 | `web_url` | string | Direct URL to view in Marcora |
 | `created_at` | integer | Unix timestamp of creation |
+| `status` | string | Present when the blueprint is still processing (`"processing"`) or failed processing (`"failed"`) |
+| `error_message` | string | Present when `status` is `"failed"`; explains why blueprint processing failed |
 
 **Example prompts:**
 - "Show me the details of my blog post blueprint"
@@ -1131,7 +1146,9 @@ Retrieve the full details of a specific blueprint by its UUID, including content
 
 ### `create_blueprint`
 
-Create a reusable blueprint template for generating content at scale. Blueprints define the structure and AI instructions for a document type. Takes 1–3 minutes to return.
+Create a reusable blueprint template for generating content at scale. Blueprints define the structure and AI instructions for a document type.
+
+**Asynchronous.** Returns immediately with `status: "processing"`, `generation_id`, `blueprint_uuid`, `name`, and `link_url` while AI analyzes and builds the blueprint in the background (typically 1–3 minutes). Poll `get_generation_status` with `generation_id` (or check `get_blueprint` with `blueprint_uuid`) until `status` is `"completed"` (or `"failed"`). Once completed, `get_generation_status`'s `content` object (`flow_type: "blueprint_item"`) and `get_blueprint` return the generated `summary`, `blueprint_dna`, `reference_content`, `input_instructions`, `source_content`, `category`, `team_visibility`, and `created_at`, and `blueprint_uuid` is ready to use with `create_content`.
 
 **Parameters:**
 
@@ -1145,17 +1162,11 @@ Create a reusable blueprint template for generating content at scale. Blueprints
 
 | Field | Type | Description |
 |---|---|---|
+| `status` | string | Initial generation status (`"processing"`). Poll `get_generation_status` with `generation_id` until `"completed"` or `"failed"` |
+| `generation_id` | string (uuid) | Generation ID — pass to `get_generation_status` to poll until blueprint processing completes |
+| `blueprint_uuid` | string (uuid) | Unique identifier — once processing completes, use as `blueprint_uuid` in `create_content` |
 | `name` | string | Blueprint name |
-| `summary` | string | AI-generated summary of what this blueprint produces |
-| `blueprint_uuid` | string | Unique identifier for use with `create_content` |
-| `blueprint_dna` | string | AI-generated analysis of the template structure |
-| `source_content` | string | The original template content |
-| `reference_content` | string | AI-polished reference version |
-| `input_instructions` | string | Guidance for what context to provide when generating |
-| `category` | object | Content category |
-| `link_url` | string | Direct link to view in Marcora |
-| `team_visibility` | string | Team visibility setting |
-| `created_at` | integer | Unix timestamp of creation |
+| `link_url` | string (uri) | Direct link to view this blueprint in Marcora |
 
 **Example prompts:**
 - "Create a blueprint for case studies"
@@ -1171,24 +1182,26 @@ Create a reusable blueprint template for generating content at scale. Blueprints
 
 Create an AI-assisted blueprint draft from a prompt. This creates a draft you can review before saving as a full blueprint — it does not create content directly. Uses Studio Credits, charged when the draft completes at the model's cost (1 credit = 5¢, rounded up). If the team is out of credits the call fails with an `insufficient_credits` error (code 402) and no draft is created.
 
+**Asynchronous.** Returns immediately with `status: "processing"`, `generation_id`, draft `uuid`, `title`, and `link_url` while AI generates the blueprint draft in the background (typically 1–2 minutes). Poll `get_generation_status` with `generation_id` until `status` is `"completed"` (or `"failed"`). Once completed, `get_generation_status`'s `content` object (`flow_type: "blueprint_draft"`) returns `{ id, uuid, title, content, link_url }`; have the user review the draft at `link_url`, then pass `uuid` as `draft_uuid` to `finalize_blueprint_draft`.
+
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | Yes | Name for the draft |
 | `instructions` | string | Yes | Description of the blueprint to create |
-| `content` | string | Yes | Initial content as markdown |
+| `content` | string | Yes | Initial content as markdown (or empty if you want the AI to generate from `instructions` alone) |
 | `category_id` | integer | No | Category ID from `list_content_categories` |
 
 **Output:**
 
 | Field | Type | Description |
 |---|---|---|
-| `id` | integer | Record ID for the blueprint draft |
-| `uuid` | string | Unique identifier for this draft — pass as `draft_uuid` to `finalize_blueprint_draft` |
+| `status` | string | Initial generation status (`"processing"`). Poll `get_generation_status` with `generation_id` until `"completed"` or `"failed"` |
+| `generation_id` | string (uuid) | Generation ID — pass to `get_generation_status` to poll until the blueprint draft completes |
+| `uuid` | string (uuid) | Unique identifier for this draft. Once completed, pass as `draft_uuid` to `finalize_blueprint_draft` |
 | `title` | string | Blueprint draft name |
-| `content` | string | AI-generated blueprint template content in markdown |
-| `link_url` | string | Direct URL to view/edit in Marcora |
+| `link_url` | string (uri) | Direct URL to view/edit this blueprint draft in Marcora |
 
 **Example prompts:**
 - "Draft a blueprint for weekly newsletters"
@@ -1198,7 +1211,9 @@ Create an AI-assisted blueprint draft from a prompt. This creates a draft you ca
 
 ### `finalize_blueprint_draft`
 
-Finalize (publish) a previously created blueprint draft into a full, usable blueprint. This is the final step in the draft workflow: `create_blueprint_draft` → review → `finalize_blueprint_draft`. Takes 1–3 minutes.
+Finalize (publish) a previously created blueprint draft into a full, usable blueprint. This is the final step in the draft workflow: `create_blueprint_draft` → review → `finalize_blueprint_draft`.
+
+**Asynchronous.** Returns immediately with `status: "processing"`, `generation_id`, `blueprint_uuid`, `name`, and `link_url` while AI analyzes and finalizes the blueprint in the background (typically 1–3 minutes). Poll `get_generation_status` with `generation_id` (or check `get_blueprint` with `blueprint_uuid`) until `status` is `"completed"` (or `"failed"`). Once completed, `get_generation_status`'s `content` object (`flow_type: "blueprint_item"`) and `get_blueprint` return the finalized `summary`, `blueprint_dna`, `reference_content`, `input_instructions`, `source_content`, `category`, `team_visibility`, and `created_at`, and `blueprint_uuid` is ready to use with `create_content`.
 
 **Parameters:**
 
@@ -1212,17 +1227,11 @@ Finalize (publish) a previously created blueprint draft into a full, usable blue
 
 | Field | Type | Description |
 |---|---|---|
+| `status` | string | Initial generation status (`"processing"`). Poll `get_generation_status` with `generation_id` until `"completed"` or `"failed"` |
+| `generation_id` | string (uuid) | Generation ID — pass to `get_generation_status` to poll until blueprint processing completes |
+| `blueprint_uuid` | string (uuid) | Unique identifier — once processing completes, use as `blueprint_uuid` in `create_content` |
 | `name` | string | Blueprint name |
-| `summary` | string | AI-generated summary |
-| `blueprint_uuid` | string | Unique identifier for use with `create_content` |
-| `blueprint_dna` | string | AI-generated analysis |
-| `source_content` | string | Template content from the finalized draft |
-| `reference_content` | string | AI-polished reference version |
-| `input_instructions` | string | Guidance for users on what context to provide |
-| `category` | object | Content category |
-| `link_url` | string | Direct link in Marcora |
-| `team_visibility` | string | Team visibility setting |
-| `created_at` | integer | Unix timestamp of creation |
+| `link_url` | string (uri) | Direct URL to view/edit this blueprint in Marcora |
 
 **Example prompts:**
 - "Finalize my newsletter blueprint draft"
@@ -1405,24 +1414,26 @@ You must provide either `content` or `instructions` (not both).
 
 Poll the status of an async generation by `generation_id`. These flows produce a `generation_id` you can check here:
 - `create_content` with a `blueprint_uuid` or `generation_mode: "multi_model"` (document generation), and `produce_plan`
+- `create_blueprint`, `create_blueprint_draft`, and `finalize_blueprint_draft` (blueprint creation and draft finalization)
 - `ask_content_assistant` (the in-document Content Assistant)
 - `apply_grounding_fix` (each job in `jobs[]` carries a `generation_id`, but jobs whose fixes land in the same document share one, because they are applied together in one run; poll each distinct `generation_id` once. It runs as a Content Assistant flow, so read `document_updated`; for a shared `generation_id` it covers every finding in that run)
 
-The response always includes `status`, `generation_id`, and `flow_type`, plus `generation_mode` (`quick` or `multi_model`) when known. `content` is `null` until the run finishes.
+The response always includes `status`, `generation_id`, and `flow_type` (plus `error_message` when `status` is `"failed"` and `generation_mode` when known). `content` is `null` until the run finishes.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `generation_id` | string (uuid) | Yes | The generation ID returned by `create_content` (with `blueprint_uuid` or `generation_mode: "multi_model"`), `produce_plan`, `ask_content_assistant` or `apply_grounding_fix` |
+| `generation_id` | string (uuid) | Yes | The generation ID returned by `create_content` (with `blueprint_uuid` or `generation_mode: "multi_model"`), `produce_plan`, `create_blueprint`, `create_blueprint_draft`, `finalize_blueprint_draft`, `ask_content_assistant`, or `apply_grounding_fix` |
 
 **Output:**
 
 | Field | Type | Description |
 |---|---|---|
 | `generation_id` | string (uuid) | The generation ID being checked |
-| `status` | string | Status of this run. Document generation (`blueprint` or `document` flow) terminates at `completed`; Content Assistant flow terminates at `complete`; `failed` on error. Intermediate values: `pending`, `processing`, `streaming` |
-| `flow_type` | string | `blueprint` (generated from a blueprint), `document` (generated without a blueprint, e.g. Multi-model `create_content` or `produce_plan` without a blueprint) or `ai_assistant` (`ask_content_assistant`) |
+| `status` | string | Status of this run. Document and blueprint generation (`blueprint`, `document`, `blueprint_item`, or `blueprint_draft` flow) terminates at `completed`; Content Assistant flow terminates at `complete`; `failed` on error. Intermediate values: `pending`, `processing`, `streaming` |
+| `flow_type` | string | `blueprint` (generated from a blueprint), `document` (generated without a blueprint, e.g. Multi-model `create_content` or `produce_plan` without a blueprint), `blueprint_item` (`create_blueprint` or `finalize_blueprint_draft`), `blueprint_draft` (`create_blueprint_draft`), or `ai_assistant` (`ask_content_assistant` / `apply_grounding_fix`) |
+| `error_message` | string | Present when `status` is `"failed"`; explains why the background generation failed |
 | `generation_mode` | string | `quick` or `multi_model`. Omitted when not recorded |
 | `content` | object \| null | `null` until the run completes. Shape depends on `flow_type` (below) |
 
@@ -1434,6 +1445,11 @@ The response always includes `status`, `generation_id`, and `flow_type`, plus `g
 | `name` | string | Document name |
 | `blueprint_id` | integer | Blueprint used to generate (blueprint runs only) |
 | `link_url` | string | Direct URL to view/open in Marcora |
+
+**`content` — blueprint creation & finalization** (`flow_type` `blueprint_item` or `blueprint_draft`):
+
+- **`blueprint_item`** (`create_blueprint` and `finalize_blueprint_draft`): `id` (integer), `blueprint_uuid` (uuid), `name`, `link_url`, `source_content`, `reference_content`, `blueprint_dna`, `input_instructions`, `summary`, `category` (`{ id, name }` or `null`), `team_visibility`, and `created_at` (integer).
+- **`blueprint_draft`** (`create_blueprint_draft`): `id` (integer), `uuid` (uuid — pass as `draft_uuid` to `finalize_blueprint_draft`), `title`, `content` (AI-generated template markdown), and `link_url`.
 
 **`content` — Content Assistant flow** (`flow_type` = `ai_assistant`):
 
@@ -1659,7 +1675,7 @@ Checks what happened to one share link: whether it was opened, how many times, h
 
 `opened` and `opens` come from the link's lifetime counter. Opens recorded before Marcora kept open details have no viewer, place or device, so `opens` can be higher than the viewers and log show: `opens_without_details` says how many and `coverage_note` explains it. An empty viewer list does not mean the link was never opened. Viewers are numbered, never named: a viewer number stands for an anonymous browser identifier, not a verified person, so these stats cannot confirm that a particular recipient opened the link. Place is approximate and comes from the network. Automated opens (email scanners, data centers) are reported separately and are never counted.
 
-Only workspace admins and editors who can open the link's document can use it; a link in another of your workspaces works if you have that access there. Anything else, including a link that does not exist, returns the same "Share link not found" error. Workspaces whose plan does not include open tracking get `tracking_locked: true` and no activity.
+Only workspace Admins and Creators who can open the link's document can use it; a link in another of your workspaces works if you have that access there. Anything else, including a link that does not exist, returns the same "Share link not found" error. Workspaces whose plan does not include open tracking get `tracking_locked: true` and no activity.
 
 **Parameters:**
 
@@ -1698,7 +1714,7 @@ Only workspace admins and editors who can open the link's document can use it; a
 
 Lists the active workspace's share links with their activity, newest activity first, like the Shared tab in Marcora: for each link its content, status, lifetime opens, number of viewers and the last open. Use it to find which links were opened or not opened, or to find a link when you don't have its URL; use `get_share_link_activity` for one link's full detail. Read-only.
 
-`opens` is the lifetime counter, while `viewers` counts only opens that have details, so older links can show opens with no viewers: that is missing history, not no activity. Automated opens are never counted. Only links whose content you can open are listed. Available to workspace admins and editors; workspaces whose plan does not include open tracking get `tracking_locked: true` and no links.
+`opens` is the lifetime counter, while `viewers` counts only opens that have details, so older links can show opens with no viewers: that is missing history, not no activity. Automated opens are never counted. Only links whose content you can open are listed. Available to workspace Admins and Creators; workspaces whose plan does not include open tracking get `tracking_locked: true` and no links.
 
 **Parameters:**
 
@@ -1836,8 +1852,9 @@ Create a new project for organizing content and context into a workstream. Optio
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | Yes | Project name |
-| `visibility` | string | No | `team` or `private`. Defaults to `team` |
-| `project_brief_details` | string | No | If supplied, an AI-generated project brief is created and attached to the project. The brief's `content_id` is returned in the response so it can be passed to `update_content` later for edits |
+| `visibility` | string | No | `team` (default) makes the project visible to team Admins, Creators, and Viewers as well as anyone added to the project; `private` limits it to explicit project members (the creator is added automatically) |
+| `project_brief_content` | string | No | Finished brief text to save directly as the project brief (no AI, no Studio Credits). Takes precedence over `project_brief_instructions` |
+| `project_brief_instructions` | string | No | Prompt describing the brief to auto-generate with AI (uses Studio Credits). Mutually exclusive with `project_brief_content`, which takes precedence |
 
 **Output:**
 
@@ -1846,7 +1863,7 @@ Create a new project for organizing content and context into a workstream. Optio
 | `project_id` | string (uuid) | Project identifier |
 | `name` | string | Project name |
 | `link_url` | string | Direct URL to view this project in Marcora |
-| `project_brief` | object \| null | Present (non-null) only when `project_brief_details` was supplied. `{name, content_id}`. `content_id` is the brief document's UUID — pass it to `update_content` / `get_content` to edit or read the brief. `name` may be empty immediately after creation while AI generation is in flight |
+| `project_brief` | object \| null | Present (non-null) only when `project_brief_content` or `project_brief_instructions` was supplied. `{name, content_id}`. `content_id` is the brief document's UUID — pass it to `update_content` / `get_content` to edit or read the brief. `name` may be empty immediately after creation while AI generation is in flight |
 
 **Example prompts:**
 - "Create a project for our Q3 product launch"
@@ -2324,7 +2341,7 @@ Create a new workflow template for your active team. New workflows are saved **I
 
 ### `update_workflow`
 
-Partial update of a workflow template — only the keys you send mutate; unspecified keys are preserved. Call `get_workflow` first to read the current values, then send the minimal diff.
+Partial update of a workflow template — only the keys you send mutate; unspecified keys are preserved. Call `get_workflow` first to read the current values, then send the minimal diff. Only the workflow's creator (`created_by_user_id`) can update it; anyone else gets an access-denied error.
 
 > **Status:** `{ workflow_id, status: "active" }` sets it Active; `{ workflow_id, status: "inactive" }` sets it Inactive (its schedule is kept exactly as it was); `{ workflow_id, status: "archived" }` soft-deletes. Any other value is refused and nothing is saved — there is no `paused` workflow status. Setting a workflow Active does not turn its schedule On.
 
@@ -2354,7 +2371,7 @@ Partial update of a workflow template — only the keys you send mutate; unspeci
 
 ### `run_workflow`
 
-Manually run a workflow now. Creates a run record and starts an automated agent session that carries out the workflow's steps, using Marcora tools and your connected apps; the session is instructed to use only the tools in the workflow's `allowed_tools`. Inspect the returned `status` to know what happened. Only an **Active** workflow can run; an Inactive or archived one is refused. The schedule plays no part in a manual run.
+Manually run a workflow now. Creates a run record and starts an automated agent session that carries out the workflow's steps, using Marcora tools and your connected apps; the session is instructed to use only the tools in the workflow's `allowed_tools`. Inspect the returned `status` to know what happened. Only the workflow's creator (`created_by_user_id`) can run it manually; anyone else gets an access-denied error. Only an **Active** workflow can run; an Inactive or archived one is refused. The schedule plays no part in a manual run.
 
 > **Check `status`:** `running` → dispatch succeeded, the agent session is live; `failed` → dispatch failed, read `error_reason` for the cause; `skipped` → the runner decided no work was needed (rare for manual runs).
 

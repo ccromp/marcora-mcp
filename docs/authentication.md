@@ -42,12 +42,14 @@ Include your API key as a Bearer token in the `Authorization` header. Most MCP c
 Both authentication methods grant access to all tools within the scope of your Marcora account:
 
 - You can access data belonging to your **active team**
-- Your role on the team (e.g. owner, member) determines what actions you can perform
+- Your role on the team (Admin, Creator, Viewer, or Collaborator) determines what actions you can perform
 - Private content and collections are only visible to their creator
 - Team-visible content is accessible to team members (Collaborators see only documents in the projects they belong to, plus their own)
 
-## Revoking Access
+## Managing and Revoking Access
 
-**OAuth connections:** Disconnect the MCP server from your AI client's settings. You can also revoke OAuth authorizations from your Marcora account settings.
+In **Settings → Integrations → MCP** ([Integration Settings](https://app.marcora.ai/integration-settings)), each connection shows which app connected (`Claude`, `ChatGPT`, `HubSpot`, `Cursor`, `Gong`, or `Other app`). If you own a connection, you can rename it (**Rename** → **Rename connection** → **Save name**, 1–64 characters) to keep multiple connections easy to tell apart.
+
+**OAuth connections:** Disconnect the MCP server from your AI client's settings, or revoke the connection from [Integration Settings](https://app.marcora.ai/integration-settings).
 
 **API keys:** Delete the key from [Integration Settings](https://app.marcora.ai/integration-settings). The key is immediately invalidated.
