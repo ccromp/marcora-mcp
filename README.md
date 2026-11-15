@@ -2,18 +2,20 @@
 
 > Marcora is the context layer for go-to-market teams: your positioning, brand voice, and product facts in one source of truth that your AI tools read from.
 
-**Learn more:** [marcora.ai](https://marcora.ai)
+**Learn more:** [marcora.ai](https://marcora.ai) · **Docs:** [marcora.ai/docs/mcp-overview](https://marcora.ai/docs/mcp-overview)
+
+[![Add to Kiro](https://kiro.dev/images/add-to-kiro.svg)](https://kiro.dev/launch/mcp/add?name=marcora&config=%7B%22url%22%3A%22https%3A%2F%2Fmcp.marcora.ai%2F%22%7D)
 
 ## About
 
-This is the **public documentation repository** for Marcora's hosted MCP server. The server itself is a commercial, closed-source remote service. This repo provides metadata, connection instructions, tool documentation, and support resources.
+This is the **public documentation and plugin repository** for Marcora's hosted MCP server. The server itself is a commercial, closed-source remote service. This repo provides Portable Agent Plugin v1 metadata (`plugin.json` + `mcp.json`), the companion `marcora-mcp` workflow skill, connection instructions, tool documentation, and support resources.
 
 | | |
 |---|---|
 | **Type** | Hosted remote MCP server |
 | **Implementation** | Closed-source (commercial) |
 | **Transport** | Streamable HTTP |
-| **Authentication** | OAuth 2.0 or API token |
+| **Authentication** | OAuth 2.1 (PKCE) or API token |
 | **Status** | Production |
 
 ## What It Does
@@ -35,27 +37,30 @@ Marcora's MCP server enables AI clients to:
 
 ## Connection
 
-**Server URL (OAuth):** `https://mcp.marcora.ai`
+**Server URL (OAuth):** `https://mcp.marcora.ai/`
 
 **Authentication options:**
-- **OAuth 2.0** (recommended for interactive clients) — connect using `https://mcp.marcora.ai`
-- **API Token** (for non-interactive environments) — generate a key at [Integration Settings](https://app.marcora.ai/integration-settings) and connect to the same URL (`https://mcp.marcora.ai`), passing the key in an `Authorization: Bearer <your-api-key>` header. The server negotiates the right transport automatically.
+- **OAuth 2.1 with PKCE** (recommended for interactive clients) — connect using `https://mcp.marcora.ai/`
+- **API Token** (for non-interactive environments) — generate a key at [Integration Settings](https://app.marcora.ai/integration-settings) and connect to the same URL (`https://mcp.marcora.ai/`), passing the key in an `Authorization: Bearer <your-api-key>` header. The server negotiates the right transport automatically.
 
 ## Quickstart
 
-Add to your MCP client config:
+Add to your MCP client config (`mcp.json` / `.kiro/settings/mcp.json` / `claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
     "marcora": {
-      "url": "https://mcp.marcora.ai"
+      "url": "https://mcp.marcora.ai/"
     }
   }
 }
 ```
 
-See [docs/quickstart.md](docs/quickstart.md) for setup instructions for Claude, ChatGPT, Claude Desktop, Cursor, and VS Code.
+- **Kiro:** Click **Add to Kiro** above, or add the snippet to `~/.kiro/settings/mcp.json` (user) or `.kiro/settings/mcp.json` (workspace). Kiro signs in via browser OAuth on first connection.
+- **Hermes Agent:** Run `hermes plugins install marcora` (or `hermes plugins install https://github.com/ccromp/marcora-mcp`) to install both the remote MCP server connection and the bundled `marcora-mcp` workflow skill.
+
+See [docs/quickstart.md](docs/quickstart.md) for setup instructions for Claude, ChatGPT, Claude Desktop, Cursor, Kiro, Hermes Agent, and VS Code.
 
 ## The Marcora AI Workflows Skill (recommended)
 
@@ -196,12 +201,20 @@ See [docs/tools.md](docs/tools.md) for the complete tool reference.
 - [Support](docs/support.md)
 - [Marcora Website Documentation](https://marcora.ai/mcp)
 
-## Security & Privacy
+## Security, Privacy & Runtime Disclosures
 
-See [docs/security.md](docs/security.md) for details on data handling, permissions, and responsible disclosure.
+- **External service & authentication:** This package connects over HTTPS to Marcora's hosted MCP server at `https://mcp.marcora.ai/`. Connecting requires a Marcora account (a permanent Free tier is available at [marcora.ai/pricing](https://marcora.ai/pricing)) authenticated via OAuth 2.1 with PKCE (`/oauth/authorize`, `/oauth/token`, `/oauth/register`, `/oauth/revoke`) or a user-generated Bearer API token from [Integration Settings](https://app.marcora.ai/integration-settings).
+- **Runtime tool surface (`63` tools) & Studio Credit costs:** At runtime, `https://mcp.marcora.ai/` serves **63 MCP tools**: **32 read-only tools** (`readOnlyHint: true`, `destructiveHint: false`, always free to call) and **31 non-read-only tools** (`readOnlyHint: false`, of which **16** have `destructiveHint: false` and **15** have `destructiveHint: true` because they overwrite existing records in place, trigger scans/workflows, or send team invites). Those 31 tools create or update workspace records or consume team Marcora Studio Credits when AI generation, scans, or Word exports run (`create_content` on the `instructions` generation path, `produce_plan`, `create_blueprint_draft`, `create_project` with `project_brief_instructions`, `ask_content_assistant`, `check_content_grounding`, `trigger_health_audit_scan`, `convert_markdown_to_word_doc` at 2 Studio Credits per conversion, and `run_workflow`).
+- **Server-side background agents, scheduled workflows & connected apps:** Calling `run_workflow` starts an automated agent session on Marcora's backend that executes the workflow's steps using Marcora tools and any third-party apps the user has connected in Marcora (`allowed_tools` on a workflow is a prompt instruction to the workflow runner, not a separate hard permission check). Workflows created (`create_workflow`) or activated (`update_workflow` with `status: "active"`) that have an `On` schedule are dispatched automatically by Marcora's server-side scheduler independently of the local MCP client. Calling `ask_content_assistant` starts an asynchronous background AI assistant run on an existing document that may edit the document body in place.
+- **Advisory nature of MCP annotations & Hermes `trust: "untrusted"` scope:** MCP `ToolAnnotations` (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) are advisory hints; each MCP host decides whether and how to prompt for confirmation. In Hermes Agent, `plugin.json` declares `"trust": "untrusted"` and `"timeout": 180` on the `marcora` server so Hermes's host policy prompts before client-initiated calls to non-read-only tools, but client-side `trust: "untrusted"` and MCP annotations only govern calls initiated by the local client and do not prevent server-side scheduled workflow runs or background agent execution once a workflow is started or activated on Marcora.
+- **Privacy Policy:** [marcora.ai/privacy-policy](https://marcora.ai/privacy-policy)
+- **Terms of Service:** [marcora.ai/terms](https://marcora.ai/terms)
+- **Security & Trust Center:** [marcora.ai/security](https://marcora.ai/security) and [docs/security.md](docs/security.md)
 
 ## Support
 
+- **Email support:** [support@marcora.ai](mailto:support@marcora.ai)
+- **Security disclosures:** [security@marcora.ai](mailto:security@marcora.ai)
 - **Bug reports & feature requests:** [GitHub Issues](https://github.com/ccromp/marcora-mcp/issues)
 - **Website:** [marcora.ai](https://marcora.ai)
 

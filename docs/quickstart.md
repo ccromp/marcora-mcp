@@ -95,10 +95,40 @@ Add to your VS Code settings (`.vscode/mcp.json`):
 {
   "servers": {
     "marcora": {
-      "url": "https://mcp.marcora.ai"
+      "url": "https://mcp.marcora.ai/"
     }
   }
 }
+```
+
+### Kiro
+
+Click [![Add to Kiro](https://kiro.dev/images/add-to-kiro.svg)](https://kiro.dev/launch/mcp/add?name=marcora&config=%7B%22url%22%3A%22https%3A%2F%2Fmcp.marcora.ai%2F%22%7D) or add to `~/.kiro/settings/mcp.json` (user) or `.kiro/settings/mcp.json` (workspace):
+
+```json
+{
+  "mcpServers": {
+    "marcora": {
+      "url": "https://mcp.marcora.ai/"
+    }
+  }
+}
+```
+
+Kiro opens a browser login on first connection to complete OAuth 2.1 with PKCE.
+
+### Hermes Agent
+
+Install the Marcora Portable Agent Plugin v1 package (remote MCP server + companion `marcora-mcp` workflow skill):
+
+```bash
+hermes plugins install marcora
+```
+
+Or directly from GitHub:
+
+```bash
+hermes plugins install https://github.com/ccromp/marcora-mcp
 ```
 
 ### API Token Configuration (Any Client)
