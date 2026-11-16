@@ -24,6 +24,18 @@ When things go wrong, surface the raw error to the user — don't silently retry
 
 ---
 
+## E17 — Copying Only me material into a team-visible document (or writing after private-source access changed)
+
+**Symptom.** `update_content` or `create_content` returns a confirmation token instead of saving, or `create_content` saves a document as private when you expected a team document.
+
+**Cause.** An item you read this session is marked `audience: "only_me"` (or comes from a private project or collection), so Marcora will not let it flow into a team-visible document unless the user agrees. In addition:
+- If you read private material in this session to which the user has since lost access (or that changed after the read), `create_content` and `update_content` ask for confirmation (`confirm_private_sources`) even when writing to a document that stays private to the user (`scope` omitted/private: consent-only, nothing is shared, the document stays private).
+- Calling `get_content` on a document derived from pending (unreleased) private sources records those sources as read in this session so a subsequent write cannot move that material into a wider document without confirmation.
+
+**What to do.** Do not retry blindly and do not copy private material into a wider document on your own. Tell the user which material is involved and ask. Only if they agree, repeat the same `create_content` or `update_content` call with `confirm_private_sources` set to the token you were given. The token covers only the items it names, for that document and that one write, and expires in 5 minutes. For `create_content` when the user still has access to all read private sources and `scope` is omitted, the document is saved as private and restricted to its owner; make it team-visible only after the user agrees.
+
+---
+
 ## E15 — Telling the user a workflow "is running" when it isn't
 
 **Symptom.** You create a workflow, set it Active, and tell the user it's live — and nothing ever runs on its schedule. Or the user asks to "pause" a workflow and `update_workflow status:"paused"` is refused.
