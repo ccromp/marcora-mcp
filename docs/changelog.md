@@ -2,6 +2,16 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## Unreleased (skill restructured: short core + one reference file per workflow)
+
+### Changed
+
+- **The Marcora skill is now a short core plus reference files your AI client opens only when a task needs them.** `SKILL.md` keeps what every task needs (what Marcora is, the object model in brief, the four context layers, a table saying which workflow fits which job and which file to read first, and the rules every call follows) and drops from about 28,700 to about 4,900 tokens. Each workflow has its own file under `references/`, each under about 4,300 tokens.
+- **Coverage is unchanged.** Every section of the previous `SKILL.md`, `references/workflows.md` and `references/pitfalls.md` (v0.7.36) moved verbatim under its original heading; only cross-references between files were reworded. The old `references/workflows.md` (long-tail recipes) and `references/pitfalls.md` were dissolved into the new files, and `references/workflows.md` now holds the Marcora workflows chapter.
+- The skill's `description` (when it triggers) is unchanged. No tool, parameter or server behaviour changed.
+
+### Skill → v0.8.0 · plugin → v1.3.0
+
 ## 2026-11-15 (async blueprint creation & draft finalization, multi-collection context items, creator-only workflow updates & runs, Creator/Admin role alignment, and MCP connection labels & rename)
 
 ### Skill → v0.7.36 · plugin → v1.2.27

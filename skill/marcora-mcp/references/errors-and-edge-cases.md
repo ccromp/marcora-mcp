@@ -1,0 +1,78 @@
+# Errors and edge cases
+
+Read this when a tool returns an error or an unexpected result.
+
+---
+
+## Error runbook
+
+When things go wrong, surface the raw error to the user — don't silently retry.
+
+- **`"Document not found"`** (from `update_project` with `project_brief_id`) → the UUID doesn't match any content document. Verify with the user; common mistake is pasting a project_id where a content UUID was expected.
+- **`"Project not found in your current team."`** (from `update_project`) → the project belongs to a different team. Ask the user to switch active teams in the Marcora app.
+- **`"Project not found"`** (from `get_relevant_context` with `project_id`) → the project doesn't exist, or belongs to a team other than the active team. Check `list_projects`; if it's in another team, `set_active_team` (tell the user first — it's global). No context or brief comes back.
+- **`"You are not a member of project <id>"`** (from `get_relevant_context` with `project_id`) → the project is private and the user isn't one of its members. Tell the user; they can ask a project member to add them, or you can search without `project_id`. No context or brief comes back.
+- **`"Marcora is already updating this document."`** (from `ask_content_assistant`, or per finding in `apply_grounding_fix`'s `errors[]`) → another run on that document is still in progress. Wait for it to finish (poll `get_generation_status` if you have its `generation_id`), then retry once (for `apply_grounding_fix`, retry just those findings). Don't retry in a tight loop.
+- **`"Finding not found."`** (from `get_ci_finding`, or per finding in `apply_grounding_fix`'s `errors[]`) → the `finding_id` is unknown or you cannot read it. In `apply_grounding_fix`, that finding is skipped and the remaining findings in the call still run.
+- **`"Nothing was applied. This document has private source history..."`** (from `apply_grounding_fix`, `isError: true`) → a fix on a document with private source history cannot update a context item in the Reference Library. Follow the next step named in the message: call again with the same `finding_ids` and without `context_item_overrides` when that fixes the document itself; otherwise revise the document with `update_content`, then re-check.
+- **`"This check cannot use the document's private sources..."`** (from `check_content_grounding`, `isError: true`) → the document was built from Only me sources, which are never sent to an AI app. When they are the caller's own, the message includes a link to check the document privately in Marcora; relay that link to the user.
+- **`"Integrations are only available with a creator license..."`** (403 on Connected Apps or Webhooks) → Connected Apps (`find_app`, `add_context` `import_from`) and Webhooks require a creator or admin seat. Relay the message so the user knows to ask their workspace admin to upgrade their role.
+- **A plan-limit or Studio Credits refusal** (e.g. "This team has reached its plan's limit of N active projects", "Your team doesn't have enough Studio Credits") → relay Marcora's message to the user as written; it states the limit or shortfall and what they can do about it. Don't add upgrade or purchase advice of your own, and don't retry.
+- **Auth / `unauthorized` errors** → tell the user to reconnect Marcora in their MCP client's integration settings. Don't try to recover.
+- **Quota / rate-limit errors** → surface to the user with the message text. Don't retry in a tight loop.
+- **Anything else** → tell the user what tool you called and what error came back. Suggest they file an issue at the GitHub repo if it persists.
+
+---
+
+## E15 — Telling the user a workflow "is running" when it isn't
+
+**Symptom.** You create a workflow, set it Active, and tell the user it's live — and nothing ever runs on its schedule. Or the user asks to "pause" a workflow and `update_workflow status:"paused"` is refused.
+
+**Cause.** A workflow has two independent switches. The workflow is **Active** or **Inactive**; its schedule is **On** or **Paused**. Scheduled runs need both — Active **and** On. `create_workflow` saves the workflow Inactive and every schedule Paused, and no MCP tool can turn a schedule On: only the user can, in the app, with **Resume schedule**. There is no `paused` workflow status; `status` accepts only `active`, `inactive` and `archived`.
+
+**What to do.** Read `next_step` (from `create_workflow` / `update_workflow`) or `run_state` (from `get_workflow`) and lead your reply with it — it is computed from what was actually saved. Whenever you say a workflow is Active, say in the same sentence whether its schedule is On, Paused, or absent. If the schedule is Paused, hand the user the workflow's `link_url` exactly as returned and ask them to click **Resume schedule**. To stop scheduled runs but keep manual runs, the user pauses the schedule in the app; to stop everything, set the workflow `inactive`.
+
+---
+
+## E5 — Content `category_id` doesn't change generation behavior
+
+**Symptom.** User expects setting a category to affect output style. It doesn't.
+
+**Cause.** `category_id` is purely organizational — helps the user find content later. Generation behavior is shaped by the blueprint (if any), `instructions`, context layers, and targeting dimensions.
+
+**What to do.** Don't promise category-driven generation differences. If the user wants category-style output, recommend a blueprint instead.
+
+---
+
+## E10 — Surface human-readable identifiers, not UUIDs
+
+Don't show the user a UUID like `7b2c4f...` as an identifier. Surface the human-readable name + the `link_url` instead. UUIDs are for tool calls, not user-facing references.
+
+---
+
+## E14 — A brand-new account answers every tool with "setup underway"
+
+**Symptom.** Every tool you call — any tool — comes back with "Your Marcora account is still being set up. We're importing your website to build your context, which usually finishes within about a minute. Wait about a minute, then make this same tool call again; you don't need to ask the user first." (after the server has already held the call for up to 30 seconds waiting for active website setup to finish), or "Your Marcora account setup is still underway. We are importing your top web pages right now to build your context. Please try again in a few minutes." when no active setup build is currently running, sometimes with a progress suffix like `(3 of 7 setup steps complete.)`. The result is marked as an error (`isError: true`), but the server lists all its tools normally.
+
+**Cause.** The account was created recently and its context is still being built. While a new account is actively being set up, the server holds a tool call for up to 30 seconds and answers it normally if setup finishes in that window; if setup is still running after the hold, tools reply with this "setup underway" message instead of doing the work. That is expected, not a fault, and the connection itself is healthy — which is why the integration looks fine while no tool does anything yet.
+
+**What to do.** When the message says setup usually finishes within about a minute, wait about a minute and make the same tool call again yourself without asking the user first — the progress suffix advances, so re-calling after a brief pause completes the request once setup finishes. The error flag is how clients are made to see the message; it does not mean the tool or your arguments are broken. Do **not** treat it as a tool failure, do **not** retry in a tight sub-second loop, and do **not** suggest reconnecting the server or signing up again — a second signup splits their context across two accounts. If it persists beyond about an hour, setup has stalled rather than being slow: tell them to contact support.
+
+---
+
+## E21 — Role-gated workspace actions (`Admin` / `Creator` vs. Collaborator)
+
+**Symptom.** A Collaborator gets a 403 access-denied or `creator_license_required` error on `add_context(connected_webpage_url=…)`, `update_context(refresh_webpage=true)`, `update_ci_finding_status`, `apply_grounding_fix`, `get_share_link_activity`, `list_share_link_activity`, or `find_app`.
+
+**Cause.** Workspace-level context management, grounding/CI fixes, share-link analytics, and integrations require an active `Admin` or `Creator` role (`create_project` `team_visibility: "team"` makes a project visible to team Admins, Creators, and Viewers). Collaborators can read and update project-scoped content (`get_content`, `update_content`) in their projects.
+
+**What to do.** Check `marcora:get_current_user_info` (`role`), explain that an Admin or Creator role is required, and suggest asking a workspace Admin to upgrade their role if needed.
+
+---
+
+## When you encounter something not in this list
+
+1. Surface the raw error to the user — don't silently retry.
+2. State what you tried and what came back.
+3. Suggest plausible next steps (verify a parameter, retry, reconnect).
+4. Don't assume a workaround that creates the wrong artifact in the wrong place — confirm with the user first.
