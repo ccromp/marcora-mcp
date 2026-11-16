@@ -243,6 +243,24 @@ Returns all context collections accessible to the current user. Collections orga
 
 ---
 
+### `list_marcora_collections`
+
+Browses published Marcora Collections: curated multi-item reference collections a user can add to their library. Read-only. Use it when the user names a context collection by title that `list_context_collections` does not show; a title that is not one of the team's own collections is likely a Marcora Collection.
+
+**Parameters:** `search` (string, optional; matches title, slug, contributor name or description), `category` (string, optional).
+
+**Output:** `collections[]` with `marcora_collection_id`, `collection_id` (pass in `collection_ids` on `get_relevant_context` or as `collection_id` on `list_context_items`), `slug`, `title`, `description`, `summary`, `author_name`, `category`, `is_featured`, `availability_mode`, `in_library`, `item_count`, `items` (`{ id, name }[]`) and `link_url`. If `in_library` is false, call `add_marcora_collection` without asking; if true, answer directly.
+
+---
+
+### `add_marcora_collection`
+
+Adds a published Marcora Collection to the user's library (idempotent). Identify it by `marcora_collection_id`, `slug` (or a full `/collections/<slug>` URL) or exact `title` (case-insensitive). Unpublished or unknown collections return `Shared collection not found`.
+
+**Output:** `marcora_collection_id`, `collection_id`, `slug`, `title`, `availability_mode`, `in_library`, `already_in_library`, `status` (`"added"` or `"already_in_library"`), `state`, `message`, `item_count`, `items`, `link_url`. When `already_in_library` is true, do not tell the user you just added it; go straight to `get_relevant_context` with `collection_ids: [collection_id]`.
+
+---
+
 ### `create_context_collection`
 
 Create a new context collection to organize your reference materials. Collections group related context items together for easier management and targeted retrieval.
