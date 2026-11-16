@@ -249,7 +249,7 @@ Browses published Marcora Collections: curated multi-item reference collections 
 
 **Parameters:** `search` (string, optional; matches title, slug, contributor name or description), `category` (string, optional).
 
-**Output:** `collections[]` with `marcora_collection_id`, `collection_id` (pass in `collection_ids` on `get_relevant_context` or as `collection_id` on `list_context_items`), `slug`, `title`, `description`, `summary`, `author_name`, `category`, `is_featured`, `availability_mode`, `in_library`, `item_count`, `items` (`{ id, name }[]`) and `link_url`. If `in_library` is false, call `add_marcora_collection` without asking; if true, answer directly.
+**Output:** `marcora_collections[]` with `marcora_collection_id`, `collection_id` (pass in `collection_ids` on `get_relevant_context` or as `collection_id` on `list_context_items`), `slug`, `title`, `description`, `summary`, `author_name`, `category`, `is_featured`, `availability_mode`, `in_library`, `item_count`, `items` (`{ id, name }[]`) and `link_url`. If `in_library` is false, call `add_marcora_collection` without asking; if true, answer directly.
 
 ---
 
