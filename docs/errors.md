@@ -112,14 +112,14 @@ Neither error returns any context or the project's brief.
 
 ### "Your Marcora account is still being set up"
 
-**Cause:** The account is brand new and Marcora is importing its website to build the team's context. While that setup is running, the server holds each tool call for up to 30 seconds and answers it normally if setup finishes in that window. If setup is still running after the hold, the call returns "Your Marcora account is still being set up. We're importing your website to build your context, which usually finishes within about a minute. Wait about a minute, then make this same tool call again; you don't need to ask the user first." The result is flagged as a tool error (`isError: true`) so that every client, including SDK-based ones, surfaces the message rather than rejecting the response.
+**Cause:** The account is brand new and Marcora is importing its website to build the team's context. While that setup is running, the server holds each tool call for up to 30 seconds and answers it normally if setup finishes in that window. If setup is still running after the hold, the call returns "Your Marcora account is still being set up. Your website is still being processed; some imports take several minutes. This call has not run yet. Retry this same tool call now without asking the user. ..." The result is flagged as a tool error (`isError: true`) so that every client, including SDK-based ones, surfaces the message rather than rejecting the response.
 
 This is expected, not a fault, even though the result is flagged as an error. The connection is fine: the server still lists all its tools and authentication has succeeded. Only the *calls* are held.
 
 An account with no setup running is not held. A team added from inside an existing account, a setup that failed, and a setup that stalled all get normal tool answers.
 
 **Solutions:**
-- Wait about a minute and make the same call again. Setup usually finishes well inside that.
+- Retry the same call. The call did not run, so repeating it cannot duplicate anything. Each attempt waits up to 30 seconds, so keep retrying only while the notice keeps coming, for up to 5 minutes in total, then tell the user setup is still processing and to try again later. Website imports can take several minutes.
 - The message includes progress when it is available, e.g. `(3 of 7 setup steps complete.)`, so repeating the call is a reasonable way to watch it advance.
 - Do not re-run signup or reconnect the server. Neither speeds this up, and creating a second account splits the team's context across two places.
 - The hold releases automatically as soon as setup finishes, and in any case stops applying 72 hours after the account was created.
