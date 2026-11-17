@@ -30,7 +30,7 @@ Read this before answering "what do we have on X?", browsing or searching the li
 
 **Steps (browse path).**
 1. `marcora:list_context_items` (default returns everything the user can see; pass `reference_library_only=true` for just orphan items in the top-level Reference Library). Items in private collections / private projects the user is not in are filtered out automatically. Calls come back too: filter with `content_type: "call_transcript"`, `date_from` / `date_to`, `kinds` and `company`, and read each call's `call` block (date, kind, company, people, audience).
-2. Optionally `marcora:list_context_collections` if the user is asking about collection-level organization, or `marcora:get_project(project_id).context_items` for one project's items.
+2. Optionally `marcora:list_context_collections` if the user is asking about collection-level organization (it also lists the Marcora Collections in their library, marked `source: "marcora_collection"`), or `marcora:get_project(project_id).context_items` for one project's items.
 3. If the user wants to read the actual content of an item, `marcora:get_context_item(context_item_id)`.
 
 **Output to user.** A summary, not a JSON dump. Offer next steps: drill into a specific item (`get_context_item`), add new context, generate something based on what was found.
@@ -64,3 +64,5 @@ Read this before answering "what do we have on X?", browsing or searching the li
 **Cause.** Project context items (Layer 3) are included in full during in-project generations — no relevancy scoring, unlike Reference Library (Layer 2).
 
 **What to do.** Suggest the user prune project context to items still relevant to the initiative. Universally-useful items belong in the Reference Library (top-level) instead.
+
+**Named collection ("Use the 'X' context collection in Marcora…").** Check `list_context_collections` first. If the title is there (`source: "team"` or `"marcora_collection"`), pass its `id` in `collection_ids` on `get_relevant_context` (with `include_brand_foundation: true`), or as `collection_id` on `list_context_items`, and answer. If it is **not** there, do not say it does not exist: it is likely a published Marcora Collection not yet in the user's library. Find it with `list_marcora_collections` (`search` set to the title) and, if `in_library` is `false`, call `add_marcora_collection` **without asking** (naming the collection to use is the instruction to add it). Then use the returned `collection_id` the same way. `already_in_library: true` means it was already there (for example attached at signup): do not tell the user you just added it. Present each `link_url` exactly as returned.

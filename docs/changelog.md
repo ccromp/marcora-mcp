@@ -2,6 +2,22 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-16 (Marcora Collections, playbook cycles, readable errors)
+
+### Skill → v0.8.1 · plugin → v1.3.1
+
+### Added
+
+- **Marcora Collections (`list_marcora_collections`, `add_marcora_collection`):** browse published Marcora Collections (curated reference collections) and add one to the user's library. When a user names a context collection by title that is not in `list_context_collections`, call `list_marcora_collections` (with `search` set to the title), then `add_marcora_collection` without asking, then use the returned `collection_id` with `get_relevant_context` (`collection_ids`) or `list_context_items` (`collection_id`). `add_marcora_collection` is idempotent and reports `already_in_library`.
+- **Playbook cycles (`list_playbook_cycles`, `get_playbook_cycle`, `list_my_playbook_steps`, `complete_playbook_step`, `generate_cycle_content`, `get_cycle_generation`):** follow and drive a running playbook cycle (the instance `instantiate_playbook` creates). List cycles with progress, read one with its steps, list the steps assigned to you (soonest due first, `due_by` includes overdue), complete a step with a result link and note, and run "Generate all" for a cycle (uses Studio Credits, one generation per step; poll `get_cycle_generation`).
+
+### Changed
+
+- **`list_context_collections`** now includes the Marcora Collections in the user's library (`source: "marcora_collection"`, with `marcora_collection_id`) alongside the team's own (`source: "team"`). **`list_context_items`** accepts `collection_id`; `get_context_item` and `get_relevant_context` read items in active Marcora Collections.
+- **`create_playbook` / `update_playbook` / `get_playbook`:** playbook items carry `builds_on` (0-based positions of earlier items a step builds on, so each step's generation draws on them). **`instantiate_playbook`** accepts `topic`, stored on the cycle as `context`. **`list_plans`** accepts `run_id` and each plan row carries `run_id`.
+- **Errors:** actionable refusals (including malformed UUIDs) return `isError: true` with a readable message; a malformed request envelope returns `-32602 Invalid params` naming the field.
+- Tool surface: 71 tools served at `mcp.marcora.ai` (8 added).
+
 ## Unreleased (skill restructured: short core + one reference file per workflow)
 
 ### Changed

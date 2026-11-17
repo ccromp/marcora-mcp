@@ -1,6 +1,6 @@
 # Content plans and playbooks
 
-Read this before calling any plan or playbook tool (`create_plan`, `update_plan`, `produce_plan`, `list_plans`, `get_plan`, `create_playbook`, `create_playbook_from_plans`, `instantiate_playbook`, …): a content plan, the plans board, a launch calendar, or a reusable sequence of content to write.
+Read this before calling any plan or playbook tool (`create_plan`, `update_plan`, `produce_plan`, `list_plans`, `get_plan`, `create_playbook`, `create_playbook_from_plans`, `instantiate_playbook`, `list_playbook_cycles`, `get_playbook_cycle`, `list_my_playbook_steps`, `complete_playbook_step`, `generate_cycle_content`, …): a content plan, the plans board, a launch calendar, or a reusable sequence of content to write.
 
 ---
 
@@ -33,15 +33,28 @@ The **starting stage is set automatically from `source`**, you don't control it 
 
 - **`list_playbooks`** — All playbooks visible to the caller (team + own private). Summaries only — call `get_playbook` for items. Use before `instantiate_playbook`/`update_playbook` to find the right id.
 - **`get_playbook`** — One playbook with its full ordered item list. Inspect before instantiating/editing.
-- **`create_playbook`** — Author a reusable template from scratch: `name` + optional ordered `items` (each item becomes one plan on instantiation). Defaults `visibility:"team"`. Optionally set **`anchor_date`** (`YYYY-MM-DD`) when the template is built around a real date — it persists on the playbook and becomes the default anchor at instantiation.
+- **`create_playbook`** — Author a reusable template from scratch: `name` + optional ordered `items` (each item becomes one plan on instantiation). An item can carry `builds_on`: 0-based positions, in the same `items` array, of EARLIER items it builds on (never itself or a later one); each step's generation then draws on the steps it builds on. Defaults `visibility:"team"`. Optionally set **`anchor_date`** (`YYYY-MM-DD`) when the template is built around a real date — it persists on the playbook and becomes the default anchor at instantiation.
 - **`create_playbook_from_plans`** — Capture existing plans as a template ("save what worked"): pass `plan_ids`; their title/description/prompt/blueprint/category copy into ordered items. Use this (vs `create_playbook`) when the user liked a batch they already ran.
-- **`update_playbook`** — Rename/re-describe (patch in place) or restructure. If `items` is provided it **FULLY REPLACES** the items and their order; omit `items` to leave them. `visibility` change is creator-only. Pass **`anchor_date`** to set the reference date, or `null` to clear it.
+- **`update_playbook`** — Rename/re-describe (patch in place) or restructure. If `items` is provided it **FULLY REPLACES** the items and their order; omit `items` to leave them. Resend `builds_on` for every item you want to keep linked, because items are replaced in full. `visibility` change is creator-only. Pass **`anchor_date`** to set the reference date, or `null` to clear it.
 - **`instantiate_playbook`** — **Run** a playbook: create one Accepted plan per item, in order, as a batch (source `"playbook"`, inheriting the playbook's visibility). This is a distinct bulk action — it does NOT create/edit the playbook. Optional `project_id`, `assigned_to`, `category_id`, and **`anchor_date`**: each item's `offset_days` is applied to the anchor to compute that plan's due date (e.g. "instantiate my launch playbook anchored to next Monday"). If `anchor_date` is omitted, the playbook's persisted anchor is used.
 
 > **Playbook responses carry links — hand them to the user, not raw ids.** Every playbook read/write tool returns `anchor_date` (persisted `YYYY-MM-DD`, or `null`) and a **`link_url`** that opens the playbook in Marcora. `instantiate_playbook` returns the created **cycle** (`run`, with its own `link_url` → `app.marcora.ai/runs/{run_id}`) plus a `plans[]` array where **each plan has its own `link_url`** → `app.marcora.ai/plans/{plan_uuid}`. Share the cycle link to hand off the whole batch.
+
+### Playbook cycles (the 6 cycle tools)
+
+`instantiate_playbook` starts a **cycle**: one step (a plan) per playbook item. Pass `topic` (what the cycle is about, up to 4,000 characters) so the cycle's content is generated against it. The cycle's `run_id` and `link_url` come back in `run`. A step is a plan, identified by its `plan_uuid`.
+
+- **`list_playbook_cycles`** — Running cycles (`status`: `active` default | `complete` | `all`; optional `playbook_id`), each with progress (done / total). Use it to find a `run_id`.
+- **`get_playbook_cycle`** — One cycle with its steps in order: instructions (`prompt`), stage, due date, owner, the earlier steps it builds on, the produced document, and the recorded result once completed.
+- **`list_my_playbook_steps`** — The open steps assigned to the user across all cycles, soonest due first. `due_by` (YYYY-MM-DD) includes overdue steps. This is the daily "what do I need to do" check. Then read the step in context with `get_playbook_cycle`.
+- **`complete_playbook_step`** — Mark a step Complete with optional `result_url` and `note` as evidence. Works for steps with no document (which `update_plan` cannot complete). Needs edit rights on the step; idempotent; a Dismissed step is refused. Only call it when the work was actually done.
+- **`generate_cycle_content`** — "Generate all": starts generating the document for every step that has none, in order, on the server. **Consumes Studio Credits, one generation per step — confirm before starting.** Skips checklist and action steps, dismissed and already-generated steps, and teammates' steps (reported with a reason). One batch per cycle at a time; calling again while one runs returns `started: false`. Async.
+- **`get_cycle_generation`** — Poll the latest batch (`running` / `completed` / `stopped` / `interrupted`) and each step's status. For one step's output use its `generation_id` with `get_generation_status`.
+- To see every step of a cycle as plans, `list_plans` accepts `run_id` (combine with `assignee_scope: "all_visible"`); each plan row carries its `run_id`.
 
 ### Typical flows
 
 - **Turn a suggestion into content:** `list_plans` (find it) → `update_plan target_stage:"Accepted"` → `produce_plan` → poll `get_generation_status` → hand the user the produced content's link.
 - **Capture then reuse:** user runs a good batch of plans → `create_playbook_from_plans(plan_ids)` → later `instantiate_playbook(anchor_date=…)` to redeploy the sequence.
 - **Author a template:** `create_playbook(name, items)` → `instantiate_playbook` when ready to deploy.
+- **Run and follow a campaign:** `instantiate_playbook(playbook_id, anchor_date, topic)` → `generate_cycle_content(run_id)` (after confirming credits) → poll `get_cycle_generation` → `list_my_playbook_steps(due_by=today)` each day → `complete_playbook_step(plan_uuid, result_url)` as steps are done.

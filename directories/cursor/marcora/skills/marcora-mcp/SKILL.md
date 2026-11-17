@@ -4,7 +4,7 @@ description: "Use this skill BEFORE calling any Marcora MCP tool (create_content
 license: MIT
 metadata:
   mcp-server: marcora
-  version: 0.8.0
+  version: 0.8.1
 ---
 
 # Marcora AI Workflows
@@ -49,11 +49,11 @@ The Marcora MCP server is hosted; the user's MCP client connects directly. You d
 | Write, generate or save a document (blog post, email, one-pager, case study, campaign), with or without a blueprint, project or audience; or check on a generation still running | `get_relevant_context` then `create_content`; `get_generation_status` to check one already running | `references/generate-content.md` |
 | Create a project; set, read or edit a project brief; rename / archive a project; do substantive work **inside** a project | `create_project`, `update_project`, `get_project` | `references/projects-and-briefs.md` |
 | Save reference material (pasted text, a URL snapshot, a web page to keep current) to the library or a project | `add_context` | `references/add-context.md` |
-| Ask "what do we have on X?", browse or search the library, find the most relevant existing docs — or **write the content yourself** and save it via `content` | `get_relevant_context`, `list_context_items`, `list_content` | `references/find-context.md` |
+| Ask "what do we have on X?", use a named context collection (including a curated Marcora Collection), browse or search the library, find the most relevant existing docs — or **write the content yourself** and save it via `content` | `get_relevant_context`, `list_context_items`, `list_content` | `references/find-context.md` |
 | Read or change Brand Foundation (company overview, brand voice, writing style, writing examples) | `get_brand_foundation`, `update_brand_foundation` | `references/brand-foundation.md` |
 | Check a document's claims against the library ("is this accurate?", "does it contradict anything?"), apply fixes or health-audit findings | `check_content_grounding`, `apply_grounding_fix` | `references/grounding.md`, then `references/grounding-recipe.md` to run a check end to end |
 | Make something reusable, recurring or scheduled ("every Monday…", "automate this", "an agent that does X"); build, activate or run a workflow | `create_workflow` and the workflow tools | `references/workflows.md` |
-| Plan content (a launch calendar, ideas on the plans board), produce a plan, or save / run a reusable sequence of content (playbook) | `create_plan`, `produce_plan`, playbook tools | `references/plans-and-playbooks.md` |
+| Plan content (a launch calendar, ideas on the plans board), produce a plan, save / run a reusable sequence of content (playbook), or follow a running playbook cycle (what is due, complete a step, generate all its content) | `create_plan`, `produce_plan`, playbook and cycle tools | `references/plans-and-playbooks.md` |
 | Create a blueprint (template), or browse / import one from the Blueprint Exchange | `create_blueprint`, `list_community_blueprints` | `references/blueprints.md` |
 | Share a document externally or export it to Word | `create_external_share`, `convert_markdown_to_word_doc` | `references/share-and-export.md` |
 

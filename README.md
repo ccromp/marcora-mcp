@@ -132,6 +132,8 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Context & Resources | `update_brand_foundation` | Overwrite one Brand Foundation element |
 | Context & Resources | `list_context_collections` | List context collections |
 | Context & Resources | `create_context_collection` | Create a new context collection |
+| Context & Resources | `list_marcora_collections` | Browse published Marcora Collections (curated reference collections) |
+| Context & Resources | `add_marcora_collection` | Add a Marcora Collection to your library |
 | Context & Resources | `add_context` | Add a context item to your library |
 | Context & Resources | `update_context` | Update an existing context item |
 | Context & Resources | `list_context_items` | List context items in your library (optional semantic `search`) |
@@ -179,7 +181,13 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Plans & Playbooks | `create_playbook` | Author a reusable playbook of plan items |
 | Plans & Playbooks | `create_playbook_from_plans` | Capture existing plans as a playbook |
 | Plans & Playbooks | `update_playbook` | Rename, re-describe, or restructure a playbook |
-| Plans & Playbooks | `instantiate_playbook` | Run a playbook into a batch of plans (optionally anchored to a date) |
+| Plans & Playbooks | `instantiate_playbook` | Run a playbook into a cycle of plans (optionally anchored to a date, with a topic) |
+| Plans & Playbooks | `list_playbook_cycles` | List running playbook cycles with progress |
+| Plans & Playbooks | `get_playbook_cycle` | Read one cycle with its ordered steps |
+| Plans & Playbooks | `list_my_playbook_steps` | List the open playbook steps assigned to you, soonest due first |
+| Plans & Playbooks | `complete_playbook_step` | Mark a cycle step Complete with a result link and note |
+| Plans & Playbooks | `generate_cycle_content` | Generate the content for every step of a cycle that has none (uses Studio Credits) |
+| Plans & Playbooks | `get_cycle_generation` | Check the progress of a cycle's "Generate all" batch |
 | Workflows | `list_workflows` | List workflows |
 | Workflows | `get_workflow` | Get a workflow's full definition |
 | Workflows | `create_workflow` | Create a new workflow template |
@@ -204,7 +212,7 @@ See [docs/tools.md](docs/tools.md) for the complete tool reference.
 ## Security, Privacy & Runtime Disclosures
 
 - **External service & authentication:** This package connects over HTTPS to Marcora's hosted MCP server at `https://mcp.marcora.ai/`. Connecting requires a Marcora account (a permanent Free tier is available at [marcora.ai/pricing](https://marcora.ai/pricing)) authenticated via OAuth 2.1 with PKCE (`/oauth/authorize`, `/oauth/token`, `/oauth/register`, `/oauth/revoke`) or a user-generated Bearer API token from [Integration Settings](https://app.marcora.ai/integration-settings).
-- **Runtime tool surface (`63` tools) & Studio Credit costs:** At runtime, `https://mcp.marcora.ai/` serves **63 MCP tools**: **32 read-only tools** (`readOnlyHint: true`, `destructiveHint: false`, always free to call) and **31 non-read-only tools** (`readOnlyHint: false`, of which **16** have `destructiveHint: false` and **15** have `destructiveHint: true` because they overwrite existing records in place, trigger scans/workflows, or send team invites). Those 31 tools create or update workspace records or consume team Marcora Studio Credits when AI generation, scans, or Word exports run (`create_content` on the `instructions` generation path, `produce_plan`, `create_blueprint_draft`, `create_project` with `project_brief_instructions`, `ask_content_assistant`, `check_content_grounding`, `trigger_health_audit_scan`, `convert_markdown_to_word_doc` at 2 Studio Credits per conversion, and `run_workflow`).
+- **Runtime tool surface (`71` tools) & Studio Credit costs:** At runtime, `https://mcp.marcora.ai/` serves **71 MCP tools**: **37 read-only tools** (`readOnlyHint: true`, `destructiveHint: false`, always free to call) and **34 non-read-only tools** (`readOnlyHint: false`, of which **19** have `destructiveHint: false` and **15** have `destructiveHint: true` because they overwrite existing records in place, trigger scans/workflows, or send team invites). Those 34 tools create or update workspace records or consume team Marcora Studio Credits when AI generation, scans, or Word exports run (`create_content` on the `instructions` generation path, `produce_plan`, `generate_cycle_content` (one generation per step), `create_blueprint_draft`, `create_project` with `project_brief_instructions`, `ask_content_assistant`, `check_content_grounding`, `trigger_health_audit_scan`, `convert_markdown_to_word_doc` at 2 Studio Credits per conversion, and `run_workflow`).
 - **Server-side background agents, scheduled workflows & connected apps:** Calling `run_workflow` starts an automated agent session on Marcora's backend that executes the workflow's steps using Marcora tools and any third-party apps the user has connected in Marcora (`allowed_tools` on a workflow is a prompt instruction to the workflow runner, not a separate hard permission check). Workflows created (`create_workflow`) or activated (`update_workflow` with `status: "active"`) that have an `On` schedule are dispatched automatically by Marcora's server-side scheduler independently of the local MCP client. Calling `ask_content_assistant` starts an asynchronous background AI assistant run on an existing document that may edit the document body in place.
 - **Advisory nature of MCP annotations & Hermes `trust: "untrusted"` scope:** MCP `ToolAnnotations` (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) are advisory hints; each MCP host decides whether and how to prompt for confirmation. In Hermes Agent, `plugin.json` declares `"trust": "untrusted"` and `"timeout": 180` on the `marcora` server so Hermes's host policy prompts before client-initiated calls to non-read-only tools, but client-side `trust: "untrusted"` and MCP annotations only govern calls initiated by the local client and do not prevent server-side scheduled workflow runs or background agent execution once a workflow is started or activated on Marcora.
 - **Privacy Policy:** [marcora.ai/privacy-policy](https://marcora.ai/privacy-policy)

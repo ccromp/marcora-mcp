@@ -224,6 +224,8 @@ Returns all context collections accessible to the current user. Collections orga
 
 > **Placement rule:** a context item is either in the reference library (not in any collection) or in one or more collections — never both; private collections and call transcripts stay single-collection and cannot be combined with other collections, and Library source collections are added as secondary collections only via Library authoring.
 
+**Includes Marcora Collections.** The list holds both the team's own collections (`source: "team"`) and the active Marcora Collections in the user's library (`source: "marcora_collection"`, with `marcora_collection_id`). When the user names a collection that is not in this list, it is likely a published Marcora Collection not yet in their library: find it with `list_marcora_collections` and add it with `add_marcora_collection`, then pass the returned `collection_id` to `get_relevant_context` (`collection_ids`) or `list_context_items` (`collection_id`).
+
 **Parameters:** None
 
 **Output:** An object with a single `collections` key holding an array of context collections. Each item:
@@ -235,6 +237,8 @@ Returns all context collections accessible to the current user. Collections orga
 | `description` | string | Collection description |
 | `is_private` | boolean | Whether this collection is private to the creator |
 | `item_count` | integer | Number of distinct context items in this collection (whether primary or secondary) |
+| `source` | string | `team` (the team's own collection) or `marcora_collection` (a published Marcora Collection in the user's library). Use `id` with `add_context` / `update_context` for `team` collections only |
+| `marcora_collection_id` | integer \| null | Published Marcora Collection ID when `source` is `marcora_collection`; `null` for a team collection |
 | `link_url` | string | Direct URL to view this collection in the Marcora app |
 
 **Example prompts:**
@@ -269,6 +273,46 @@ Create a new context collection to organize your reference materials. Collection
 **Example prompts:**
 - "Create a new collection called 'Q2 Product Research'"
 - "Make a private collection for competitive analysis"
+
+---
+
+### `list_marcora_collections`
+
+Browse published **Marcora Collections**: curated, multi-item reference collections that a user can add to their library and use as context in Claude, ChatGPT, and Marcora. Read-only. Use it when the user names a context collection by title (for example, `Use the "{title}" context collection in Marcora`) that does not appear in `list_context_collections`, or asks which curated collections are available.
+
+If a result has `in_library: false`, call `add_marcora_collection` right away without asking for confirmation (naming the collection to use is the instruction to add it). If `in_library: true`, go straight to answering using the returned `collection_id`.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `search` | string | No | Case-insensitive filter on title, slug, contributor name, or description. Omit to list all published collections |
+| `category` | string | No | Case-insensitive category name or slug. Omit for all categories |
+
+**Output:** `{ marcora_collections, total }`. Each collection has `marcora_collection_id`, `collection_id`, `slug`, `title`, `description`, `summary`, `author_name`, `category`, `is_featured`, `availability_mode` (`default` or `opt_in`), `in_library` (boolean), `item_count`, `items` (`{ id, name }` list), and `link_url`. Present `link_url` exactly as returned.
+
+**Example prompts:**
+- "Use the 'Launch Messaging' context collection in Marcora and tell me how to apply it to my company"
+- "What curated Marcora Collections are available?"
+
+---
+
+### `add_marcora_collection`
+
+Add a published Marcora Collection to the current user's library so its items can be searched with `get_relevant_context` and read with `list_context_items` and `get_context_item`. Idempotent: safe to call when the collection is already in the library.
+
+**Parameters:** provide one of the following.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `marcora_collection_id` | integer | One of three | Published Marcora Collection ID from `list_marcora_collections` |
+| `slug` | string | One of three | Collection slug, or a full `https://marcora.ai/collections/<slug>` URL |
+| `title` | string | One of three | Exact public title (case-insensitive) |
+
+**Output:** `marcora_collection_id`, `collection_id` (pass this as `collection_ids` to `get_relevant_context`, or `collection_id` to `list_context_items`), `slug`, `title`, `description`, `availability_mode`, `in_library`, `already_in_library`, `status` (`added` or `already_in_library`), `state` (`added` or `default_visible`), `message`, `item_count`, `items`, `link_url`. When `already_in_library` is `true`, do not tell the user it was just added; answer from the collection's content.
+
+**Example prompts:**
+- "Add the 'Launch Messaging' collection from Marcora to my library"
 
 ---
 
@@ -465,6 +509,7 @@ Each returned item carries its `collection_id` (primary collection ID, or `null`
 |---|---|---|---|
 | `reference_library_only` | boolean | No | When `true`, returns only items not in any project or collection (`collection_ids: []` and `project_id: null`). Default `false` returns everything |
 | `search` | string | No | Optional natural-language query. When provided, every item you can see is scored by its best-matching passage and the list is sorted by that score instead of recency; each item gains a `relevance_score`. Nothing is dropped, so the response is still the whole library. Omit or leave empty for the normal recency-ordered list. To retrieve the passages relevant to a question, use `get_relevant_context` |
+| `collection_id` | integer | No | Return only items in this team collection or active Marcora Collection (id from `list_context_collections` or `list_marcora_collections`). Omit to include every accessible collection |
 | `content_type` | string | No | Return only items of this type, for example `call_transcript` (calls), `manual` (pasted text), or `webpage`. Omit for every type |
 | `date_from` | string | No | Return only items dated on or after this, as `YYYY-MM-DD` or ISO 8601. Compared with the call's own date (when it happened) for calls, and the created date (when it was added) for every other item. A call with no known date does not match a date bound (`date_from` must not be after `date_to`) |
 | `date_to` | string | No | Return only items dated on or before this, as `YYYY-MM-DD` (the whole day counts) or ISO 8601. A call with no known date does not match a date bound (`date_from` must not be after `date_to`) |
@@ -1935,6 +1980,7 @@ Returns a paginated list of plans visible to the authenticated user. Use filters
 | `project_id` | string | No | Filter to plans associated with this project UUID |
 | `category_id` | integer | No | Filter to plans in this content category |
 | `assignee_scope` | string | No | Whose plans to return: `me` (default), `created_by_me`, or `all_visible` |
+| `run_id` | integer | No | Only the steps of one playbook cycle (the `run_id` from `list_playbook_cycles` / `instantiate_playbook`). Combine with `assignee_scope: "all_visible"` to see every step of the cycle, not only yours |
 | `due_before` | string | No | ISO date YYYY-MM-DD. Note: does not apply yet |
 | `due_after` | string | No | ISO date YYYY-MM-DD. Note: does not apply yet |
 | `search_text` | string | No | Substring match on plan title. Note: does not apply yet |
@@ -1955,6 +2001,7 @@ Returns a paginated list of plans visible to the authenticated user. Use filters
 | `items[].created_by` | integer | User ID of creator |
 | `items[].due_date` | string | Due date (YYYY-MM-DD), or null |
 | `items[].produced_content_id` | string | UUID of linked content item, or null |
+| `items[].run_id` | integer | The playbook cycle this plan is a step of, or null. Read the cycle with `get_playbook_cycle` |
 | `items[].created_at` | string | ISO timestamp |
 | `items[].updated_at` | string | ISO timestamp |
 | `itemsTotal` | integer | Total number of matching plans |
@@ -2141,7 +2188,7 @@ Fetch one content playbook by id, including its full ordered list of items.
 |---|---|---|---|
 | `playbook_id` | integer | Yes | ID of the playbook to fetch |
 
-**Output:** the playbook object — including its `anchor_date` (persisted `YYYY-MM-DD` reference date, or `null`) and `link_url` (opens the playbook in the Marcora web app) — with an ordered `items` array. Each item carries the plan fields it will stamp out (title, description, prompt, blueprint, category) plus an `offset_days` counted from the anchor date to compute each due date on instantiation.
+**Output:** the playbook object — including its `anchor_date` (persisted `YYYY-MM-DD` reference date, or `null`) and `link_url` (opens the playbook in the Marcora web app) — with an ordered `items` array. Each item carries the plan fields it will stamp out (title, description, prompt, blueprint, category), a `builds_on` array (0-based positions of the earlier steps it builds on; empty when none), plus an `offset_days` counted from the anchor date to compute each due date on instantiation.
 
 **Example prompts:**
 - "What's in my launch-week playbook?"
@@ -2160,7 +2207,7 @@ Create a reusable content playbook — an ordered template of content-plan items
 | `description` | string | No | Free-text description |
 | `visibility` | string | No | `team` (default) or `private` |
 | `anchor_date` | string | No | Optional `YYYY-MM-DD` reference date the playbook is built around (a launch, event, campaign kickoff). Persisted on the playbook; each item's `offset_days` counts from it, and it becomes the default anchor when instantiating. Leave off for an evergreen/undated template |
-| `items` | array | No | Ordered playbook items (each becomes one plan on instantiation) |
+| `items` | array | No | Ordered playbook items (each becomes one plan on instantiation). Each item can carry `builds_on`: an array of 0-based positions, in this same `items` array, of EARLIER items the step builds on (a link to itself or a later item is rejected). When the playbook is run, each step's generation draws on the steps it builds on |
 
 **Output:** the created playbook object, including its persisted `anchor_date` (or `null`) and a `link_url` that opens the new playbook in the Marcora web app — share it with the user.
 
@@ -2204,7 +2251,7 @@ Edit a content playbook. Any playbook is fully editable. Pass only the fields to
 | `description` | string | No | New description (pass `null` to clear) |
 | `visibility` | string | No | `team` or `private` (creator-only) |
 | `anchor_date` | string | No | Set the playbook's `YYYY-MM-DD` reference date. Omit to keep the current value; pass `null` to clear it |
-| `items` | array | No | If provided, REPLACES the full ordered item list |
+| `items` | array | No | If provided, REPLACES the full ordered item list. Resend `builds_on` (0-based positions of earlier items in this array) for every item you want to keep linked |
 
 **Output:** the updated playbook object, including its `anchor_date` (or `null`) and `link_url`.
 
@@ -2227,6 +2274,7 @@ Run a playbook: create one content plan per playbook item, in order, as a batch.
 | `project_id` | string (uuid) | No | Scope the created plans to this project |
 | `assigned_to` | integer | No | Assign the created plans to this team member |
 | `category_id` | integer | No | Apply this content category to the created plans |
+| `topic` | string | No | What this cycle is about (max 4000 chars), e.g. the product, launch or campaign. Stored on the cycle, shown as its topic, and used when the cycle's content is generated |
 
 If `anchor_date` is omitted, the playbook's persisted `anchor_date` (if any) is used.
 
@@ -2236,13 +2284,109 @@ If `anchor_date` is omitted, the playbook's persisted `anchor_date` (if any) is 
 |---|---|---|
 | `playbook_id` | integer | The instantiated playbook |
 | `run_id` | integer | ID of the cycle (run) this created — the group the plans belong to |
-| `run` | object | The created cycle: `id`, `name` (auto-named `"<playbook> — <Mon YYYY>"` unless you passed a name), `anchor_date`, and `link_url` (`https://app.marcora.ai/runs/{run_id}`) — share it to hand the user their new cycle |
+| `run` | object | The created cycle: `id`, `name` (auto-named `"<playbook> — <Mon YYYY>"` unless you passed a name), `context` (the `topic` you passed, or null), `anchor_date`, and `link_url` (`https://app.marcora.ai/runs/{run_id}`) — share it to hand the user their new cycle |
 | `created_count` | integer | Number of plans created (one per playbook item) |
 | `plans` | array | The created content plans (same shape as `create_plan` / `get_plan`), each with its own `link_url` (`https://app.marcora.ai/plans/{plan_uuid}`). Stage `Accepted`, source `playbook` |
 
 **Example prompts:**
 - "Run my launch playbook"
 - "Instantiate this template anchored to next Monday"
+
+---
+
+### Playbook cycles
+
+A **cycle** is a running instance of a playbook: `instantiate_playbook` creates one, with one step (a plan) per playbook item. These six tools read and drive cycles. A step is identified by its `plan_uuid`.
+
+---
+
+### `list_playbook_cycles`
+
+List the playbook cycles in the current team: active by default, or filtered by playbook or status. Cycles whose steps you cannot see (a private playbook you do not own) are omitted. Read-only.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `playbook_id` | integer | No | Only cycles of this playbook (from `list_playbooks`) |
+| `status` | string | No | `active` (default; at least one step still open), `complete` (every step Complete or Dismissed), or `all` |
+| `page` | integer | No | Page number (default 1) |
+| `per_page` | integer | No | Items per page (default 20, max 100) |
+
+**Output:** `items` (each: `run_id`, `name`, `playbook_id`, `playbook_name`, `topic`, `anchor_date`, `created_by`, `created_at`, `status`, `progress` with `total` / `done` / `dismissed` / `by_stage`, `link_url`), plus `itemsTotal`, `curPage`, `nextPage`, `prevPage`.
+
+**Example prompts:** "What cycles are running?" · "How is our product launch cycle going?"
+
+---
+
+### `get_playbook_cycle`
+
+Read one cycle with its steps in playbook order. Read-only.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `run_id` | integer | Yes | Cycle id, from `list_playbook_cycles` / `instantiate_playbook`, or the trailing number of a cycle `link_url` |
+
+**Output:** `cycle` (same shape as a `list_playbook_cycles` row) and `steps`. Each step carries `position`, `plan_uuid`, `title`, `description`, `prompt` (the instructions), `stage`, `done`, `due_date`, `assigned_to` / `assigned_to_name`, `builds_on` (earlier steps it builds on), `document` (the produced document with link, or null), `step` (`kind`, `goes_out_date`, `reviewer`, `optional`), `result` (recorded link / note once completed, or null) and `link_url`. Use a step's `plan_uuid` with `get_plan` for full detail or `complete_playbook_step` to finish it.
+
+**Example prompts:** "What's due next in the launch cycle?" · "What did step 2 produce?"
+
+---
+
+### `list_my_playbook_steps`
+
+List the open playbook steps (not Complete or Dismissed) assigned to you, across all running cycles, soonest due first (undated last). Read-only. This is the daily "what do I need to do" check.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `due_by` | string | No | `YYYY-MM-DD`. Only steps due on or before this date (overdue included). Omit for all open steps |
+| `run_id` | integer | No | Only steps of this cycle |
+
+**Output:** `items` (each: `plan_uuid`, `title`, `description`, `prompt`, `stage`, `due_date`, `run_id`, `cycle_name`, `cycle_link_url`, `link_url`) and `itemsTotal`.
+
+**Example prompts:** "What do I need to do today?" · "Anything overdue in my playbook steps?"
+
+---
+
+### `complete_playbook_step`
+
+Mark a cycle step Complete and record the evidence: an optional result link and/or a short note, shown on the step in `get_playbook_cycle`. Works for steps that produce no document, which `update_plan` cannot complete. You must be able to edit the step (its assignee or creator). Idempotent: an already-Complete step keeps its original `completed_at` / `completed_by` and only a newly supplied `result_url` / `note` is updated. A Dismissed step is refused (409), and plans that are not cycle steps are refused (use `update_plan`).
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `plan_uuid` | string (uuid) | Yes | The step's `plan_uuid`, from `get_playbook_cycle` or `list_my_playbook_steps` |
+| `result_url` | string | No | http(s) link to the result, e.g. a submission confirmation. Omit to keep what is recorded |
+| `note` | string | No | Note on what was done. Omit to keep what is recorded |
+
+**Output:** `plan_uuid`, `title`, `stage`, `completed_at`, `completed_by`, `result_url`, `note`, `run_id`, `link_url`, `cycle_link_url`.
+
+**Example prompts:** "Mark the press-release step done, here's the confirmation page"
+
+---
+
+### `generate_cycle_content`
+
+Start "Generate all" on a cycle: generate the document for every step that has none yet, in step order, on the server (it keeps going after the call returns). Each step is generated with the cycle's topic and the steps it builds on. Only content steps assigned to you (or created by you) are generated; checklist and action steps, dismissed steps, already-generated steps and teammates' steps are skipped with a reason. **Uses the team's Studio Credits, one generation per step**; if credits run out the batch stops cleanly and the remaining steps are reported as `not_started`. Only one batch runs per cycle at a time: calling again while one runs returns `started: false` with the running batch. Not idempotent. For a single step use `produce_plan`.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `run_id` | integer | Yes | Cycle id from `list_playbook_cycles` / `instantiate_playbook` |
+
+**Output:** `started`, `nothing_to_generate`, `batch`, `pieces` (each: `position`, `plan_uuid`, `title`, `status` of `queued` / `generating` / `done` / `failed` / `blocked` / `skipped` / `not_started`, `reason`, `message`, `generation_id`, `depends_on`) and `cycle_link_url`. Async: poll `get_cycle_generation` (and `get_generation_status` for one step's `generation_id`).
+
+**Example prompts:** "Write all the content in the launch cycle"
+
+---
+
+### `get_cycle_generation`
+
+Read the latest "Generate all" batch of a cycle: overall status (`running`, `completed`, `stopped`, `interrupted`) and each step's status with a reason and message where relevant. Returns `batch: null` when none was ever started. Read-only.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `run_id` | integer | Yes | Cycle id from `list_playbook_cycles` |
+
+**Output:** `batch` (or null) and `cycle_link_url`.
+
+**Example prompts:** "How is the cycle generation going?"
 
 ---
 

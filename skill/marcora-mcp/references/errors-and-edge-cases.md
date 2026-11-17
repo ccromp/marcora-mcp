@@ -8,6 +8,7 @@ Read this when a tool returns an error or an unexpected result.
 
 When things go wrong, surface the raw error to the user — don't silently retry.
 
+- **A refusal you can act on (a wrong id, a malformed UUID, a permission or privacy refusal) comes back as a tool result with `isError: true` and a readable message**, not a protocol failure. Read the message and tell the user what it says; if it names a bad argument, correct it (re-list to get a fresh id, or pass the full UUID) and make one corrected call. Do not blindly retry. A malformed request envelope (for example a non-object `params`) returns JSON-RPC `-32602 Invalid params` naming the field.
 - **`"Document not found"`** (from `update_project` with `project_brief_id`) → the UUID doesn't match any content document. Verify with the user; common mistake is pasting a project_id where a content UUID was expected.
 - **`"Project not found in your current team."`** (from `update_project`) → the project belongs to a different team. Ask the user to switch active teams in the Marcora app.
 - **`"Project not found"`** (from `get_relevant_context` with `project_id`) → the project doesn't exist, or belongs to a team other than the active team. Check `list_projects`; if it's in another team, `set_active_team` (tell the user first — it's global). No context or brief comes back.
