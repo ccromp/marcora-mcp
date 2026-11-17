@@ -2,6 +2,12 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-17 (setup hold applies only while setup is running)
+
+### Skill → v0.8.2
+
+- **Accounts with no setup running are no longer held.** The first-call setup hold (pitfall E14) now applies only while a new account's website setup is actually running. A team added from inside an existing account, a setup that failed, and a setup that stalled now get normal tool answers instead of the earlier "importing your top web pages" refusal. A team whose setup really is running is still held up to 30 seconds per call, then gets the "wait about a minute and retry" notice. `docs/errors.md`, pitfall E14 and the skill's one-line summary are updated.
+
 ## 2026-11-16 (Marcora Collections, playbook cycles, readable errors)
 
 ### Skill → v0.8.1 · plugin → v1.3.1
