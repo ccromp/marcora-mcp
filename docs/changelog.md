@@ -2,6 +2,25 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-18 (call instructions, playbook steps & variables, cycle edits, complete_playbook_step overwrite disclosure, add_context plain-fact wording)
+
+### Skill → v0.8.3 · plugin → v1.3.2
+
+### Added
+
+- **Call instructions (`list_call_instructions`, `add_call_instruction`, `update_call_instruction`, `remove_call_instruction`):** manage the user's standing call instructions — the saved `guidance` (steers what Marcora suggests from calls) and `word_fix` (`find` and `replace` for recurring transcription errors) rules they also edit in Settings. Instructions apply to all of the user's calls by default (`scope: "default"`) or to one automatic call import (`automatic_call_import_id`, listed in `list_call_instructions` `automatic_call_imports`). Changes apply to calls processed from now on; already-imported calls are unchanged.
+- **`update_playbook_cycle`:** rename a playbook cycle and/or change its topic (`name`, `topic`). Step edits (title, prompt, due date, assignee, dismiss) stay on `update_plan`, and the cycle tool descriptions now say so.
+- **`reopen_playbook_step`:** untick a completed checklist step (back to `Accepted`, result cleared). Other step kinds are refused.
+
+### Changed
+
+- **`create_playbook` / `update_playbook` / `get_playbook` / `create_playbook_from_plans`:** items declare a step: `kind` (`content`, `checklist`, `action`), `optional`, `owner_user_id`, `reviewer`, `goes_out_offset_days` and, for action steps, `action` (the Slack, Asana and Gmail actions are listed in the tool text); playbooks declare `anchor_label`, `default_project_id` and `variables` (`{Name}` placeholders). `get_playbook` and the write tools return the same fields.
+- **`update_playbook` no longer resets steps:** declare the item `id` and send every kept item back with it; a step field sent changes only that field. A list with no current ids that would reset checklist or action steps or step settings is refused and nothing is written; to rewrite steps on purpose, send `kind` on every item.
+- **`instantiate_playbook`:** `variables` (values for the playbook's variables) and `skip_item_ids` (optional steps to leave out).
+- **`complete_playbook_step`:** `destructiveHint` is now `true`, and the description states that calling it again on an already-Complete step with a newly supplied `result_url` or `note` overwrites the previously recorded one (omit them to leave the recorded result unchanged) and that only a checklist step can be undone, with `reopen_playbook_step`.
+- **`add_context`:** description, input schema, and output schema lines reworded as plain facts (no change to arguments, types, or runtime behavior).
+- Tool surface: 77 tools served at `mcp.marcora.ai` (6 added: 38 read-only, 39 non-read-only).
+
 ## 2026-11-17 (setup hold applies only while setup is running)
 
 ### Skill → v0.8.2

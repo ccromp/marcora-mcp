@@ -326,7 +326,7 @@ You can supply the body in exactly one of four ways:
 - **`import_url`** — pass a public URL to import **once**. The backend fetches it and converts it to clean markdown server-side using AI main-content extraction (it isolates the primary page or article body and drops navigation and boilerplate), then stores that markdown as a **static snapshot**. The item is **not** refreshable. Use for one-off imports — a presigned-link export (e.g. a Google Doc, or a connected-app sandbox), a competitor's blog post, or anything you'd otherwise have to pull into your own conversation just to forward. The call waits for the import, up to about 25 seconds. If the page loads in that time, it returns the new item's `id` with `import_status: "ready"` (the body is not in this response; `get_context_item` returns it). If the page can't be read, it returns an error and nothing is added; the error says why. If the import is still running after 25 seconds, it returns `import_status: "processing"` and the content lands a moment later: poll `get_context_item` until `import_status` is `"ready"`. A failure after that point shows up as an in-app notification, and no item is saved.
 - **`connected_webpage_url`** — pass a URL to track as a live **web page**. The backend fetches the page, stores it as a `webpage` context item, and **remembers the URL** so it can be re-pulled later (via `update_context` `refresh_webpage`, or the refresh button in the Marcora web app). Use this for the customer's own pages and any page you want to keep current. If the same URL is already tracked, the existing item is **updated in place** (no duplicate) and its stored content is **overwritten** with the fresh fetch. The call waits up to about 25 seconds for the page, the same way `import_url` does: `import_status: "ready"` on success, an error on failure (nothing is added for a new URL, and a tracked URL keeps its saved copy), or `"processing"` if it is still running. Because of that overwrite, `add_context` is marked as a destructive tool.
 
-- **`import_from`** — bring in calls from a call-recording app the user has connected: `{ toolkit, call_ids }`, where `toolkit` is `fathom`, `gong`, `fireflies`, `googlemeet` or `wispr_flow_mcp` and `call_ids` is 1 to 10 of that app's own call ids (found with the app's own list or search tool, then passed in this one call). Marcora fetches and cleans each transcript itself through the user's own connection; the agent never retypes or pastes a transcript, and no transcript text is returned. It cannot be combined with `content`, `import_url`, `connected_webpage_url`, `as_call`, `call_date`, `call_kind` or `call_company`. `audience`, `project_id` and `collection_id` work as for calls (Only me and filed in Calls unless you say otherwise; a Collaborator must pass `project_id`; choose one of `project_id` or `collection_id`); `name` is ignored because each call keeps its own title.
+- **`import_from`** — bring in calls from a call-recording app the user has connected: `{ toolkit, call_ids }`, where `toolkit` is `fathom`, `gong`, `fireflies`, `googlemeet` or `wispr_flow_mcp` and `call_ids` is 1 to 10 of that app's own call ids (found with the app's own list or search tool, then passed in this one call). Marcora fetches and cleans each transcript itself through the user's own connection, so no transcript text is passed or returned. It takes the place of `content`, `import_url` and `connected_webpage_url`, and is used without `as_call`, `call_date`, `call_kind` or `call_company`. `audience`, `project_id` and `collection_id` work as for calls (Only me and filed in Calls unless you say otherwise; a Collaborator must pass `project_id`; choose one of `project_id` or `collection_id`); `name` is ignored because each call keeps its own title.
 
 Google Meet and Wispr Flow imports are Beta. For Google Meet, pass the bare ID from conferenceRecords/{id}, or doc:{document_id} for a saved transcript. Recent discovery is organizer-only within 30 days; a known conference record still requires access. Saved transcripts require your own active Google Meet and Google Docs connections in the same team; discovery also requires Google Drive and searches by document creation window. The document must contain a date and timestamped speaker-labelled transcript, not just Gemini notes. Meet supplies no original meeting title or participant emails; automatic Meet imports stay Only me and do not support attendance filters. For Wispr Flow, use a meeting ID from search: recorded meetings only, not dictation or scratchpad. Wispr attendee search uses calendar invitees; narrow a search that reaches 1,000 matches.
 
@@ -338,7 +338,7 @@ To check whether an app is connected, or to get its Connect link before importin
 >
 > **Connected Apps require a Creator or Admin seat.** `import_from` (and `find_app`) require a Creator or Admin seat on the workspace (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*).
 >
-> **Team audience on ordinary items:** when the user asks for the item to be saved for the team, pass `audience: "team"` (on `content`, `import_url` or `connected_webpage_url`), even with a `collection_id` or `project_id`. It is accepted when the item will be team-visible. In a private collection or private project it is refused with a readable tool error (`isError: true`) and nothing is saved: tell the user why and offer a shared collection, a team-visible project or the Reference Library. Never fall back to a private save without asking the user. Every successful save returns `audience` (`"team"`, `"project_members"`, or `"only_me"`): who can actually see the item, whether or not you passed `audience`. Tell the user that plainly.
+> **Team audience on ordinary items:** when the user asks for the item to be saved for the team, pass `audience: "team"` (on `content`, `import_url` or `connected_webpage_url`), even with `collection_ids` / `collection_id` or `project_id`. It is accepted when the item will be team-visible. In a private collection or private project it is refused with a readable tool error (`isError: true`) and nothing is saved; a shared collection, a team-visible project or the Reference Library accepts it. The same call without `audience` would save into the private collection or project, where only its owner or members can see the item, so a refused team save is never saved privately. Every successful save returns `audience` (`"team"`, `"project_members"`, or `"only_me"`): who can actually see the item, whether or not `audience` was passed.
 
 **Parameters:**
 
@@ -351,12 +351,12 @@ To check whether an app is connected, or to get its Connect link before importin
 | `collection_id` | integer \| null | No | Single collection ID to file the item in (from `list_context_collections` or `create_context_collection`). For ordinary items, omit it — or pass `null` or `0` — to file the item in the Reference Library (`collection_ids: []`). On call paths (`as_call` or `import_from`), `null` or `0` keeps the default (`Calls`); pass a positive `collection_id` or `collection_ids` to change a call's placement |
 | `collection_ids` | array (integer) | No | Full list of collection IDs to file the item in. The first ID becomes the primary (`collection_id`) collection and the remaining IDs are secondary memberships; pass `[]` to leave the item in the Reference Library. If sent alongside `collection_id`, `collection_id` must match `collection_ids[0] ?? null` (or `0` when `collection_ids` is `[]`). Private collections and call transcripts stay single-collection; Library source collections are attached as secondary collections only via Library authoring |
 | `project_id` | string | No | Project ID to associate with (from `list_projects`). Omit it to leave the item unassociated |
-| `audience` | string | No | Who can see it (`only_me` or `team`). For a call: `only_me` (default; visible only to the person who added it) or `team`. For an ordinary context item: pass `team` when the user wants it saved for the team, even with a `collection_id` or `project_id`; in a private collection or project it is refused and nothing is saved, so tell the user and offer a shared collection, a team-visible project or the Reference Library, and never save privately without asking. `only_me` is rejected on an ordinary item |
+| `audience` | string | No | Who can see it (`only_me` or `team`). For a call: `only_me` (default; visible only to the person who added it) or `team`. For an ordinary context item: pass `team` when the user wants it saved for the team, even with a `collection_id` or `project_id`; in a private collection or project it is refused and nothing is saved (a shared collection, a team-visible project or the Reference Library accepts it, and the same call without `audience` would save privately there). `only_me` is rejected on an ordinary item |
 | `as_call` | boolean | No | Whether to save `content` as a call transcript in Calls. Omit and Marcora decides (`true` forces a call; `false` forces an ordinary item). Only valid with `content` |
 | `call_date` | string | No | Calls only (`YYYY-MM-DD` or ISO 8601). Omit to take the date from the transcript |
 | `call_kind` | string | No | Calls only: `customer`, `external`, `team_meeting`, `one_on_one`, or `recorded`. Omit to work it out from who spoke |
 | `call_company` | string \| null | No | Calls only: the other company on the call (`null` for none). Omit to take the company from the transcript |
-| `import_from` | object | Conditional | `{ toolkit, call_ids }`: `toolkit` is `fathom`, `gong`, `fireflies`, `googlemeet` or `wispr_flow_mcp`; `call_ids` is 1 to 10 of the app's own call ids, each once. Alternative to the three body inputs above |
+| `import_from` | object | Conditional | `{ toolkit, call_ids }`: `toolkit` is `fathom`, `gong`, `fireflies`, `googlemeet` or `wispr_flow_mcp`; `call_ids` is 1 to 10 of the app's own call ids, each once. Takes the place of the three body inputs above |
 
 > **Placement rule:** a context item is either in the **Reference Library** (`collection_ids: []`, `collection_id: null`) or in **one or more collections** (`collection_ids`, `collections`, with `collection_id` set to the primary collection) — never both. Private collections and call transcripts stay single-collection and cannot be combined with other collections, and Library source collections are added as secondary collections only via Library authoring.
 
@@ -374,12 +374,12 @@ To check whether an app is connected, or to get its Connect link before importin
 | `collection_ids` | array (integer) | All accessible collection IDs this context item belongs to (primary collection first; `[]` when in the Reference Library) |
 | `collections` | array (`{id, name}`) | All accessible collections this context item belongs to (primary collection first; `[]` when in the Reference Library) |
 | `project_id` | string \| null | Project association (null if none) |
-| `audience` | string | Who can see the saved item: `"team"`, `"project_members"`, or `"only_me"`. Returned on every successful save (ordinary items and calls), whether or not `audience` was passed. Tell the user |
-| `link_url` | string | Direct URL to view this context item in the Marcora app. Resolves to the project, collection, or reference library view depending on the item's scope |
+| `audience` | string | Who can see the saved item: `"team"`, `"project_members"`, or `"only_me"`. Returned on every successful save (ordinary items and calls), whether or not `audience` was passed |
+| `link_url` | string | Direct URL to view this context item in the Marcora app. Contains the item's IDs and is the working URL for it |
 | `saved_as_call` | boolean | True when saved as a call |
 | `call` | object | Present only on call items: `{ audience, company, date, kind, people, summary_status }`. The summary is written after the save; `call.summary_status` shows where it is, and `get_context_item` returns the summary once ready |
-| `message` | string | Calls only: where it went and who can see it; tell the user |
-| `brand_foundation_build` | object | Present only on a `connected_webpage_url` add that queued a build of the team's blank Brand Foundation sections from the website: `{status: "queued", message}`. `message` says what to tell the user (the blank sections are being built and should be ready within about a minute, not empty). Absent otherwise, so never imply a build is running without it |
+| `message` | string | Calls only: where it went and who can see it |
+| `brand_foundation_build` | object | Present only on a `connected_webpage_url` add that queued a build of the team's blank Brand Foundation sections from the website: `{status: "queued", message}`. `message` states that the blank sections are being built and should be ready within about a minute, so they are in progress, not empty. Absent otherwise |
 | `import_from` | object | Present only on an `import_from` add: `{ toolkit, app_name }`, the app the calls came from |
 | `results` | array | Present only on an `import_from` add: one entry per requested call, in order. Each has `call_id`, `status` (`imported`, `duplicate` = already in Marcora, `not_ready` = the app has no transcript yet, try later, or `failed`), `message`, and for an imported call `context_item_id`, `name`, `audience`, `filed_in` and `link_url` |
 | `summary` | object | Present only on an `import_from` add: how many calls ended in each state |
@@ -388,7 +388,7 @@ To check whether an app is connected, or to get its Connect link before importin
 
 At the plan's limit the call returns an error stating the limit; deleting an item makes room. Input, placement, and webpage/provider import refusals come back as readable tool errors (`isError: true`) rather than generic protocol faults.
 
-**`import_from` errors and edge cases:** if the app is not connected, the call fails with an error that names the app and carries its Connect link; give the user the link and retry once they have connected. A problem with one call's source connection stays in that call's row (`failed`) while the later calls continue. A plan-capacity refusal is a `failed` row carrying the friendly limit message.
+**`import_from` errors and edge cases:** if the app is not connected, the call fails with an error that names the app and carries its Connect link; the import works once the app is connected. A problem with one call's source connection stays in that call's row (`failed`) while the later calls continue. A plan-capacity refusal is a `failed` row carrying the friendly limit message.
 
 **Example prompts:**
 - "Add our brand guidelines to Marcora"
@@ -432,6 +432,121 @@ Looks up the apps Marcora offers to connect (for example Gong or Fathom), by nam
 **Example prompts:**
 - "Can Marcora connect to Gong?"
 - "Which of my call-recording apps are connected?"
+
+---
+
+### `list_call_instructions`
+
+Lists the user's standing call instructions: the saved guidance and word fixes Marcora applies to their calls, the same list they edit in Settings. Also returns the user's automatic call imports (`automatic_call_import_id`, `name`, `enabled`) so an instruction can be limited to one. Read-only.
+
+**When to use it:** before adding a call instruction (to avoid a duplicate), when the user asks what they have told Marcora about their calls, or to find an `instruction_id` to change or remove. Instructions apply to calls processed from now on; calls already imported are not changed.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `scope` | string | No | `"all"` (default: every instruction) or `"default"` (only those that apply to all the user's calls) |
+| `automatic_call_import_id` | string (uuid) | No | Only this automatic call import's instructions (from `automatic_call_imports` in this tool's result). Not with `scope: "default"` |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `instructions` | array | The user's standing call instructions. Each has `instruction_id` (uuid), `kind` (`"word_fix"` or `"guidance"`), `find` / `replace` (`word_fix` only), `text` (`guidance` only), `scope` (`"default"` or `"automatic_call_import"`), `automatic_call_import_id` (uuid or `null`), `enabled` (boolean), `source` (`"settings"`, `"automatic_call_import"`, `"dismissal"`, or `"agent"`), `created_at`, and `updated_at` |
+| `automatic_call_imports` | array | The user's automatic call imports in this workspace: `{ automatic_call_import_id, name, enabled }` |
+| `limits` | object | Per-scope limits: `{ word_fixes_per_scope, guidance_per_scope, guidance_max_chars }` |
+| `note` | string | Reminder of when changes take effect |
+
+**Example prompts:**
+- "What call instructions do I have saved in Marcora?"
+- "Show my word fixes for call transcripts"
+
+---
+
+### `add_call_instruction`
+
+Saves a standing instruction for how Marcora handles the user's calls, to the same visible list they edit in Settings. Two kinds:
+- **`guidance`** (`text`, up to 300 chars): steers what Marcora suggests from calls, e.g. *"never suggest content plans about pricing sheets"*, *"only suggest case studies from calls"*, *"use our One-Pager blueprint for one-pagers"*.
+- **`word_fix`** (`find` up to 100 chars, `replace` up to 200 chars): a recurring transcription error to correct (case-insensitive matching), e.g. find `"Market Core"`, replace `"MarketCore"`.
+
+**When to use it:** when the user states a lasting preference about their calls, not for a one-off request. Instructions apply to calls processed from now on; calls already imported are not changed, so say so when the user expects past calls to change. Applies to all the user's calls by default; pass `automatic_call_import_id` (from `list_call_instructions`) to limit it to calls from one automatic call import. If unsure whether it already exists, call `list_call_instructions` first. Duplicates and per-scope limits are refused with a plain message: report it and, at the limit, offer to remove an old one. Tell the user exactly what was saved.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `kind` | string | Yes | `"word_fix"` (needs `find` and `replace`) or `"guidance"` (needs `text`) |
+| `text` | string | Conditional | `guidance` only: the instruction in one short sentence, in the user's words (max 300 chars) |
+| `find` | string | Conditional | `word_fix` only: the word or phrase as it is wrongly transcribed (max 100 chars; matching ignores case) |
+| `replace` | string | Conditional | `word_fix` only: the correct word or phrase (max 200 chars) |
+| `automatic_call_import_id` | string (uuid) | No | Limit to calls from this automatic call import (from `automatic_call_imports` in `list_call_instructions`). Omit for all the user's calls |
+| `enabled` | boolean | No | Default `true`. Pass `false` to save it switched off |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `instruction` | object | The saved instruction (`instruction_id`, `kind`, `find`/`replace` or `text`, `scope`, `automatic_call_import_id`, `enabled`, `source`, `created_at`, `updated_at`) |
+| `note` | string | Reminder of when the change takes effect |
+
+**Example prompts:**
+- "Whenever a call transcript says 'Market Core', replace it with 'MarketCore'"
+- "From my calls, only suggest case studies and never suggest pricing sheets"
+
+---
+
+### `update_call_instruction`
+
+Edits or switches on/off one of the user's standing call instructions. Pass only what changes: a `word_fix` can change `find` and `replace`; `guidance` can change `text`; `enabled` switches it off (`false`) or back on (`true`) without losing it. To make an instruction apply to a different automatic call import, remove it and add it again. Changes apply to calls processed from now on; calls already imported are not changed.
+
+**When to use it:** to correct the wording of a saved call instruction, change a word fix, or pause/resume an instruction without deleting it. Get `instruction_id` from `list_call_instructions`.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `instruction_id` | string (uuid) | Yes | The instruction's `instruction_id`, from `list_call_instructions` |
+| `text` | string | No | `guidance` only: the new instruction text (max 300 chars) |
+| `find` | string | No | `word_fix` only: the new word or phrase to find (max 100 chars) |
+| `replace` | string | No | `word_fix` only: the new replacement (max 200 chars) |
+| `enabled` | boolean | No | `false` switches it off but keeps it; `true` switches it back on |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `instruction` | object | The updated instruction (`instruction_id`, `kind`, `find`/`replace` or `text`, `scope`, `automatic_call_import_id`, `enabled`, `source`, `created_at`, `updated_at`) |
+| `note` | string | Reminder of when the change takes effect |
+
+**Example prompts:**
+- "Pause my call instruction about case studies without deleting it"
+- "Update that word fix so 'Marcora AI' replaces 'Marcora.ai'"
+
+---
+
+### `remove_call_instruction`
+
+Permanently removes one of the user's standing call instructions from their Settings list. Calls already processed keep what the instruction did; later calls no longer use it.
+
+**When to use it:** when the user asks to stop applying an instruction (*"stop doing that"*, *"forget that fix"*). To keep it but pause it, use `update_call_instruction` with `enabled: false` instead. Get `instruction_id` from `list_call_instructions` and confirm which one if the user's wording could match more than one.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `instruction_id` | string (uuid) | Yes | The instruction's `instruction_id`, from `list_call_instructions` |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `removed` | boolean | `true` when the instruction was removed |
+| `instruction_id` | string (uuid) | The removed instruction's ID |
+| `note` | string | Reminder of when the change takes effect |
+
+**Example prompts:**
+- "Remove my call instruction about pricing sheets"
+- "Delete the 'Market Core' word fix"
 
 ---
 
@@ -2188,7 +2303,7 @@ Fetch one content playbook by id, including its full ordered list of items.
 |---|---|---|---|
 | `playbook_id` | integer | Yes | ID of the playbook to fetch |
 
-**Output:** the playbook object — including its `anchor_date` (persisted `YYYY-MM-DD` reference date, or `null`) and `link_url` (opens the playbook in the Marcora web app) — with an ordered `items` array. Each item carries the plan fields it will stamp out (title, description, prompt, blueprint, category), a `builds_on` array (0-based positions of the earlier steps it builds on; empty when none), plus an `offset_days` counted from the anchor date to compute each due date on instantiation.
+**Output:** the playbook object — including `anchor_date` (persisted `YYYY-MM-DD` reference date, or `null`), `anchor_label`, `default_project_id`, `variables`, and `link_url` (opens the playbook in the Marcora web app) — with an ordered `items` array. Each item carries `id`, the plan fields it will stamp out (`name`, `title`, `description`, `prompt`, `blueprint_id`, `category_id`), a `builds_on` array (0-based positions of the earlier steps it builds on; empty when none), `offset_days` counted from the anchor date to compute each due date on instantiation, and step fields (`kind` of `content` / `checklist` / `action`, `goes_out_offset_days`, `optional`, `owner_user_id`, `reviewer`, `action`).
 
 **Example prompts:**
 - "What's in my launch-week playbook?"
@@ -2207,9 +2322,12 @@ Create a reusable content playbook — an ordered template of content-plan items
 | `description` | string | No | Free-text description |
 | `visibility` | string | No | `team` (default) or `private` |
 | `anchor_date` | string | No | Optional `YYYY-MM-DD` reference date the playbook is built around (a launch, event, campaign kickoff). Persisted on the playbook; each item's `offset_days` counts from it, and it becomes the default anchor when instantiating. Leave off for an evergreen/undated template |
-| `items` | array | No | Ordered playbook items (each becomes one plan on instantiation). Each item can carry `builds_on`: an array of 0-based positions, in this same `items` array, of EARLIER items the step builds on (a link to itself or a later item is rejected). When the playbook is run, each step's generation draws on the steps it builds on |
+| `items` | array | No | Ordered playbook items (each becomes one plan on instantiation). Each item can carry `builds_on`: an array of 0-based positions, in this same `items` array, of EARLIER items the step builds on (a link to itself or a later item is rejected). When the playbook is run, each step's generation draws on the steps it builds on. Each item can also set a step: `kind` (`content` default, `checklist` — a to-do the owner ticks off — or `action` — a connected-app action), `optional` (may be left out when the playbook is run), `owner_user_id` (an active team member), `reviewer` (free text, up to 120 characters), `goes_out_offset_days` (content steps: a second date, days after the anchor) and, for `action` steps, `action: { toolkit, operation, params }`. The actions that exist: `slack/post_message` (`channel`*, `message`*), `asana/create_task` (`name`*, `notes`, `project`, `workspace`; project or workspace required), `gmail/create_draft` (`to`*, `subject`*, `body`*; creates a draft, sends nothing); `{Variable}` placeholders are allowed in values. An action step is run by its owner in the Marcora app, not over MCP. |
+| `anchor_label` | string | No | What `anchor_date` is called in the app, e.g. "Launch day" (up to 60 characters). `null` clears it |
+| `default_project_id` | string (uuid) | No | Project a run of this playbook starts in by default. `null` clears it |
+| `variables` | array | No | Placeholders the person running the playbook fills in once, e.g. `[{ "name": "Product", "required": true }]`; write `{Product}` in item names, descriptions, prompts and action params. Up to 30; a name is 1-40 letters, numbers, spaces, dashes or underscores. On update, sending `variables` replaces the whole list |
 
-**Output:** the created playbook object, including its persisted `anchor_date` (or `null`) and a `link_url` that opens the new playbook in the Marcora web app — share it with the user.
+**Output:** the created playbook object (same shape as `get_playbook`, including `anchor_date`, `anchor_label`, `default_project_id`, `variables`, ordered `items` with step fields, and a `link_url` that opens the new playbook in the Marcora web app — share it with the user).
 
 **Example prompts:**
 - "Make me a launch-week playbook"
@@ -2230,7 +2348,7 @@ Create a playbook by capturing existing content plans as reusable template items
 | `description` | string | No | Free-text description |
 | `visibility` | string | No | `team` (default) or `private` |
 
-**Output:** the created playbook object, including its `anchor_date` (`null` unless later set) and a `link_url` that opens the new playbook in the Marcora web app — share it with the user.
+**Output:** the created playbook object (same shape as `get_playbook`, including `anchor_date`, `anchor_label`, `default_project_id`, `variables`, ordered `items` with step fields, and a `link_url` that opens the new playbook in the Marcora web app — share it with the user).
 
 **Example prompts:**
 - "Turn these plans into a playbook"
@@ -2251,9 +2369,12 @@ Edit a content playbook. Any playbook is fully editable. Pass only the fields to
 | `description` | string | No | New description (pass `null` to clear) |
 | `visibility` | string | No | `team` or `private` (creator-only) |
 | `anchor_date` | string | No | Set the playbook's `YYYY-MM-DD` reference date. Omit to keep the current value; pass `null` to clear it |
-| `items` | array | No | If provided, REPLACES the full ordered item list. Resend `builds_on` (0-based positions of earlier items in this array) for every item you want to keep linked |
+| `items` | array | No | If provided, REPLACES the full ordered item list. Resend `builds_on` (0-based positions of earlier items in this array) for every item you want to keep linked. **Send every item you keep back with its `id` from `get_playbook`** (ids are re-issued each time items are saved, so use the latest read): an item sent with its `id` keeps its step, and a step field you send changes only that field. A list with no current ids that would reset checklist/action steps or step settings is refused and nothing is written; to rewrite steps on purpose, send `kind` on every item. Each item can also set a step: `kind` (`content` default, `checklist` — a to-do the owner ticks off — or `action` — a connected-app action), `optional` (may be left out when the playbook is run), `owner_user_id` (an active team member), `reviewer` (free text, up to 120 characters), `goes_out_offset_days` (content steps: a second date, days after the anchor) and, for `action` steps, `action: { toolkit, operation, params }`. The actions that exist: `slack/post_message` (`channel`*, `message`*), `asana/create_task` (`name`*, `notes`, `project`, `workspace`; project or workspace required), `gmail/create_draft` (`to`*, `subject`*, `body`*; creates a draft, sends nothing); `{Variable}` placeholders are allowed in values. An action step is run by its owner in the Marcora app, not over MCP. |
+| `anchor_label` | string | No | What `anchor_date` is called in the app, e.g. "Launch day" (up to 60 characters). `null` clears it |
+| `default_project_id` | string (uuid) | No | Project a run of this playbook starts in by default. `null` clears it |
+| `variables` | array | No | Placeholders the person running the playbook fills in once, e.g. `[{ "name": "Product", "required": true }]`; write `{Product}` in item names, descriptions, prompts and action params. Up to 30; a name is 1-40 letters, numbers, spaces, dashes or underscores. On update, sending `variables` replaces the whole list |
 
-**Output:** the updated playbook object, including its `anchor_date` (or `null`) and `link_url`.
+**Output:** the updated playbook object (same shape as `get_playbook`, including `anchor_date`, `anchor_label`, `default_project_id`, `variables`, ordered `items` with step fields, and `link_url`).
 
 **Example prompts:**
 - "Add a follow-up email to my launch playbook"
@@ -2275,6 +2396,8 @@ Run a playbook: create one content plan per playbook item, in order, as a batch.
 | `assigned_to` | integer | No | Assign the created plans to this team member |
 | `category_id` | integer | No | Apply this content category to the created plans |
 | `topic` | string | No | What this cycle is about (max 4000 chars), e.g. the product, launch or campaign. Stored on the cycle, shown as its topic, and used when the cycle's content is generated |
+| `variables` | object | No | Values for the playbook's variables by name, e.g. `{ "Product": "Acme" }` (up to 500 characters each). Every variable the playbook marks required must be given |
+| `skip_item_ids` | integer[] | No | Ids (from `get_playbook`) of OPTIONAL steps to leave out of this cycle. A step that is not optional is refused, and at least one step must remain |
 
 If `anchor_date` is omitted, the playbook's persisted `anchor_date` (if any) is used.
 
@@ -2296,13 +2419,13 @@ If `anchor_date` is omitted, the playbook's persisted `anchor_date` (if any) is 
 
 ### Playbook cycles
 
-A **cycle** is a running instance of a playbook: `instantiate_playbook` creates one, with one step (a plan) per playbook item. These six tools read and drive cycles. A step is identified by its `plan_uuid`.
+A **cycle** is a running instance of a playbook: `instantiate_playbook` creates one, with one step (a plan) per playbook item. These eight tools read and drive cycles. A step is identified by its `plan_uuid`.
 
 ---
 
 ### `list_playbook_cycles`
 
-List the playbook cycles in the current team: active by default, or filtered by playbook or status. Cycles whose steps you cannot see (a private playbook you do not own) are omitted. Read-only.
+List the playbook cycles in the current team: active by default, or filtered by playbook or status. Cycles whose steps you cannot see (a private playbook you do not own) are omitted. To rename a cycle or change its topic use `update_playbook_cycle`. Read-only.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
@@ -2319,7 +2442,7 @@ List the playbook cycles in the current team: active by default, or filtered by 
 
 ### `get_playbook_cycle`
 
-Read one cycle with its steps in playbook order. Read-only.
+Read one cycle with its steps in playbook order. Each step's `plan_uuid` is how you change it: to change a step's title, prompt, due date, assignee or to dismiss it, use `update_plan` with the step's `plan_uuid`; to complete it, `complete_playbook_step`; to rename the cycle or change its topic, `update_playbook_cycle`. Read-only.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
@@ -2348,7 +2471,7 @@ List the open playbook steps (not Complete or Dismissed) assigned to you, across
 
 ### `complete_playbook_step`
 
-Mark a cycle step Complete and record the evidence: an optional result link and/or a short note, shown on the step in `get_playbook_cycle`. Works for steps that produce no document, which `update_plan` cannot complete. You must be able to edit the step (its assignee or creator). Idempotent: an already-Complete step keeps its original `completed_at` / `completed_by` and only a newly supplied `result_url` / `note` is updated. A Dismissed step is refused (409), and plans that are not cycle steps are refused (use `update_plan`).
+Mark a cycle step Complete and record the evidence: an optional result link and/or a short note, shown on the step in `get_playbook_cycle`. Works for steps that produce no document, which `update_plan` cannot complete. You must be able to edit the step (its assignee or creator). Calling it again on a step that is already Complete keeps its original `completed_at` / `completed_by`, but a newly supplied `result_url` or `note` **overwrites** the previously recorded one (the earlier value is not kept); omit them to leave the recorded result unchanged. Only a checklist step can be undone, with `reopen_playbook_step`, so only call this when the work is done. A Dismissed step is refused (409). Plans that are not cycle steps are refused (use `update_plan`).
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
@@ -2360,6 +2483,42 @@ Mark a cycle step Complete and record the evidence: an optional result link and/
 
 **Example prompts:** "Mark the press-release step done, here's the confirmation page"
 
+
+---
+
+### `reopen_playbook_step`
+
+Reopen a completed **checklist** step: it goes back to `Accepted` and its recorded result is cleared (the "untick" of `complete_playbook_step`). Only checklist steps can be reopened; any other step kind is refused (409). Reopening a step that is not Complete changes nothing. You must be able to edit the step (its assignee or creator).
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `plan_uuid` | string (uuid) | Yes | The step's `plan_uuid`, from `get_playbook_cycle` (its `step.kind` says whether it is a checklist step) |
+
+**Output:** `plan_uuid`, `title`, `stage`, `completed_at` (0 once reopened), `completed_by`, `result_url`, `note`, `run_id`, `link_url`, `cycle_link_url`.
+
+**Example prompts:** "I ticked that off by mistake, reopen it"
+
+---
+
+### `update_playbook_cycle`
+
+Rename a cycle and/or change its topic. Pass only what changes: `name` replaces the cycle name (it cannot be blank); `topic` replaces the topic (up to 4,000 characters; `null` or blank clears it). The topic is folded into the prompt of content steps generated afterwards, so steps already generated are not changed by it.
+
+To change a step's title, prompt, due date, assignee or to dismiss it, use `update_plan` with the step's `plan_uuid` (from `get_playbook_cycle`); to complete it, `complete_playbook_step`.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `run_id` | integer | Yes | Cycle id, from `list_playbook_cycles` / `instantiate_playbook` |
+| `name` | string | No | New cycle name. Omit to keep it |
+| `topic` | string or null | No | New topic. Omit to keep it; `null` or blank clears it |
+
+**Output:** `run_id`, `name`, `playbook_id`, `playbook_name`, `topic`, `anchor_date`, `updated_at`, `link_url`.
+
+**Example prompts:** "Rename this cycle to Aurora launch" · "Change the cycle's topic to the December release"
 ---
 
 ### `generate_cycle_content`
