@@ -2,6 +2,27 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-19 (playbook gaps, cycle step links, grounding conflict_check, Admin/Creator document creation, webhook_id validation)
+
+### Skill → v0.8.4 · plugin → v1.3.3
+
+### Added
+
+- **`add_playbook_step`:** add one step (`content`, `checklist`, or `action`) to a running playbook cycle without changing the playbook template (`after_plan_uuid` positions it after a specific step, or at the end; `builds_on` takes `plan_uuid`s of earlier steps in the same cycle; supports `owner_user_id`, typed `owner_name`, `due_date`/`due_time`, `goes_out_date`/`goes_out_time`, `reviewer`, `blueprint_uuid`).
+- **`list_playbook_owner_names`:** list the typed owner names (`owner_name`) in use on your team's playbook steps (agents or non-members), alphabetical in the spelling first used.
+
+### Changed
+
+- **Playbook templates & instantiation (`create_playbook`, `update_playbook`, `get_playbook`, `create_playbook_from_plans`, `instantiate_playbook`):** items support `off_by_default` (starts unticked when run; use `include_item_ids` on `instantiate_playbook` to include), typed `owner_name` (up to 60 chars, content and checklist steps only), `due_time` (`HH:MM`, requires `offset_days`), and `goes_out_time` (`HH:MM`, requires `goes_out_offset_days`). `instantiate_playbook` `run.link_url` uses the cycle's UUID path (`/runs/{playbook_run_uuid}`).
+- **Playbook cycles (`get_playbook_cycle`, `list_my_playbook_steps`):** `get_playbook_cycle` returns steps in their cycle order (so steps added via `add_playbook_step` appear where they were placed) and includes `owner_name`, `due_time`, and `goes_out_time` in `step` when set. `list_my_playbook_steps` adds `owner_name` mode to list open steps owned by a typed owner name across running playbooks (returning `due_time`, `owner_name`, and `kind` in that mode).
+- **`update_plan`:** adds `attach_content_id` and `replace_attached_content` (attach an existing document as a content step's output; detach by transitioning back to `Accepted`), plus `owner_name`, `due_time`, and `goes_out_time`.
+- **Cycle step link rules (`update_plan`, `update_playbook`):** `update_plan` validates `builds_on_plan_ids` and `reference_document_ids` plan UUIDs against earlier steps in the same cycle (`InputError` for self, later, out-of-cycle, or unknown IDs). On `update_playbook`, an `id`-matched item that omits `builds_on` drops links to removed steps and rejects moving a step ahead of a step it still builds on unless `builds_on` is sent.
+- **`create_content`:** saving your own text with `content` no longer echoes the markdown body back in the response; it returns `content_id`, `title`, `link_url`, and a short confirmation message (use `get_content` to read it back).
+- **Grounding (`check_content_grounding`, `get_grounding_result`):** adds `conflict_check` (`{ available, reason, confirmed_items, unconfirmed_items, message }`) for the content's creator when conflicts could not be checked or were only partly checked (`no_company_overview`, `no_confirmed_sources`, `items_unconfirmed`), and clarifies that MCP grounding refuses documents built from `Only me` / private sources (with an in-app link for the owner) while shared re-checks preserve dismissed findings whose claim and warning evidence are unchanged.
+- **Document creation role gate (`create_content`, `produce_plan`, `generate_cycle_content`):** creating documents now requires an Admin or Creator role (`"Only Admins and Creators can create documents."`).
+- **`trigger_registered_webhook`:** missing or empty `webhook_id` now returns `"Missing param: webhook_id. Call list_user_webhooks first, then pass its id as webhook_id."` before webhook lookup.
+- Tool surface: 79 tools served at `mcp.marcora.ai` (2 added: 39 read-only, 40 non-read-only).
+
 ## 2026-11-18 (call instructions, playbook steps & variables, cycle edits, complete_playbook_step overwrite disclosure, add_context plain-fact wording)
 
 ### Skill → v0.8.3 · plugin → v1.3.2

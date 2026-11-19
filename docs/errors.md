@@ -16,7 +16,7 @@
 **Cause:** Your account doesn't have permission to perform the requested action.
 
 **Solutions:**
-- Check your team role — some actions require an Admin or Creator seat. In particular, Connected Apps (`find_app`, `add_context` `import_from`) and Webhooks require a Creator or Admin seat (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*), and `update_workflow` and `run_workflow` can only be called by the workflow's creator (`created_by_user_id`)
+- Check your team role — some actions require an Admin or Creator seat. Creating documents (`create_content`, `produce_plan`, `generate_cycle_content`, `create_blueprint_draft`) now requires an Admin or Creator role (*"Only Admins and Creators can create documents."*), Connected Apps (`find_app`, `add_context` `import_from`) and Webhooks require a Creator or Admin seat (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*), and `update_workflow` and `run_workflow` can only be called by the workflow's creator (`created_by_user_id`)
 - Verify you're on the correct active team
 - Private content/collections are only accessible by their creator
 
@@ -46,7 +46,8 @@
 **Cause:** Passing an incorrect or stale ID to a tool (e.g., `blueprint_uuid`, `content_id`, `project_id`), or passing a community blueprint's `slug` instead of its UUID `id` to `get_community_blueprint_details` or `import_community_blueprint`.
 
 **Solutions:**
-- Use the corresponding list tool to get fresh IDs (e.g., `list_blueprints` before `get_blueprint`)
+- Use the corresponding list tool to get fresh IDs (e.g., `list_blueprints` before `get_blueprint`, or `list_user_webhooks` before `trigger_registered_webhook`)
+- Calling `trigger_registered_webhook` with a missing or empty `webhook_id` returns `"Missing param: webhook_id. Call list_user_webhooks first, then pass its id as webhook_id."`
 - For `get_community_blueprint_details` and `import_community_blueprint`, pass the UUID in the `id` field of the `list_community_blueprints` item — not its `slug` (passing `slug` returns a readable `isError: true` error telling you to pass `id`)
 - IDs are UUIDs — ensure you're passing the full string, not a truncated version
 - A malformed UUID is refused with a readable `isError: true` message that names the argument, so you can correct it and retry. The same applies to other refusals the caller can act on (not found, access denied, privacy): they come back as tool results with `isError: true` and a readable message rather than as protocol errors. A malformed request envelope (for example `params` that is not an object) returns JSON-RPC `-32602 Invalid params` naming the field.

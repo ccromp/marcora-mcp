@@ -1032,7 +1032,7 @@ Passing neither is an error.
 - **Provide either 'content_id' or 'content'** (400) — neither was supplied.
 - **Not a valid UUID** (400) — malformed `content_id`.
 - **Content not found. Check the content_id — it must be a document you can open in this team.** (tool error)
-- **This check cannot use the document’s private sources** (an `isError` result) — the document was built from Only me sources, which are never sent to an AI app. When they are the caller's own, the message adds a link to check the document privately in Marcora; relay it to the user.
+- **This check cannot use the document’s private sources** (an `isError` result) — the document was built from Only me sources, which are never sent to an AI app. When they are the caller's own, the message adds a link to check the document privately in Marcora; relay it to the user. (Private-evidence grounding runs stay isolated in the Marcora app.)
 - **You are not authorized to perform this action** (403) — the token's user lacks a Creator or Admin role on the team.
 - **ci_not_eligible** (403) — Studio Credits or Context Intelligence availability check failed. On the current plans (Free, Solo, Team, Enterprise) this typically means the team's Studio Credit balance can't cover the estimate. Teams still on a legacy plan keep that plan's existing requirements (for a legacy plan, the message names the Command plan, an active subscription and available Studio Credits).
 
@@ -1045,7 +1045,7 @@ Passing neither is an error.
 
 ### `get_grounding_result`
 
-Read the two-pass grounding result of a scan (`supported`, `conflict`, `gap`, `note`). The poll companion to `check_content_grounding`. It never starts a scan, never browses, and never charges credits. Conflicts come only from what the document was built from (pass 1); other collections can support a claim or add a note (pass 2), each claim and finding reports `claim_subject` (`team | company | general | unknown`) and (on conflicts) `conflict_scope` (`team_facts | company_material`), and recorded research (`web_research`, `connected_app`) appears as a source.
+Read the two-pass grounding result of a scan (`supported`, `conflict`, `gap`, `note`). The poll companion to `check_content_grounding`. It never starts a scan, never browses, and never charges credits. Conflicts come only from what the document was built from (pass 1); other collections can support a claim or add a note (pass 2), each claim and finding reports `claim_subject` (`team | company | general | unknown`) and (on conflicts) `conflict_scope` (`team_facts | company_material`), and recorded research (`web_research`, `connected_app`) appears as a source. Reads shared scans only; isolated private-evidence grounding runs in the Marcora app are excluded.
 
 **When to use:** `check_content_grounding` returned `running`, or you want to re-read a document's last grounding result without paying for a new scan.
 
@@ -1141,6 +1141,7 @@ You never compose the fix yourself. Every finding already stores its recommended
 | `status` | string | `running`, `complete`, `failed`, or `none` |
 | `link_url` | string | Opens the document with its grounding panel open — hand this to the user |
 | `summary` | object | `supported`, `conflicts`, `gaps`, `notes` (optional count of note-only claims, disjoint from `supported`/`conflicts`/`gaps`), `total_claims`, plus `corpus_freshness` |
+| `conflict_check` | object | Present only for the content's creator when conflicts could not be checked (`available: false`) or were only partly checked (`available: true` with a reason). Fields: `available`, `reason` (`no_company_overview`, `no_confirmed_sources`, `items_unconfirmed`), `confirmed_items`, `unconfirmed_items`, `message`. When present, tell the user that `summary.conflicts` of `0` does **not** mean the content agrees with their sources and relay `message` |
 | `findings` | array | Actionable conflict and gap recommendations — see below |
 | `claims` | array | Each extracted claim: `claim_text`, `subject`, `value`, `bucket` (`supported`/`conflict`/`gap`/`note`), optional `claim_subject` (`{ kind: "team" \| "company" \| "general" \| "unknown", company_name, confidence }`), optional `conflict_scope` (`"team_facts" \| "company_material"`, on conflict claims only), `refs[]`, `confidence` (a **string**), plus optional `notes[]` (`{ kind: "other_collection_disagrees", message, refs[] }`), `add_to_library_eligible` (boolean — `true` only when the claim is a completely searched, nowhere-supported true gap eligible to be added to the library; `false` for company gaps, notes, supported claims with notes, or incomplete checks), and `support_only_calls` |
 | `corpus_items` | array | The sources the scan was checked against (`context_item`, `project_brief`, `brand_foundation`, `web_research`, `connected_app`) with `pass` (`1` or `2`), `link_url`, and source provenance fields (`collection`, `core_context_item_id`, `research_id`, `research_turn_id`, `owner_id`, `urls`, `app_sources`) |
@@ -1546,7 +1547,16 @@ You must provide either `content` or `instructions` (not both).
 
 > **Only me material.** An item marked `audience: "only_me"` is private to its owner. If this session read one (and the user still has access to all read private sources), `create_content` saves the document as private (and keeps it restricted to its owner) rather than the team's; if this session read private material to which the user has since lost access (or that changed after the read), `create_content` returns a confirmation token (`confirm_private_sources`) even when the document stays private (consent-only; nothing is shared and the document stays private). Never copy Only me text into a team-visible document without asking the user.
 
-**Output (Quick — synchronous):**
+**Output (saving your own `content` — synchronous):**
+
+| Field | Type | Description |
+|---|---|---|
+| `content_id` | string | Unique identifier for use with `get_content` and share tools |
+| `title` | string | Document title |
+| `link_url` | string | Direct URL to view in Marcora |
+| `message` | string | Short confirmation (`"Saved. The body is not repeated here; use get_content to read it back."`). The markdown you passed is not echoed back |
+
+**Output (Quick `instructions` — synchronous):**
 
 | Field | Type | Description |
 |---|---|---|
@@ -1575,6 +1585,7 @@ You must provide either `content` or `instructions` (not both).
 - Invalid `blueprint_uuid` — use `list_blueprints` to find valid UUIDs
 - Timeout on synchronous calls — Quick generation can take up to about 3½ minutes, which is normal
 - `insufficient_credits` (402) — the team doesn't have the 1 (Quick) or 5 (Multi-model) Studio Credits needed to start
+- `"Only Admins and Creators can create documents."` (403) — creating documents requires an Admin or Creator role on the team
 
 ---
 
@@ -2211,9 +2222,9 @@ Create a new content plan in the authenticated user's active team.
 
 Partial update of a plan: mutable fields and stage transitions. All fields are optional — supply only what you want to change.
 
-> **Array fields replace entirely:** a non-empty `reference_document_ids`, `context_collection_ids` or `targeting_dimension_ids` REPLACES the full set (it doesn't merge). An empty array `[]` is ignored, so this tool can't clear these lists.
+> **Array fields replace entirely:** a non-empty `reference_document_ids`, `context_collection_ids` or `targeting_dimension_ids` REPLACES the full set (it doesn't merge). An empty array `[]` is ignored, so this tool can't clear these lists. For playbook cycle steps, `reference_document_ids` replaces reference documents while keeping existing cycle step links unless `builds_on_plan_ids` is sent or earlier same-cycle plan UUIDs are included; self, later, out-of-cycle, and unknown/other-team plan IDs are rejected with `InputError`. Use `builds_on_plan_ids` (`[]` or `null` clears) to replace which earlier steps in the same cycle this step builds on.
 
-> **Clearing fields:** pass `null` to clear `blueprint_id` or `due_date`. `null` is ignored for `project_id` and `category_id`: to change one of those, pass a new value.
+> **Clearing fields:** pass `null` to clear `blueprint_id`, `due_date`, `owner_name`, `due_time`, or `goes_out_time`. `null` is ignored for `project_id` and `category_id`: to change one of those, pass a new value.
 
 **Stage transition rules:**
 - `Suggested` → `Accepted` or `Dismissed`
@@ -2233,12 +2244,19 @@ Partial update of a plan: mutable fields and stage transitions. All fields are o
 | `blueprint_id` | string/null | No | Blueprint UUID. Pass `null` to clear |
 | `project_id` | string/null | No | Project UUID. `null` is ignored: pass a new value to change it |
 | `category_id` | integer/null | No | Content category ID. `null` is ignored: pass a new value to change it |
-| `due_date` | string/null | No | ISO YYYY-MM-DD. Pass `null` to clear |
-| `assigned_to` | integer | No | Integer user ID. Must be a current team member |
-| `reference_document_ids` | string[] | No | A non-empty array REPLACES the full set of reference documents. `[]` is ignored, so the set can't be cleared |
+| `due_date` | string/null | No | ISO YYYY-MM-DD. Pass `null` to clear (also clears `due_time`) |
+| `assigned_to` | integer | No | Integer user ID. Must be a current team member. Choosing a team member also clears `owner_name` |
+| `visibility` | string | No | `private` or `team` (creator-only) |
+| `reference_document_ids` | string[] | No | A non-empty array REPLACES the full set of reference documents while keeping existing cycle step links unless `builds_on_plan_ids` is sent or earlier same-cycle plan UUIDs are included; any other plan or unknown ID is rejected. `[]` is ignored, so this cannot clear the set |
+| `builds_on_plan_ids` | string[]/null | No | REPLACES the `plan_uuid`s of earlier same-cycle steps this step builds on while keeping reference documents. Self, later, out-of-cycle, and unknown IDs are rejected. Pass `[]` or `null` to clear step links |
 | `context_collection_ids` | integer[] | No | A non-empty array REPLACES the full set of context collections. `[]` is ignored, so the set can't be cleared |
 | `targeting_dimension_ids` | integer[] | No | A non-empty array REPLACES the full set of targeting dimensions. `[]` is ignored, so the set can't be cleared |
 | `target_stage` | string | No | Trigger a stage transition. Use UNDERSCORE form (e.g. `In_Process`). Allowed: `Suggested`, `Accepted`, `In_Process`, `Complete`, `Dismissed` |
+| `attach_content_id` | string (uuid) | No | Playbook content steps: `content_id` of an existing document (from `list_content` or `create_content`) to attach as this step's output. Content steps only (checklist, action, and dismissed steps are refused). Pending steps are accepted first and accepted steps move to `In_Process`. A step that already has a document requires `replace_attached_content: true` (otherwise 409); the old document is kept. To detach, transition back to `Accepted` |
+| `replace_attached_content` | boolean | No | Set `true` to swap an existing attached document when sending `attach_content_id` (default `false`) |
+| `owner_name` | string/null | No | Playbook steps: typed owner (agent or non-member, max 60 chars) matched case-insensitively to existing team spellings (`list_playbook_owner_names`). Not for action steps. `null` or `assigned_to` clears it |
+| `due_time` | string/null | No | Playbook steps: optional `"HH:MM"` 24-hour time of day due (no time zone). Needs a `due_date`; `null` clears it |
+| `goes_out_time` | string/null | No | Content steps in a playbook: optional `"HH:MM"` 24-hour time of day it goes out (no time zone). Needs the step's goes-out date; `null` clears it |
 
 **Output:** Updated plan object with all fields.
 
@@ -2246,13 +2264,14 @@ Partial update of a plan: mutable fields and stage transitions. All fields are o
 - "Mark this plan as In Progress"
 - "Assign this plan to the content team"
 - "Set a due date of next Friday on this plan"
+- "Attach our existing launch blog draft to step 2"
 - "Dismiss the outdated Q2 plan"
 
 ---
 
 ### `produce_plan`
 
-Produce (generate) the actual content a plan describes — the MCP equivalent of the **Generate** button on the plans board. The plan must be in the `Accepted` stage (transition a `Suggested` plan first with `update_plan` `target_stage: "Accepted"`). Consumes team Studio Credits (charged at completion at the model's cost; typically Quick 1–2, Multi-model 6–7; starting needs 1 for Quick, 5 for Multi-model, otherwise `insufficient_credits` 402 and nothing is generated) and takes 1–5 minutes; confirm with the user before producing a plan they didn't explicitly ask to produce. The plan's `prompt`, targeting dimensions, context collections, and project association are used as generation inputs — set them via `update_plan` before producing.
+Produce (generate) the actual content a plan describes — the MCP equivalent of the **Generate** button on the plans board. Requires an **Admin** or **Creator** role (Collaborators are refused with `"Only Admins and Creators can create documents."`). The plan must be in the `Accepted` stage (transition a `Suggested` plan first with `update_plan` `target_stage: "Accepted"`). Consumes team Studio Credits (charged at completion at the model's cost; typically Quick 1–2, Multi-model 6–7; starting needs 1 for Quick, 5 for Multi-model, otherwise `insufficient_credits` 402 and nothing is generated) and takes 1–5 minutes; confirm with the user before producing a plan they didn't explicitly ask to produce. The plan's `prompt`, targeting dimensions, context collections, and project association are used as generation inputs — set them via `update_plan` before producing.
 
 **Both paths are asynchronous** — the call returns immediately with a `generation_id`; poll `get_generation_status`. On completion the backend links the produced content and moves the plan to `In_Process` (then `Complete` when the content reaches ready).
 
@@ -2303,7 +2322,7 @@ Fetch one content playbook by id, including its full ordered list of items.
 |---|---|---|---|
 | `playbook_id` | integer | Yes | ID of the playbook to fetch |
 
-**Output:** the playbook object — including `anchor_date` (persisted `YYYY-MM-DD` reference date, or `null`), `anchor_label`, `default_project_id`, `variables`, and `link_url` (opens the playbook in the Marcora web app) — with an ordered `items` array. Each item carries `id`, the plan fields it will stamp out (`name`, `title`, `description`, `prompt`, `blueprint_id`, `category_id`), a `builds_on` array (0-based positions of the earlier steps it builds on; empty when none), `offset_days` counted from the anchor date to compute each due date on instantiation, and step fields (`kind` of `content` / `checklist` / `action`, `goes_out_offset_days`, `optional`, `owner_user_id`, `reviewer`, `action`).
+**Output:** the playbook object — including `anchor_date` (persisted `YYYY-MM-DD` reference date, or `null`), `anchor_label`, `default_project_id`, `variables`, and `link_url` (opens the playbook in the Marcora web app) — with an ordered `items` array. Each item carries `id`, the plan fields it will stamp out (`name`, `title`, `description`, `prompt`, `blueprint_id`, `category_id`), a `builds_on` array (0-based positions of the earlier steps it builds on; empty when none), `offset_days` counted from the anchor date to compute each due date on instantiation, and step fields (`kind` of `content` / `checklist` / `action`, `goes_out_offset_days`, `goes_out_time`, `due_time`, `optional`, `off_by_default`, `owner_user_id`, `owner_name`, `reviewer`, `action`).
 
 **Example prompts:**
 - "What's in my launch-week playbook?"
@@ -2322,7 +2341,7 @@ Create a reusable content playbook — an ordered template of content-plan items
 | `description` | string | No | Free-text description |
 | `visibility` | string | No | `team` (default) or `private` |
 | `anchor_date` | string | No | Optional `YYYY-MM-DD` reference date the playbook is built around (a launch, event, campaign kickoff). Persisted on the playbook; each item's `offset_days` counts from it, and it becomes the default anchor when instantiating. Leave off for an evergreen/undated template |
-| `items` | array | No | Ordered playbook items (each becomes one plan on instantiation). Each item can carry `builds_on`: an array of 0-based positions, in this same `items` array, of EARLIER items the step builds on (a link to itself or a later item is rejected). When the playbook is run, each step's generation draws on the steps it builds on. Each item can also set a step: `kind` (`content` default, `checklist` — a to-do the owner ticks off — or `action` — a connected-app action), `optional` (may be left out when the playbook is run), `owner_user_id` (an active team member), `reviewer` (free text, up to 120 characters), `goes_out_offset_days` (content steps: a second date, days after the anchor) and, for `action` steps, `action: { toolkit, operation, params }`. The actions that exist: `slack/post_message` (`channel`*, `message`*), `asana/create_task` (`name`*, `notes`, `project`, `workspace`; project or workspace required), `gmail/create_draft` (`to`*, `subject`*, `body`*; creates a draft, sends nothing); `{Variable}` placeholders are allowed in values. An action step is run by its owner in the Marcora app, not over MCP. |
+| `items` | array | No | Ordered playbook items (each becomes one plan on instantiation). Each item can carry `builds_on`: an array of 0-based positions, in this same `items` array, of EARLIER items the step builds on (a link to itself or a later item is rejected). When the playbook is run, each step's generation draws on the steps it builds on. Each item can also set step fields: `kind` (`content` default, `checklist` — a to-do the owner ticks off — or `action` — a connected-app action), `optional` (may be left out via `skip_item_ids`), `off_by_default` (`true` = starts unticked and is left out unless named in `include_item_ids`; implies `optional`), `owner_user_id` (an active team member), `owner_name` (typed owner up to 60 chars for content/checklist steps, matching `list_playbook_owner_names`, never action), `due_time` (`"HH:MM"`, needs `offset_days`), `goes_out_offset_days` (content steps: a second date, days after anchor), `goes_out_time` (`"HH:MM"`, needs `goes_out_offset_days`), `reviewer` (free text, up to 120 characters), and, for `action` steps, `action: { toolkit, operation, params }`. The actions that exist: `slack/post_message` (`channel`*, `message`*), `asana/create_task` (`name`*, `notes`, `project`, `workspace`; project or workspace required), `gmail/create_draft` (`to`*, `subject`*, `body`*; creates a draft, sends nothing); `{Variable}` placeholders are allowed in values. An action step is run by its owner in the Marcora app, not over MCP. |
 | `anchor_label` | string | No | What `anchor_date` is called in the app, e.g. "Launch day" (up to 60 characters). `null` clears it |
 | `default_project_id` | string (uuid) | No | Project a run of this playbook starts in by default. `null` clears it |
 | `variables` | array | No | Placeholders the person running the playbook fills in once, e.g. `[{ "name": "Product", "required": true }]`; write `{Product}` in item names, descriptions, prompts and action params. Up to 30; a name is 1-40 letters, numbers, spaces, dashes or underscores. On update, sending `variables` replaces the whole list |
@@ -2358,7 +2377,7 @@ Create a playbook by capturing existing content plans as reusable template items
 
 ### `update_playbook`
 
-Edit a content playbook. Any playbook is fully editable. Pass only the fields to change: `name` and/or `description` patch in place. If `items` is provided it **fully replaces** the playbook's items and their order; omit `items` to leave them untouched. Changing `visibility` is creator-only.
+Edit a content playbook. Any playbook is fully editable. Pass only the fields to change: `name` and/or `description` patch in place. If `items` is provided it sets the playbook's items and their order; omit `items` to leave them untouched. Changing `visibility` is creator-only.
 
 **Parameters:**
 
@@ -2369,7 +2388,7 @@ Edit a content playbook. Any playbook is fully editable. Pass only the fields to
 | `description` | string | No | New description (pass `null` to clear) |
 | `visibility` | string | No | `team` or `private` (creator-only) |
 | `anchor_date` | string | No | Set the playbook's `YYYY-MM-DD` reference date. Omit to keep the current value; pass `null` to clear it |
-| `items` | array | No | If provided, REPLACES the full ordered item list. Resend `builds_on` (0-based positions of earlier items in this array) for every item you want to keep linked. **Send every item you keep back with its `id` from `get_playbook`** (ids are re-issued each time items are saved, so use the latest read): an item sent with its `id` keeps its step, and a step field you send changes only that field. A list with no current ids that would reset checklist/action steps or step settings is refused and nothing is written; to rewrite steps on purpose, send `kind` on every item. Each item can also set a step: `kind` (`content` default, `checklist` — a to-do the owner ticks off — or `action` — a connected-app action), `optional` (may be left out when the playbook is run), `owner_user_id` (an active team member), `reviewer` (free text, up to 120 characters), `goes_out_offset_days` (content steps: a second date, days after the anchor) and, for `action` steps, `action: { toolkit, operation, params }`. The actions that exist: `slack/post_message` (`channel`*, `message`*), `asana/create_task` (`name`*, `notes`, `project`, `workspace`; project or workspace required), `gmail/create_draft` (`to`*, `subject`*, `body`*; creates a draft, sends nothing); `{Variable}` placeholders are allowed in values. An action step is run by its owner in the Marcora app, not over MCP. |
+| `items` | array | No | If provided, sets the ordered item list. **Send every item you keep back with its `id` from `get_playbook`** (ids are re-issued each time items are saved, so use the latest read): an item sent with its `id` keeps omitted fields and step settings, including `builds_on` remapped to the kept items' new positions (links to removed steps are dropped; moving a step ahead of a step it builds on is rejected unless `builds_on` is also sent; pass `[]` or `null` to clear). An item without `id` is a new step. A list with no current ids that would reset checklist/action steps or step settings is refused and nothing is written; to rewrite steps on purpose, send `kind` on every item. Step fields: `kind`, `optional`, `off_by_default`, `owner_user_id`, `owner_name`, `due_time`, `goes_out_offset_days`, `goes_out_time`, `reviewer`, `action` (same rules as `create_playbook`; `null` clears nullable fields). |
 | `anchor_label` | string | No | What `anchor_date` is called in the app, e.g. "Launch day" (up to 60 characters). `null` clears it |
 | `default_project_id` | string (uuid) | No | Project a run of this playbook starts in by default. `null` clears it |
 | `variables` | array | No | Placeholders the person running the playbook fills in once, e.g. `[{ "name": "Product", "required": true }]`; write `{Product}` in item names, descriptions, prompts and action params. Up to 30; a name is 1-40 letters, numbers, spaces, dashes or underscores. On update, sending `variables` replaces the whole list |
@@ -2398,6 +2417,7 @@ Run a playbook: create one content plan per playbook item, in order, as a batch.
 | `topic` | string | No | What this cycle is about (max 4000 chars), e.g. the product, launch or campaign. Stored on the cycle, shown as its topic, and used when the cycle's content is generated |
 | `variables` | object | No | Values for the playbook's variables by name, e.g. `{ "Product": "Acme" }` (up to 500 characters each). Every variable the playbook marks required must be given |
 | `skip_item_ids` | integer[] | No | Ids (from `get_playbook`) of OPTIONAL steps to leave out of this cycle. A step that is not optional is refused, and at least one step must remain |
+| `include_item_ids` | integer[] | No | Ids (from `get_playbook`) of OFF-BY-DEFAULT (`off_by_default`) steps to include in this running playbook. Any off-by-default step not named here is left out, and any `builds_on` link to a left-out step is dropped. Unknown IDs are refused |
 
 If `anchor_date` is omitted, the playbook's persisted `anchor_date` (if any) is used.
 
@@ -2407,7 +2427,7 @@ If `anchor_date` is omitted, the playbook's persisted `anchor_date` (if any) is 
 |---|---|---|
 | `playbook_id` | integer | The instantiated playbook |
 | `run_id` | integer | ID of the cycle (run) this created — the group the plans belong to |
-| `run` | object | The created cycle: `id`, `name` (auto-named `"<playbook> — <Mon YYYY>"` unless you passed a name), `context` (the `topic` you passed, or null), `anchor_date`, and `link_url` (`https://app.marcora.ai/runs/{run_id}`) — share it to hand the user their new cycle |
+| `run` | object | The created cycle: `id`, `name` (auto-named `"<playbook> — <Mon YYYY>"` unless you passed a name), `context` (the `topic` you passed, or null), `anchor_date`, and `link_url` (`https://app.marcora.ai/runs/{playbook_run_uuid}`) — share it to hand the user their new cycle |
 | `created_count` | integer | Number of plans created (one per playbook item) |
 | `plans` | array | The created content plans (same shape as `create_plan` / `get_plan`), each with its own `link_url` (`https://app.marcora.ai/plans/{plan_uuid}`). Stage `Accepted`, source `playbook` |
 
@@ -2419,7 +2439,7 @@ If `anchor_date` is omitted, the playbook's persisted `anchor_date` (if any) is 
 
 ### Playbook cycles
 
-A **cycle** is a running instance of a playbook: `instantiate_playbook` creates one, with one step (a plan) per playbook item. These eight tools read and drive cycles. A step is identified by its `plan_uuid`.
+A **cycle** is a running instance of a playbook: `instantiate_playbook` creates one, with one step (a plan) per playbook item. These ten tools read and drive cycles. A step is identified by its `plan_uuid`.
 
 ---
 
@@ -2442,13 +2462,13 @@ List the playbook cycles in the current team: active by default, or filtered by 
 
 ### `get_playbook_cycle`
 
-Read one cycle with its steps in playbook order. Each step's `plan_uuid` is how you change it: to change a step's title, prompt, due date, assignee or to dismiss it, use `update_plan` with the step's `plan_uuid`; to complete it, `complete_playbook_step`; to rename the cycle or change its topic, `update_playbook_cycle`. Read-only.
+Read one cycle with its steps in order (including any steps added mid-cycle via `add_playbook_step`). Each step's `plan_uuid` is how you change it: to change a step's title, prompt, due date, assignee, typed owner, time of day, attach an existing document, or dismiss it, use `update_plan` with the step's `plan_uuid`; to complete it, `complete_playbook_step`; to rename the cycle or change its topic, `update_playbook_cycle`. Read-only.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `run_id` | integer | Yes | Cycle id, from `list_playbook_cycles` / `instantiate_playbook`, or the trailing number of a cycle `link_url` |
 
-**Output:** `cycle` (same shape as a `list_playbook_cycles` row) and `steps`. Each step carries `position`, `plan_uuid`, `title`, `description`, `prompt` (the instructions), `stage`, `done`, `due_date`, `assigned_to` / `assigned_to_name`, `builds_on` (earlier steps it builds on), `document` (the produced document with link, or null), `step` (`kind`, `goes_out_date`, `reviewer`, `optional`), `result` (recorded link / note once completed, or null) and `link_url`. Use a step's `plan_uuid` with `get_plan` for full detail or `complete_playbook_step` to finish it.
+**Output:** `cycle` (same shape as a `list_playbook_cycles` row) and `steps`. Each step carries `position`, `plan_uuid`, `title`, `description`, `prompt` (the instructions), `stage`, `done`, `due_date`, `assigned_to` / `assigned_to_name`, `builds_on` (earlier steps it builds on), `document` (the produced document with link, or null), `step` (`kind`, `goes_out_date`, `reviewer`, `optional`, plus `owner_name`, `due_time`, and `goes_out_time` when set), `result` (recorded link / note once completed, or null) and `link_url`. Use a step's `plan_uuid` with `get_plan` for full detail or `complete_playbook_step` to finish it.
 
 **Example prompts:** "What's due next in the launch cycle?" · "What did step 2 produce?"
 
@@ -2456,16 +2476,60 @@ Read one cycle with its steps in playbook order. Each step's `plan_uuid` is how 
 
 ### `list_my_playbook_steps`
 
-List the open playbook steps (not Complete or Dismissed) assigned to you, across all running cycles, soonest due first (undated last). Read-only. This is the daily "what do I need to do" check.
+List the open playbook steps (not Complete or Dismissed) assigned to you, across all running playbooks, soonest due first (undated last). Pass `owner_name` to list the open steps owned by a typed owner name instead (matched case-insensitively across the team's running playbooks). Read-only. This is the daily "what do I need to do" check.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `due_by` | string | No | `YYYY-MM-DD`. Only steps due on or before this date (overdue included). Omit for all open steps |
-| `run_id` | integer | No | Only steps of this cycle |
+| `run_id` | integer | No | Only steps of this running playbook |
+| `owner_name` | string | No | Return the open steps owned by this typed owner name (an agent, or anyone who is not a team member), matched case-insensitively, instead of steps assigned to you. Get the exact spelling from `list_playbook_owner_names` |
 
-**Output:** `items` (each: `plan_uuid`, `title`, `description`, `prompt`, `stage`, `due_date`, `run_id`, `cycle_name`, `cycle_link_url`, `link_url`) and `itemsTotal`.
+**Output:** `items` (each: `plan_uuid`, `title`, `description`, `prompt`, `stage`, `due_date`, `run_id`, `cycle_name`, `cycle_link_url`, `link_url`; plus `due_time`, `owner_name`, and `kind` in `owner_name` mode) and `itemsTotal`.
 
-**Example prompts:** "What do I need to do today?" · "Anything overdue in my playbook steps?"
+**Example prompts:** "What do I need to do today?" · "Anything overdue in my playbook steps?" · "What open playbook steps are assigned to Claude Code?"
+
+---
+
+### `list_playbook_owner_names`
+
+List the typed owner names (`owner_name`) in use on your team's playbook steps — agents, or people who are not team members, typed as a step's owner instead of picking a team member. Alphabetical, in the spelling first used. A name drops off the list once no step uses it. Read-only.
+
+**Parameters:** none.
+
+**Output:** `owner_names` (alphabetical string array) and `total` (integer).
+
+**Example prompts:** "Which owner names are we using on playbook steps?"
+
+---
+
+### `add_playbook_step`
+
+Add one step to a **running** playbook cycle (`run_id`) without changing the playbook template it came from. The new step becomes a normal step of the running playbook: same visibility, project, and category as its other steps, starting at stage `Accepted`, counted in cycle progress, and picked up by `generate_cycle_content`.
+
+Position: right after `after_plan_uuid`, or at the end when omitted. `builds_on` may only name earlier steps in the same cycle. A typed `owner_name` is for `content` and `checklist` steps (never `action`), and times of day (`due_time`, `goes_out_time`) require their corresponding date (`due_date`, `goes_out_date`). Refusals change nothing.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `run_id` | integer | Yes | Running playbook id (from `list_playbook_cycles` or `instantiate_playbook`) |
+| `title` | string | Yes | The step's title |
+| `description` | string | No | What the step is for |
+| `prompt` | string | No | Content steps: the generation prompt (`{Variables}` are filled from the running playbook's own values) |
+| `blueprint_uuid` | string (uuid) | No | Content steps: blueprint to write from (from `list_blueprints`) |
+| `kind` | string | No | `content` (default), `checklist`, or `action` (needs `action` and `owner_user_id`; runs in the app, not over MCP) |
+| `action` | object/null | No | Required for `kind: "action"`: `{ toolkit, operation, params }` |
+| `owner_user_id` | integer | No | Team member who owns the step (defaults to caller). Do not send together with `owner_name` |
+| `owner_name` | string | No | Typed owner (agent or non-member) instead of `owner_user_id`. Not for `action` steps. See `list_playbook_owner_names` |
+| `due_date` | string | No | `YYYY-MM-DD` due date (content step's draft date) |
+| `due_time` | string | No | Optional `"HH:MM"` 24-hour time due (no time zone). Needs `due_date` |
+| `goes_out_date` | string | No | Content steps: `YYYY-MM-DD` date the finished content goes out |
+| `goes_out_time` | string | No | Content steps: optional `"HH:MM"` 24-hour time it goes out. Needs `goes_out_date` |
+| `reviewer` | string | No | Reviewer name shown on the step (free text, max 120 chars) |
+| `after_plan_uuid` | string (uuid) | No | Place the step right after this step (`plan_uuid` from `get_playbook_cycle`). Omit to add at the end |
+| `builds_on` | uuid[] | No | `plan_uuid`s of EARLIER steps in this running playbook whose finished content this step draws on. A later step is refused |
+
+**Output:** `plan_uuid`, `title`, `stage`, `due_date`, `run_id`, `step` (`kind`, `optional`, `owner_name`, times of day, and other step settings), `link_url`, `cycle_link_url`.
+
+**Example prompts:** "Add a QA check step after step 3 of the launch cycle"
 
 ---
 
@@ -2523,7 +2587,7 @@ To change a step's title, prompt, due date, assignee or to dismiss it, use `upda
 
 ### `generate_cycle_content`
 
-Start "Generate all" on a cycle: generate the document for every step that has none yet, in step order, on the server (it keeps going after the call returns). Each step is generated with the cycle's topic and the steps it builds on. Only content steps assigned to you (or created by you) are generated; checklist and action steps, dismissed steps, already-generated steps and teammates' steps are skipped with a reason. **Uses the team's Studio Credits, one generation per step**; if credits run out the batch stops cleanly and the remaining steps are reported as `not_started`. Only one batch runs per cycle at a time: calling again while one runs returns `started: false` with the running batch. Not idempotent. For a single step use `produce_plan`.
+Start "Generate all" on a cycle: generate the document for every step that has none yet, in step order, on the server (it keeps going after the call returns). Requires an **Admin** or **Creator** role. Each step is generated with the cycle's topic and the steps it builds on. Only content steps assigned to you (or created by you) are generated; checklist and action steps, dismissed steps, already-generated steps and teammates' steps are skipped with a reason. **Uses the team's Studio Credits, one generation per step**; if credits run out the batch stops cleanly and the remaining steps are reported as `not_started`. Only one batch runs per cycle at a time: calling again while one runs returns `started: false` with the running batch. Not idempotent. For a single step use `produce_plan`.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
