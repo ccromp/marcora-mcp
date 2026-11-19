@@ -10,13 +10,13 @@ Read this before calling `create_content`, or when following up on a generation 
 
 **The default: you write it.** When the user asks you to write, draft or create something (and, optionally, to save it to Marcora), write it yourself from the team's context, then save it with `content`. Marcora's own writer (`instructions`) is for three cases only: **(a)** the user asks Marcora to write or generate it, **(b)** a Blueprint is used (the user names one or asks for a template), or **(c)** a plan is being fulfilled. Do not go looking for a blueprint on every request, and do not hand a plain "write X" to the generator.
 
-**Preconditions.** None hard-required. If the user mentioned an initiative and you don't already know the project, fetch it first.
+**Preconditions.** Creating documents requires an **Admin** or **Creator** role on the team (Collaborators and Viewers are refused with `"Only Admins and Creators can create documents."`). If the user mentioned an initiative and you don't already know the project, fetch it first.
 
 **Steps — you write it (the default).**
 1. If the user mentioned an initiative and you don't already know it: `marcora:list_projects`. If they want the piece scoped to it, keep the `project_id`.
 2. `marcora:get_relevant_context` with a `prompt` describing the piece and `include_brand_foundation: true` on the first call of the conversation. Pass `project_id` when the piece belongs to a project (the first call returns the project's brief — read it; your draft must not contradict it). One response gives you Reference Library chunks and the team's Brand Foundation (company overview, brand voice, writing style, writing examples).
 3. Write the piece yourself from what it returned. To build on existing documents, read them with `marcora:get_content` (find them with `list_content`) and write from them.
-4. If the user only wants a draft, give it in the chat and stop. If they want it saved in Marcora (including "write X and save it in Marcora"): `marcora:create_content` with `content` only. Start `content` with `# <Title>` on the first line; add `project_id` and `category_id` where relevant. `content` cannot be combined with `instructions` or `blueprint_uuid`, and `reference_content_ids` is rejected with it.
+4. If the user only wants a draft, give it in the chat and stop. If they want it saved in Marcora (including "write X and save it in Marcora"): `marcora:create_content` with `content` only. Start `content` with `# <Title>` on the first line; add `project_id` and `category_id` where relevant. `content` cannot be combined with `instructions` or `blueprint_uuid`, and `reference_content_ids` is rejected with it. Saving your own `content` returns `content_id`, `title`, `link_url`, and a confirmation message without echoing the body back.
 5. **Hand the user `link_url`** exactly as returned. They open it in Marcora. **Do NOT call `get_content` to fetch the body back** — they review it, not you.
 
 **Steps — Marcora writes it (the user asks Marcora to write it, a Blueprint is used, or a plan is being fulfilled).**

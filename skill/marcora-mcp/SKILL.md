@@ -4,7 +4,7 @@ description: "Use this skill BEFORE calling any Marcora MCP tool (create_content
 license: MIT
 metadata:
   mcp-server: marcora
-  version: 0.8.3
+  version: 0.8.4
 ---
 
 # Marcora AI Workflows
@@ -53,7 +53,7 @@ The Marcora MCP server is hosted; the user's MCP client connects directly. You d
 | Read or change Brand Foundation (company overview, brand voice, writing style, writing examples) | `get_brand_foundation`, `update_brand_foundation` | `references/brand-foundation.md` |
 | Check a document's claims against the library ("is this accurate?", "does it contradict anything?"), apply fixes or health-audit findings | `check_content_grounding`, `apply_grounding_fix` | `references/grounding.md`, then `references/grounding-recipe.md` to run a check end to end |
 | Make something reusable, recurring or scheduled ("every Monday…", "automate this", "an agent that does X"); build, activate or run a workflow | `create_workflow` and the workflow tools | `references/workflows.md` |
-| Plan content (a launch calendar, ideas on the plans board), produce a plan, save / run a reusable sequence of content (playbook), or follow a running playbook cycle (what is due, complete a step, generate all its content) | `create_plan`, `produce_plan`, playbook and cycle tools | `references/plans-and-playbooks.md` |
+| Plan content (a launch calendar, ideas on the plans board), produce a plan, save / run a reusable sequence of content (playbook), or follow a running playbook cycle (what is due, add or attach a step, complete a step, generate all its content) | `create_plan`, `produce_plan`, playbook and cycle tools | `references/plans-and-playbooks.md` |
 | Create a blueprint (template), or browse / import one from the Blueprint Exchange | `create_blueprint`, `list_community_blueprints` | `references/blueprints.md` |
 | Share a document externally or export it to Word | `create_external_share`, `convert_markdown_to_word_doc` | `references/share-and-export.md` |
 

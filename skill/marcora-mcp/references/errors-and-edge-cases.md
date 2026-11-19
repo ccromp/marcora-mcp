@@ -75,9 +75,9 @@ Don't show the user a UUID like `7b2c4f...` as an identifier. Surface the human-
 
 ## E21 — Role-gated workspace actions (`Admin` / `Creator` vs. Collaborator)
 
-**Symptom.** A Collaborator gets a 403 access-denied or `creator_license_required` error on `add_context(connected_webpage_url=…)`, `update_context(refresh_webpage=true)`, `update_ci_finding_status`, `apply_grounding_fix`, `get_share_link_activity`, `list_share_link_activity`, or `find_app`.
+**Symptom.** A Collaborator gets a 403 access-denied or `creator_license_required` error on document creation (`create_content`, `produce_plan`, `generate_cycle_content`, `create_blueprint_draft` — `"Only Admins and Creators can create documents."`), `add_context(connected_webpage_url=…)`, `update_context(refresh_webpage=true)`, `update_ci_finding_status`, `apply_grounding_fix`, `get_share_link_activity`, `list_share_link_activity`, or `find_app`.
 
-**Cause.** Workspace-level context management, grounding/CI fixes, share-link analytics, and integrations require an active `Admin` or `Creator` role (`create_project` `team_visibility: "team"` makes a project visible to team Admins, Creators, and Viewers). Collaborators can read and update project-scoped content (`get_content`, `update_content`) in their projects.
+**Cause.** Creating new documents, workspace-level context management, grounding/CI fixes, share-link analytics, and integrations require an active `Admin` or `Creator` role (`create_project` `team_visibility: "team"` makes a project visible to team Admins, Creators, and Viewers). Collaborators can read and update project-scoped content (`get_content`, `update_content`) in their projects.
 
 **What to do.** Check `marcora:get_current_user_info` (`role`), explain that an Admin or Creator role is required, and suggest asking a workspace Admin to upgrade their role if needed.
 
