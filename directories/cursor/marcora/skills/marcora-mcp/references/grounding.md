@@ -28,7 +28,7 @@ Read this before calling `check_content_grounding` or `apply_grounding_fix`: che
 
 **Claims that rest only on calls.** A supported claim may carry `support_only_calls` (one entry per call, with its date, kind and company). It appears only when every supporting source is a call. Tell the user such a claim rests only on calls, which are one conversation's word rather than a written source.
 
-**Private sources stay in Marcora.** Documents built from `Only me` sources cannot be grounded over MCP (`check_content_grounding` refuses with a link for the owner to run an isolated private check in Marcora; `get_grounding_result` reads shared scans only). On shared re-checks, dismissed findings stay dismissed as long as the claim and its warning evidence are unchanged.
+**Private sources stay in Marcora.** Documents built from `Only me` sources cannot be grounded over MCP (`check_content_grounding` refuses with a link for the owner to run an isolated private check in Marcora; `get_grounding_result` reads shared scans only). On shared re-checks, dismissed findings stay dismissed as long as the claim and its warning evidence are unchanged. Calling `get_grounding_result({content_id})` reads the latest completed scan with live finding statuses and counts (so dismissed or resolved findings appear as `dismissed` / `resolved` immediately), whereas `get_grounding_result({scan_id})` reads that scan's frozen snapshot (captured per-scan claims and completion-time finding statuses; returns `"Grounding result not found."` if a cited source was later erased).
 
 `apply_grounding_fix` also applies Context Intelligence health-audit recommendations from `list_ci_findings`. Full recipe: `references/grounding-recipe.md`.
 
@@ -50,7 +50,7 @@ Read this before calling `check_content_grounding` or `apply_grounding_fix`: che
 
 **Cause.** `get_grounding_result` with a `content_id` and no `scan_id` returns the latest **completed** grounding, deliberately skipping a scan that is still in flight. During your scan, the latest completed one is the *previous* result.
 
-**What to do.** Poll with the **`scan_id`** that `check_content_grounding` returned. That reads the exact run you started, whatever its status. Reserve the `content_id` form for "what is this document's grounding state right now", when nothing is running.
+**What to do.** Poll with the **`scan_id`** that `check_content_grounding` returned. That reads the exact run you started, whatever its status (and for completed scans, preserves that scan's captured claims and completion-time finding statuses). Reserve the `content_id` form for "what is this document's grounding state right now", when nothing is running — it reads the latest completed scan alongside live finding statuses and counts, so dismissed or resolved findings read as `dismissed` / `resolved` immediately.
 
 ---
 
