@@ -2,6 +2,15 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-20 (playbook action steps are a plain instruction)
+
+### Skill → v0.8.5 · plugin → v1.3.4
+
+### Changed
+
+- **Playbook `action` steps are now `{ instruction }`:** `create_playbook`, `update_playbook`, `add_playbook_step` and `get_playbook` describe an action step as one or two plain sentences saying what to do (up to 12,000 characters, `{Variable}` allowed). There is no fixed list of actions or apps. When the step's owner presses Run in the Marcora app, their in-app agent carries it out with the owner's own connected apps, asks the owner for exact approval before every write to a connected app or anything that reaches another person, and saves the result on the step. It does not run over MCP.
+- **`complete_playbook_step`:** an `action` step needs both a result link and a short note.
+
 ## 2026-11-19 (playbook gaps, cycle step links, grounding conflict_check, Admin/Creator document creation, webhook_id validation)
 
 ### Skill → v0.8.4 · plugin → v1.3.3
