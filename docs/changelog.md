@@ -2,6 +2,9 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## 2026-11-20 (plan `blueprint_id` outputSchema fix)
+- Fixed `create_plan`, `get_plan`, and `update_plan` `outputSchema` to declare `blueprint_id` as `["integer", "null"]` (matching the integer ID returned at runtime and sibling playbook tools, rather than `["string", "null"]`).
+
 ## 2026-11-20 (playbook action steps are a plain instruction)
 
 ### Skill → v0.8.5 · plugin → v1.3.4
