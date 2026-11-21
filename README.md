@@ -126,6 +126,7 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Category | Tool | Description |
 |---|---|---|
 | Account | `get_current_user_info` | Get profile, enabled `teams[]`, roles, subscription plans, credits, and member rosters |
+| Account | `invite_user` | Invite a teammate or project collaborator to a team by email |
 | Context & Resources | `get_brand_foundation` | Get team's Brand Foundation (company overview, voice, style, examples) |
 | Context & Resources | `update_brand_foundation` | Overwrite one Brand Foundation element |
 | Context & Resources | `list_context_collections` | List context collections |
@@ -141,6 +142,7 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Context & Resources | `add_call_instruction` | Save a standing call instruction (`guidance` or `word_fix`) for future calls |
 | Context & Resources | `update_call_instruction` | Edit or switch on/off a standing call instruction |
 | Context & Resources | `remove_call_instruction` | Permanently remove a standing call instruction |
+| Context & Resources | `find_app` | Look up available third-party apps connected to Marcora |
 | Context Intelligence | `list_ci_findings` | List findings from automated context-library scans |
 | Context Intelligence | `get_ci_finding` | Get one finding in full detail by UUID |
 | Context Intelligence | `update_ci_finding_status` | Acknowledge, dismiss, or resolve a finding |
@@ -183,6 +185,8 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Plans & Playbooks | `create_playbook_from_plans` | Capture existing plans as a playbook |
 | Plans & Playbooks | `update_playbook` | Rename, re-describe, or restructure a playbook |
 | Plans & Playbooks | `instantiate_playbook` | Run a playbook into a cycle of plans (optionally anchored to a date, with a topic) |
+| Plans & Playbooks | `list_playbook_suggestions` | List call-detected playbook suggestions (`suggested`, `started`, `dismissed`) |
+| Plans & Playbooks | `dismiss_playbook_suggestion` | Dismiss a call-detected playbook suggestion (optionally saving a call rule) |
 | Plans & Playbooks | `list_playbook_cycles` | List running playbook cycles with progress |
 | Plans & Playbooks | `get_playbook_cycle` | Read one cycle with its ordered steps |
 | Plans & Playbooks | `list_my_playbook_steps` | List open playbook steps assigned to you (or to a typed `owner_name`), soonest due first |

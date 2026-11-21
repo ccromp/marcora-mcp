@@ -8,9 +8,9 @@ Read this before a call you are unsure about, or when you hit a convention you d
 
 - **Hand over links exactly as returned.** When a tool returns `link_url` (or any URL field), copy it character for character into your reply. Never retype an id, shorten a URL, or rebuild one from a pattern — a single wrong character in a UUID gives the user a dead link that still looks right.
 
-- **Don't duplicate Content to "add it" to a project.** Attachment is a link between the project and the document, not a copy. Use `update_project(project_brief_id=...)` — it auto-attaches.
+- **Don't duplicate Content to "add it" to a project.** Attachment is a link between the project and the document, not a copy. Use `update_project(team_id, project_id, project_brief_id=...)` — it auto-attaches.
 
-- **Write new content yourself; don't hand a plain "write X" to Marcora's generator.** The default for new content is `get_relevant_context(include_brand_foundation=true)` → you write → `create_content` with `content`. The `content` path stores your text **verbatim** and consults no context, so if you skip the context call, your draft is off-brand and ignores the Reference Library. Marcora's generator (`instructions`) is for three cases: the user asks Marcora to write it, a Blueprint is used, or a plan is being fulfilled. **On that path, don't pre-fetch:** the `instructions` path already pulls in Brand Foundation (so you don't need `marcora:get_brand_foundation` either), Reference Library via relevancy scoring, Project Context if `project_id` is set, and any `collection_ids` you pass, so fetching first is wasted work. Other legitimate uses of the fetch tools: the narrow Workflow-1 sourcing-check (specific customer / incident not likely in the library) and direct user Q&A about brand voice or library contents.
+- **Write new content yourself; don't hand a plain "write X" to Marcora's generator.** The default for new content is `get_relevant_context(team_id, prompt, include_brand_foundation=true)` → you write → `create_content` with `content`. The `content` path stores your text **verbatim** and consults no context, so if you skip the context call, your draft is off-brand and ignores the Reference Library. Marcora's generator (`instructions`) is for three cases: the user asks Marcora to write it, a Blueprint is used, or a plan is being fulfilled. **On that path, don't pre-fetch:** the `instructions` path already pulls in Brand Foundation (so you don't need `marcora:get_brand_foundation` either), Reference Library via relevancy scoring, Project Context if `project_id` is set, and any `collection_ids` you pass, so fetching first is wasted work. Other legitimate uses of the fetch tools: the narrow Workflow-1 sourcing-check (specific customer / incident not likely in the library) and direct user Q&A about brand voice or library contents.
 
 - **Don't fetch the content body after generation.** Hand the user the `link_url`. `get_content` is for three cases only: (a) the user later asks a question that requires reading the body to answer, (b) you need the markdown to feed `convert_markdown_to_word_doc`, or (c) a `project_brief` block came back with `truncated: true` and you are about to work in that project — read the full brief first.
 
@@ -24,7 +24,7 @@ Read this before a call you are unsure about, or when you hit a convention you d
 
 - **Targeting dimension IDs are *option* IDs, not dimension IDs.** Drill into the `options` array.
 
-- **`update_project` is team-scoped.** A project belonging to a different team the user is also a member of won't be visible until they switch active teams in the app.
+- **`update_project` is team-scoped via `team_id`.** Pass the `team_id` of the team the project belongs to (call `get_current_user_info` to see your teams) — no app team switch is needed.
 
 - **Empty-string inputs to `update_project` are silently ignored.** Net effect: passing `name=""` is a safe no-op rather than a clobber. There's intentionally no way to clear a project name through this tool.
 

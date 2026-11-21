@@ -30,16 +30,16 @@ Read this before creating a project, setting or editing a project brief, renamin
 1. If you don't already know the project's UUID: `marcora:list_projects` to resolve it from the name.
 2. If the user said "the doc I just made" and you don't already know the Content UUID: `marcora:list_content` and disambiguate with the user.
 3. **State your plan** ("I'll set the brief on \[project] to '\[doc title]'.").
-4. `marcora:update_project(project_id, project_brief_id=<content_uuid>)`. **The tool handles BOTH cases automatically:** if the content is already in the project's documents → pins it as the brief; if not → attaches it AND sets it as the brief in one call.
+4. `marcora:update_project(team_id, project_id, project_brief_id=<content_uuid>)`. **The tool handles BOTH cases automatically:** if the content is already in the project's documents → pins it as the brief; if not → attaches it AND sets it as the brief in one call.
 
 **Validation.** None required after the call — the tool returns `success: true` with the updated project record.
 
 **Output to user.** "Brief set: [project link]."
 
-**To edit the brief (not change which doc IS the brief):** use `update_content` on the brief's `content_id`. Discover it via `get_project(project_id).project_brief.content_id` (`project_brief` is `null` when the project has no brief) or, when the user just created the project, take it directly from the `create_project` response. **Read the current brief before you rewrite it** — `get_content(content_id)` for the full body — because `update_content` replaces the body in full.
+**To edit the brief (not change which doc IS the brief):** use `update_content` on the brief's `content_id`. Discover it via `get_project(team_id, project_id).project_brief.content_id` (`project_brief` is `null` when the project has no brief) or, when the user just created the project, take it directly from the `create_project` response. **Read the current brief before you rewrite it** — `get_content(team_id, content_id)` for the full body — because `update_content` replaces the body in full.
 
 **Pitfalls — this is the founding misfire that motivated this skill:**
-- **Don't** fetch the content with `get_content` and re-create it via `create_content(project_id=...)` to "put it in the project." That creates a duplicate with a fresh UUID, orphaned from the original. Attachment is a relationship, not a copy. `update_project` handles it.
+- **Don't** fetch the content with `get_content` and re-create it via `create_content(team_id, project_id=...)` to "put it in the project." That creates a duplicate with a fresh UUID, orphaned from the original. Attachment is a relationship, not a copy. `update_project` handles it.
 - **Don't** call `get_project` first to check if the doc is in the project. `update_project` handles both states. (If the project *already has* a brief and the user is replacing it, it is worth reading the old one first — `get_project` then `get_content` — so nothing it settled is lost without the user knowing. That is a read for the user's benefit, not an attachment check.)
 - **Don't** use `add_context` to set a brief — `add_context` creates a *Context item*, which is a different object than a Content item used as a brief.
 
@@ -52,12 +52,12 @@ Read this before creating a project, setting or editing a project brief, renamin
 The brief is the project's authoritative statement of premise, scope and the structural decisions already taken. The project's other documents and context items may be older than it or contradict it — **the brief wins**. Work produced without reading it is likely to contradict decisions the user has already made.
 
 **Two tools hand you the brief — you only need it once per project per conversation:**
-1. **`marcora:get_project(project_id)`** → a `project_brief` block (`null` when there is no brief). Its entry in `documents` is flagged `is_project_brief: true` and sorted first.
-2. **`marcora:get_relevant_context(prompt, project_id=…)`** → the same `project_brief` block, as the **first** key of the response, when the project has a brief. `include_project_brief` defaults to `true`.
+1. **`marcora:get_project(team_id, project_id)`** → a `project_brief` block (`null` when there is no brief). Its entry in `documents` is flagged `is_project_brief: true` and sorted first.
+2. **`marcora:get_relevant_context(team_id, prompt, project_id=…)`** → the same `project_brief` block, as the **first** key of the response, when the project has a brief. `include_project_brief` defaults to `true`.
 
 **Steps.**
 1. On your **first** touch of a project in the conversation, take the brief from whichever of the two calls you make first.
-2. Read `content_intro`. If `truncated` is `true`, it is only the opening excerpt — call `marcora:get_content(content_id)` for the full body **before** doing the work. (This is always a legitimate use of `get_content`.)
+2. Read `content_intro`. If `truncated` is `true`, it is only the opening excerpt — call `marcora:get_content(team_id, content_id)` for the full body **before** doing the work. (This is always a legitimate use of `get_content`.)
 3. On **every later** `get_relevant_context` call for the same project in the same conversation, pass `include_project_brief: false` — you already have it. If you got the brief from `get_project` first, the first `get_relevant_context` call for that project already counts as a later call. The same goes for a brief your environment has already put in your instructions for that project.
 4. A **different** project is a fresh start: leave `include_project_brief` at its default for your first call on it.
 
@@ -74,7 +74,7 @@ The brief is the project's authoritative statement of premise, scope and the str
 **Steps.**
 1. If you don't already know the `project_id`: `marcora:list_projects`.
 2. **State your plan** — name the field changing and the new value.
-3. `marcora:update_project(project_id, …)` with ONLY the fields changing (a partial update — omitted fields are untouched).
+3. `marcora:update_project(team_id, project_id, …)` with ONLY the fields changing (a partial update — omitted fields are untouched).
    - `name` (text)
    - `visibility` enum: `team` | `private`
    - `status` enum: `active` | `archived`
@@ -85,7 +85,7 @@ The brief is the project's authoritative statement of premise, scope and the str
 
 ## E1 — "Document not found" when resolving a project brief
 
-**Symptom.** `marcora:update_project(project_brief_id=<bad-uuid>)` returns `"Document not found"`.
+**Symptom.** `marcora:update_project(team_id, project_id, project_brief_id=<bad-uuid>)` returns `"Document not found"`.
 
 **Cause.** The UUID doesn't match any content document in the team, and this is the error that comes back.
 
@@ -97,7 +97,7 @@ The brief is the project's authoritative statement of premise, scope and the str
 
 ## E2b — The project brief isn't among the chunks
 
-**Symptom.** You searched a project with `get_relevant_context(project_id=…)` and none of the chunks come from the project's brief.
+**Symptom.** You searched a project with `get_relevant_context(team_id, prompt, project_id=…)` and none of the chunks come from the project's brief.
 
 **Cause.** The brief is a Content document, not a context item, so relevancy search never indexes it. It reaches you as a separate `project_brief` block instead — on the first call for that project (`include_project_brief` defaults to `true`), or from `get_project`.
 

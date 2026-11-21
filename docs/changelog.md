@@ -2,16 +2,28 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
-## Unreleased (merged playbook step & finding fix tools, documentation search, collection-only filter, plan `blueprint_id` outputSchema)
+## 2026-11-21 (per-call `team_id`, merged tools, docs-backed `learn_marcora_tools`, collection-only search, playbook/plan/invite parity)
+
+### Skill → v0.8.6 · plugin → v1.3.5
+
+### Added
+
+- **`list_playbook_suggestions` & `dismiss_playbook_suggestion`:** inspect call-detected playbook suggestions (`suggested`, `started`, `dismissed`) and dismiss suggestions (optionally saving a standing call-guidance rule).
+- **Per-cycle projects & per-step playbook options:** `create_playbook` / `update_playbook` add `new_project_each_use`, `project_name_pattern`, and per-step `targeting_dimension_ids`, `context_collection_ids`, `use_cycle_source`, and `draft_lead_days`; `instantiate_playbook` adds `new_project`, run-wide `targeting_dimension_ids` / `context_collection_ids`, `suggestion_id`, and `step_overrides` (`owner`, non-blank `prompt`, UUID `blueprint_id`, targeting/collections). `create_plan` / `update_plan` / `add_playbook_step` expose `draft_lead_days` (0–365), `generation_settings` (`use_cycle_source`), and `step.schedule.outcome` (full union including `waiting_content`).
 
 ### Changed
 
-- **`update_playbook_step_status` (replaces `complete_playbook_step` + `reopen_playbook_step`):** single tool taking `action: "complete" | "reopen"`. `complete` marks `content`, `checklist`, or `action` steps Complete (requiring both `result_url` and `note` on `action` steps); `reopen` unticks completed `checklist` steps back to `Accepted` and clears completion evidence (rejects `result_url`/`note`).
+- **Per-call `team_id` scoping (replaces `get_team_info` + `set_active_team`):** 71 team-scoped tools require explicit `team_id`; `get_current_user_info` returns `teams[]` with roles (aligned to `creator`), Studio Credit balances, plans, and member rosters; 6 non-team-scoped tools take no `team_id`.
+- **`get_share_link_activity` (replaces `list_share_link_activity`):** supports list mode (omit `share_link`) and detail mode (pass `share_link`) with clamped pagination (`links_limit`/`opens_limit` clamped to 1..100).
+- **`update_playbook_step_status` (replaces `complete_playbook_step` + `reopen_playbook_step`):** single tool taking `action: "complete" | "reopen"`. `complete` marks `content` or `checklist` steps Complete (`action` steps cannot be completed over external MCP); `reopen` unticks completed `checklist` steps back to `Accepted` and clears completion evidence (rejects `result_url`/`note`).
 - **`apply_finding_fix` (replaces `apply_grounding_fix` + `apply_ci_finding_fix`):** single batch fix-application tool covering both content-grounding findings and Context Intelligence `health_audit` recommendations (`web_freshness` and `impact_scan` findings return in `errors[]` pointing to `update_ci_finding_status`).
 - **`learn_marcora_tools`:** upgraded with documentation modes — `{}` returns the Marcora Documentation table of contents (`docs_toc`), `page` reads a full page by slug/title/UUID (`docs_page`), `query` performs semantic search collapsed to <=3 full pages <=28,000 chars (`docs_query`), and `topic` serves one of the 13 compact usage-guide sections (`overview` + 12 topics).
 - **`get_relevant_context`:** adds optional `only_these_collections: true` flag to search strictly within specified positive-integer `collection_ids` (excluding the Reference Library; cannot combine with `project_id` or `calls`).
-- **Tool description trims:** trimmed all `brand` tool descriptions strictly under 2,048 characters (`0` tools >= 2,048c).
-- **`create_plan`, `get_plan`, `update_plan`:** fixed `outputSchema` to declare `blueprint_id` as `["integer", "null"]` (matching the integer ID returned at runtime and sibling playbook tools, rather than `["string", "null"]`).
+- **Grounding & webpage import clarifications (`get_grounding_result`, `add_context`):** clarifies `get_grounding_result` snapshot vs live status behavior and `add_context` `import_url` rejections for binary files and unreachable webpages.
+- **Playbook & plan refinements:** `update_plan` clears `context_collection_ids` / `targeting_dimension_ids` on `[]`, replaces template `prompt` cleanly, and documents `do_on_date` off rules; `update_playbook_cycle` refuses targeting/context fields; `list_playbook_cycles` / `get_playbook_cycle` include `project_id` / `project_name` and `"Deleted template"` `playbook_name`; `reviewer` is deprecated and ignored across MCP playbook/plan tools; `create_plan`, `get_plan`, and `update_plan` declare `blueprint_id` as `["integer", "null"]`.
+- **`invite_user`:** refuses `viewer` and `collaborator` callers, verifies writable `project_id` in `team_id` across all invite roles, and enforces email validation parity.
+- **Tool description trims & `docs/overview.md`:** trimmed all `brand` tool descriptions strictly under 2,048 characters (`0` tools >= 2,048c), and updated `docs/overview.md` with client visibility notes (ChatGPT omits workflows; Slack hides blueprint creation) and per-call `team_id` scoping.
+- Tool surface: 77 tools served at `mcp.marcora.ai` (38 read-only, 39 non-read-only).
 
 ## 2026-11-20 (playbook action steps are a plain instruction)
 
