@@ -58,6 +58,6 @@ The **starting stage is set automatically from `source`**, you don't control it 
 ### Typical flows
 
 - **Turn a suggestion into content:** `list_plans` (find it) → `update_plan target_stage:"Accepted"` → `produce_plan` → poll `get_generation_status` → hand the user the produced content's link.
-- **Capture then reuse:** user runs a good batch of plans → `create_playbook_from_plans(plan_ids)` → later `instantiate_playbook(anchor_date=…)` to redeploy the sequence.
-- **Author a template:** `create_playbook(name, items)` → `instantiate_playbook` when ready to deploy.
-- **Run and follow a campaign:** `instantiate_playbook(playbook_id, anchor_date, topic)` → `generate_cycle_content(run_id)` (after confirming credits) → poll `get_cycle_generation` → `list_my_playbook_steps(due_by=today)` each day → `update_playbook_step_status(plan_uuid, action="complete", result_url=…)` as steps are done.
+- **Capture then reuse:** user runs a good batch of plans → `create_playbook_from_plans(team_id, plan_ids)` → later `instantiate_playbook(team_id, playbook_id, anchor_date=…)` to redeploy the sequence.
+- **Author a template:** `create_playbook(team_id, name, items)` → `instantiate_playbook` when ready to deploy.
+- **Run and follow a campaign:** `instantiate_playbook(team_id, playbook_id, anchor_date, topic)` → `generate_cycle_content(team_id, run_id)` (after confirming credits) → poll `get_cycle_generation(team_id, run_id)` → `list_my_playbook_steps(team_id, due_by=today)` each day → `update_playbook_step_status(team_id, plan_uuid, action="complete", result_url=…)` as steps are done.

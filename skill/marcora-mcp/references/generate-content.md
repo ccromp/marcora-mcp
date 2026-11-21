@@ -43,7 +43,7 @@ Read this before calling `create_content`, or when following up on a generation 
 
 **Steps.**
 1. Recall the `generation_id` from earlier in the conversation. (On the `blueprint_uuid` path, `create_content` also returned the draft's `content_id` and `link_url` at start; `create_blueprint`, `create_blueprint_draft`, and `finalize_blueprint_draft` also return their `blueprint_uuid` / draft `uuid` and `link_url` at start.) If lost, ask the user — `list_content` won't show pending generations.
-2. `marcora:get_generation_status(generation_id)`.
+2. `marcora:get_generation_status(team_id, generation_id)`.
 3. Status meanings:
    - `pending` / `gathering context` / `processing` → still working, surface progress.
    - `completed` → hand `response.content.link_url` (or the start-time `link_url`) to the user.

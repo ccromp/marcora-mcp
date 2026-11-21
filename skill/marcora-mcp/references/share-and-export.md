@@ -22,8 +22,8 @@ Read this before creating an external share link or exporting a document to Word
 **Goal.** Produce a `.docx` download for a content item.
 
 **Steps.**
-1. `marcora:get_content(content_id)` — fetch the markdown body. (This is one of the few legitimate uses of `get_content`.)
-2. `marcora:convert_markdown_to_word_doc(markdown_content, filename?, document_url?)` — `document_url` embeds as a footer link to the original.
+1. `marcora:get_content(team_id, content_id)` — fetch the markdown body. (This is one of the few legitimate uses of `get_content`.)
+2. `marcora:convert_markdown_to_word_doc(team_id, markdown_content, filename?, document_url?)` — `document_url` embeds as a footer link to the original.
 3. Hand the returned `download_url` to the user.
 
 ---
@@ -34,4 +34,4 @@ Read this before creating an external share link or exporting a document to Word
 
 **Cause.** This tool takes `markdown_content` as a parameter — it does not pull content by ID.
 
-**What to do.** Two-step: `marcora:get_content(content_id)` → `marcora:convert_markdown_to_word_doc(markdown_content=...)`. Optionally pass `document_url` (the original content's `link_url`) so the .docx footer links back.
+**What to do.** Two-step: `marcora:get_content(team_id, content_id)` → `marcora:convert_markdown_to_word_doc(team_id, markdown_content=...)`. Optionally pass `document_url` (the original content's `link_url`) so the .docx footer links back.

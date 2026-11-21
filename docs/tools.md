@@ -105,6 +105,7 @@ By default returns all four elements. Pass `elements` to scope the response to a
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `elements` | array of enum | No | Optional subset of elements to return. Values: `company_overview`, `brand_voice`, `writing_style`, `writing_examples`. Omit or pass empty to return all four |
 
 **Output:**
@@ -132,7 +133,7 @@ By default returns all four elements. Pass `elements` to scope the response to a
 
 Overwrites one of the team's four Brand Foundation elements with new content. **Always full-replace — no patch semantics.** Other elements are untouched. If the team has no row for the element yet, one is created.
 
-> **Important:** Before calling this tool, you should typically call `get_brand_foundation({elements: ["<element>"]})` first to read the current value so the user can confirm what's being replaced. Brand Foundation content shapes every AI-generated piece of content the team produces, so unintended overwrites are costly.
+> **Important:** Before calling this tool, you should typically call `get_brand_foundation({ team_id, elements: ["<element>"] })` first to read the current value so the user can confirm what's being replaced. Brand Foundation content shapes every AI-generated piece of content the team produces, so unintended overwrites are costly.
 
 **Elements and limits:**
 
@@ -147,6 +148,7 @@ Overwrites one of the team's four Brand Foundation elements with new content. **
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `element` | enum | Yes | Which element to overwrite. One of `company_overview`, `brand_voice`, `writing_style`, `writing_examples` |
 | `content` | string | Yes | New markdown content. Replaces existing content in full. Free-form — no enforced structure |
 
@@ -177,8 +179,11 @@ Returns all context collections accessible to the current user. Collections orga
 
 **Includes Marcora Collections.** The list holds both the team's own collections (`source: "team"`) and the active Marcora Collections in the user's library (`source: "marcora_collection"`, with `marcora_collection_id`). When the user names a collection that is not in this list, it is likely a published Marcora Collection not yet in their library: find it with `list_marcora_collections` and add it with `add_marcora_collection`, then pass the returned `collection_id` to `get_relevant_context` (`collection_ids`) or `list_context_items` (`collection_id`).
 
-**Parameters:** None
+**Parameters:**
 
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 **Output:** An object with a single `collections` key holding an array of context collections. Each item:
 
 | Field | Type | Description |
@@ -206,6 +211,7 @@ Create a new context collection to organize your reference materials. Collection
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `name` | string | Yes | A descriptive name for the collection |
 | `description` | string | Yes | A short description of what this collection contains |
 | `is_private` | boolean | Yes | If true, only you can see this collection. If false, all team members can access it |
@@ -295,6 +301,7 @@ To check whether an app is connected, or to get its Connect link before importin
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `name` | string | Yes | Descriptive name for the context item |
 | `content` | string | Conditional | Markdown body (creates a `manual` item, or a call transcript when saved as a call). Provide exactly one of `content` / `import_url` / `connected_webpage_url` / `import_from` |
 | `import_url` | string | Conditional | Public URL imported **once** as a static markdown snapshot (a static snapshot, not refreshable). Provide exactly one of the four body inputs |
@@ -366,6 +373,7 @@ Looks up the apps Marcora offers to connect (for example Gong or Fathom), by nam
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `query` | string | Yes | An app name, or what it does |
 | `limit` | integer | No | Matches to return, 1 to 20. Default 10 |
 
@@ -396,6 +404,7 @@ Lists the user's standing call instructions: the saved guidance and word fixes M
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `scope` | string | No | `"all"` (default: every instruction) or `"default"` (only those that apply to all the user's calls) |
 | `automatic_call_import_id` | string (uuid) | No | Only this automatic call import's instructions (from `automatic_call_imports` in this tool's result). Not with `scope: "default"` |
 
@@ -426,6 +435,7 @@ Saves a standing instruction for how Marcora handles the user's calls, to the sa
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `kind` | string | Yes | `"word_fix"` (needs `find` and `replace`) or `"guidance"` (needs `text`) |
 | `text` | string | Conditional | `guidance` only: the instruction in one short sentence, in the user's words (max 300 chars) |
 | `find` | string | Conditional | `word_fix` only: the word or phrase as it is wrongly transcribed (max 100 chars; matching ignores case) |
@@ -456,6 +466,7 @@ Edits or switches on/off one of the user's standing call instructions. Pass only
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `instruction_id` | string (uuid) | Yes | The instruction's `instruction_id`, from `list_call_instructions` |
 | `text` | string | No | `guidance` only: the new instruction text (max 300 chars) |
 | `find` | string | No | `word_fix` only: the new word or phrase to find (max 100 chars) |
@@ -485,6 +496,7 @@ Permanently removes one of the user's standing call instructions from their Sett
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `instruction_id` | string (uuid) | Yes | The instruction's `instruction_id`, from `list_call_instructions` |
 
 **Output:**
@@ -515,6 +527,7 @@ To **re-pull a tracked web-page item** from its stored URL — the same action a
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `context_item_id` | string (uuid) | Yes | The context item to update |
 | `refresh_webpage` | boolean | No | Set `true` to re-pull a `webpage` item's content from its stored URL. Ignores `name` / `content` / `import_url`. Errors on non-webpage items. Admin or Creator only |
 | `name` | string | No | If provided, updates the name. Omit to leave unchanged. Ignored when `refresh_webpage` is true |
@@ -573,6 +586,7 @@ Each returned item carries its `collection_id` (primary collection ID, or `null`
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `reference_library_only` | boolean | No | When `true`, returns only items not in any project or collection (`collection_ids: []` and `project_id: null`). Default `false` returns everything |
 | `search` | string | No | Optional natural-language query. When provided, every item you can see is scored by its best-matching passage and the list is sorted by that score instead of recency; each item gains a `relevance_score`. Nothing is dropped, so the response is still the whole library. Omit or leave empty for the normal recency-ordered list. To retrieve the passages relevant to a question, use `get_relevant_context` |
 | `collection_id` | integer | No | Return only items in this team collection or active Marcora Collection (id from `list_context_collections` or `list_marcora_collections`). Omit to include every accessible collection |
@@ -606,7 +620,7 @@ Each returned item carries its `collection_id` (primary collection ID, or `null`
 | `relevance_score` | number \| null | Present only when a `search` query is supplied. Cosine similarity (`0`–`1`, higher = more similar) of the item's best-matching passage to the query; `null` when the item has no indexed passage yet |
 
 **Other ways to discover context-item IDs:**
-- `get_project(project_id).context_items` — items attached to a specific project
+- `get_project({ team_id, project_id }).context_items` — items attached to a specific project
 - `get_relevant_context` — its `sources[]` array carries the `context_item_id` of each parent item for the matched chunks
 
 **Example prompts:**
@@ -620,12 +634,13 @@ Each returned item carries its `collection_id` (primary collection ID, or `null`
 
 Opens a single context item by ID and returns its full markdown content and metadata. Use it when you already have an item's ID and need to read the whole item — `list_context_items` only returns `content_intro` (a short truncation), and `get_relevant_context` returns matched passages. It does not search; to find material relevant to a question, use `get_relevant_context`.
 
-The IDs you pass here can come from `list_context_items`, `get_project(project_id).context_items`, `list_context_collections`, or `get_relevant_context`. A context item is either in the Reference Library (`collection_ids: []`, `collection_id: null`) or in one or more collections (`collection_ids`, `collections`, with `collection_id` set to the primary collection) — never both.
+The IDs you pass here can come from `list_context_items`, `get_project({ team_id, project_id }).context_items`, `list_context_collections`, or `get_relevant_context`. A context item is either in the Reference Library (`collection_ids: []`, `collection_id: null`) or in one or more collections (`collection_ids`, `collections`, with `collection_id` set to the primary collection) — never both.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `context_item_id` | string (uuid) | Yes | UUID of the context item to fetch |
 
 **Output:**
@@ -690,6 +705,7 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `prompt` | string | Yes | Search string describing what context you need |
 | `project_id` | string (uuid) | No | **Additive** — ALSO searches that project's context alongside the general library (rejected when `only_these_collections: true`) |
 | `collection_ids` | array | No | **Additive** by default — ALSO searches those collections alongside the general library; set `only_these_collections: true` to search ONLY these positive integer collection IDs |
@@ -793,6 +809,7 @@ Findings are returned **newest-first**. Each has a status lifecycle: `pending` (
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `status` | string | No | Filter by status: `pending` (the actionable queue), `acknowledged`, `dismissed`, `resolved`. Omit for all |
 | `severity` | string | No | Filter by severity as recorded by the scan: `critical`, `warning`, or `info`. Omit for all |
 | `process_type` | string | No | Filter by originating scan: `health_audit` (library-wide sweep), `web_freshness` (tracked webpage changes), `impact_scan` (downstream change impact), or `content_grounding` (document grounding check). Omit for all |
@@ -826,6 +843,7 @@ The `suggested_fix` object (when present) contains the proposed replacement cont
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `finding_id` | string (uuid) | Yes | UUID of the finding (from `list_ci_findings`) |
 
 **Output:**
@@ -868,6 +886,7 @@ Status meanings:
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `finding_id` | string (uuid) | Yes | UUID of the finding (from `list_ci_findings`) |
 | `status` | string | Yes | New status: `acknowledged`, `dismissed`, or `resolved` |
 
@@ -896,8 +915,11 @@ The scan runs in the **background**: the response returns immediately with a `sc
 
 **⚠️ Cost + gating:** the scan uses team Studio Credits — Marcora estimates the cost first and won't start a run the team's balance can't cover. Only one health audit can run at a time, and a cooldown applies after each completed run. **A clean completion clears prior pending `health_audit`, `web_freshness`, and `impact_scan` findings** (preserving `content_grounding` and non-pending statuses).
 
-**Parameters:** None
+**Parameters:**
 
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 **Output:**
 
 | Field | Type | Description |
@@ -972,6 +994,7 @@ Passing neither is an error.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `content_id` | string (uuid) | No\* | Existing document to scan. **Pass it alone** to scan the document as it stands — the safe default |
 | `content` | string | No\* | Markdown to ground. Alone, stored as a new document. **With `content_id`, replaces that document's entire body** — pass the full document, never a fragment |
 | `title` | string | No | Only meaningful with `content`. Omit and the title is taken from the first line |
@@ -1010,6 +1033,7 @@ Read the two-pass grounding result of a scan (`supported`, `conflict`, `gap`, `n
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `scan_id` | string (uuid) | No\* | The scan to read. Use this when polling |
 | `content_id` | string (uuid) | No\* | Read the latest completed grounding for this document |
 
@@ -1052,6 +1076,7 @@ You never compose the fix yourself. Every finding already stores its recommended
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `finding_ids` | array of uuid | Yes | The findings to apply. One or many |
 | `context_item_overrides` | object | No | Map of `finding_id` → `context_item_id` to redirect specific fixes. Every key must also appear in `finding_ids` |
 
@@ -1157,8 +1182,11 @@ A gap means the check found nothing in the reference library that backs a claim.
 
 Returns all content categories available to your team. Categories organize blueprints and content by type (e.g. GTM Strategy, Product Launch, etc).
 
-**Parameters:** None
+**Parameters:**
 
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 **Output:** An object with a single `categories` key holding an array of categories, each with `id` and `name`. Use the `id` as `category_id` when creating blueprints or content.
 
 **Example prompts:**
@@ -1171,8 +1199,11 @@ Returns all content categories available to your team. Categories organize bluep
 
 Returns targeting dimensions and their options for the specified team (`team_id`). Dimensions are categories (e.g. Buying Stage, Persona) with selectable options used to target content generation.
 
-**Parameters:** None
+**Parameters:**
 
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 **Output:** An object with a single `dimensions` key holding an array of dimensions. Each dimension has `id`, `name`, and an `options` array (each option `{ id, name }`). Pass option `id`s as `dimension_option_ids` to `create_content` to target generation.
 
 **Example prompts:**
@@ -1216,8 +1247,11 @@ Read-only: it reads no workspace data, changes nothing, and uses no credits.
 
 Get all blueprints in your team's library as a flat list. Each blueprint includes its content category and a web URL.
 
-**Parameters:** None
+**Parameters:**
 
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 **Output:** An object with a single `blueprints` key holding a flat array of blueprints. Each item:
 
 | Field | Type | Description |
@@ -1247,6 +1281,7 @@ Retrieve the full details of a specific blueprint by its UUID, including content
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `blueprint_uuid` | string | Yes | UUID of the blueprint to retrieve |
 
 **Output:**
@@ -1284,6 +1319,7 @@ Create a reusable blueprint template for generating content at scale. Blueprints
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `name` | string | Yes | Blueprint name |
 | `category_id` | integer | Yes | Category ID from `list_content_categories` |
 | `source_content` | string | Yes | Well-structured markdown template content |
@@ -1318,6 +1354,7 @@ Create an AI-assisted blueprint draft from a prompt. This creates a draft you ca
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `name` | string | Yes | Name for the draft |
 | `instructions` | string | Yes | Description of the blueprint to create |
 | `content` | string | Yes | Initial content as markdown (or empty if you want the AI to generate from `instructions` alone) |
@@ -1349,6 +1386,7 @@ Finalize (publish) a previously created blueprint draft into a full, usable blue
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `draft_uuid` | string | Yes | The UUID of the blueprint draft to finalize (from `create_blueprint_draft`) |
 | `name` | string | No | Optional name override |
 | `category_id` | integer | No | Optional category ID override |
@@ -1442,6 +1480,7 @@ Import a blueprint from the Marcora community exchange into your team's library.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `blueprint_exchange_id` | string (uuid) | Yes | UUID of the community blueprint to import: the `id` field of a `list_community_blueprints` item (the same value `get_community_blueprint_details` takes). Not the `slug` (passing a slug returns a readable `isError: true` error telling you to pass `id`) |
 
 **Output:**
@@ -1491,6 +1530,7 @@ You must provide either `content` or `instructions` (not both).
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `content` | string | No* | Your own text to save directly as a document. Cannot be used with `blueprint_uuid` |
 | `instructions` | string | No* | Detailed instructions describing what to create (AI will generate it) |
 | `blueprint_uuid` | string | No | Blueprint UUID to generate from. Makes the call async. Only works with `instructions` |
@@ -1564,6 +1604,7 @@ The response always includes `status`, `generation_id`, and `flow_type` (plus `e
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `generation_id` | string (uuid) | Yes | The generation ID returned by `create_content` (with `blueprint_uuid` or `generation_mode: "multi_model"`), `produce_plan`, `create_blueprint`, `create_blueprint_draft`, `finalize_blueprint_draft`, `ask_content_assistant`, or `apply_finding_fix` |
 
 **Output:**
@@ -1621,6 +1662,7 @@ Lists the team's content that the current user can see, as a single unified arra
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `search` | string | No | Optional natural-language query. When provided, every visible row is scored by similarity to it and the list is sorted by that score instead of recency; each row gains a `relevance_score`. Nothing is dropped. Omit or leave empty for the normal recency-ordered list |
 
 **Output:** An object with a single `content` key holding an array of items.
@@ -1661,6 +1703,7 @@ Retrieves the full markdown body of a specific document by its `content_id` (UUI
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `content_id` | string | Yes | The UUID of the content to retrieve (from `list_content`, a `documents` entry or the `project_brief` block of `get_project`, or `get_generation_status`) |
 
 **Output:**
@@ -1701,6 +1744,7 @@ Update a content document by `content_id`. Partial-update semantics — every fi
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `content_id` | string (uuid) | Yes | UUID of the content to update. From `list_content`, `get_content`, `get_generation_status`, or `get_project` |
 | `content` | string | No | New full markdown body. Omit to leave body unchanged |
 | `name_override` | string | No | Custom document name. Setting this locks the name (won't auto-resync from content header on future edits) |
@@ -1757,6 +1801,7 @@ Send a natural-language request to Marcora's in-document **Content Assistant** f
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `content_id` | string (uuid) | Yes | The content document to act on (from `list_content`, `get_content`, or `get_project`) |
 | `prompt` | string | Yes | The request, in natural language |
 | `selected_text` | string | No | Text the user has highlighted in the document, to focus the request on |
@@ -1794,6 +1839,7 @@ Creates a public share link for content, with optional expiration. Accessible pu
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `content_id` | string | Yes | The ID of the content to share |
 | `expires_at` | integer | No | Unix timestamp for link expiration |
 
@@ -1854,6 +1900,7 @@ Export a markdown document as a downloadable Word (.docx) file. Returns a downlo
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `markdown_content` | string | Yes | Markdown content to convert |
 | `filename` | string | No | Filename without extension |
 | `document_url` | string | No | URL to embed as footer link to original document |
@@ -1878,8 +1925,11 @@ Export a markdown document as a downloadable Word (.docx) file. Returns a downlo
 
 Returns all projects visible to the current user. Projects organize content into workstreams.
 
-**Parameters:** None
+**Parameters:**
 
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 **Output:** An object with a single `projects` key holding an array of projects. Each item:
 
 | Field | Type | Description |
@@ -1911,6 +1961,7 @@ Returns details for a specific project: its members, documents, context items, a
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `project_id` | string | Yes | Project UUID from `list_projects` |
 
 **Output:**
@@ -1954,6 +2005,7 @@ Create a new project for organizing content and context into a workstream. Optio
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `name` | string | Yes | Project name |
 | `visibility` | string | No | `team` (default) makes the project visible to team Admins, Creators, and Viewers as well as anyone added to the project; `private` limits it to explicit project members (the creator is added automatically) |
 | `project_brief_content` | string | No | Finished brief text to save directly as the project brief (no AI, no Studio Credits). Takes precedence over `project_brief_instructions` |
@@ -1985,6 +2037,7 @@ Update mutable fields on an existing project (name, visibility, status, project 
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `project_id` | string (uuid) | Yes | UUID of the project to update. Get from `list_projects` or `get_project`. |
 | `name` | string | No | New project name. Must be non-empty when provided. |
 | `visibility` | string | No | New visibility setting. `team` makes it visible to all team members; `private` restricts to the creator and explicit project members. |
@@ -2025,6 +2078,7 @@ Returns a paginated list of plans visible to the authenticated user. Use filters
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `stage` | string[] | No | Filter by stage. Use UNDERSCORE form (e.g. `In_Process`). Allowed: `Suggested`, `Accepted`, `In_Process`, `Complete`, `Dismissed`. Only the first element is honored currently |
 | `source` | string[] | No | Filter by source. Allowed: `user_added`, `cora_proactive`, `cora_requested`, `workflow`, `playbook`. Only the first element is honored currently |
 | `project_id` | string | No | Filter to plans associated with this project UUID |
@@ -2072,6 +2126,7 @@ Fetch a single plan by UUID with full details including linked references, conte
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `plan_uuid` | string (uuid) | Yes | UUID of the plan to fetch. Use `plan_uuid`, not the integer id |
 
 **Output:**
@@ -2117,6 +2172,7 @@ Create a new content plan in the specified team (`team_id`).
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `title` | string | Yes | One-line summary of the content intent (1-200 characters) |
 | `description` | string | No | Free-text description |
 | `due_date` | string | No | ISO date YYYY-MM-DD |
@@ -2159,6 +2215,7 @@ Partial update of a plan: mutable fields and stage transitions. All fields are o
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `plan_uuid` | string (uuid) | Yes | UUID of the plan to update |
 | `title` | string | No | New title |
 | `description` | string | No | New description |
@@ -2201,6 +2258,7 @@ Produce (generate) the actual content a plan describes — the MCP equivalent of
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `plan_uuid` | string (uuid) | Yes | UUID of the plan to produce. Must be in `Accepted` stage |
 | `generation_mode` | string | No | `quick` (one model) or `multi_model` (two drafts and a synthesis). Default: `multi_model` for a plan with a blueprint, `quick` for one without |
 | `ai_provider` | string | No | Quick only: which model family writes the document. Allowed values and default are in the tool's input schema. Ignored with `multi_model` |
@@ -2224,8 +2282,11 @@ Produce (generate) the actual content a plan describes — the MCP equivalent of
 
 List all content playbooks visible to the caller in the specified team (`team_id`) (team-visible playbooks plus the caller's own private ones). Returns summaries only — call `get_playbook` for a playbook's items. Use before `instantiate_playbook` / `update_playbook` to find the right id.
 
-**Parameters:** none.
+**Parameters:**
 
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 **Output:** an array of playbook summary objects (`id`, `name`, `description`, `visibility`, `anchor_date`, `link_url`, item count, timestamps). Each object's `anchor_date` is the persisted `YYYY-MM-DD` reference date (or `null`), and `link_url` opens that playbook in the Marcora web app — surface it instead of the raw id.
 
 **Example prompts:**
@@ -2242,6 +2303,7 @@ Fetch one content playbook by id, including its full ordered list of items.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `playbook_id` | integer | Yes | ID of the playbook to fetch |
 
 **Output:** the playbook object — including `anchor_date` (persisted `YYYY-MM-DD` reference date, or `null`), `anchor_label`, `default_project_id`, `variables`, and `link_url` (opens the playbook in the Marcora web app) — with an ordered `items` array. Each item carries `id`, the plan fields it will stamp out (`name`, `title`, `description`, `prompt`, `blueprint_id`, `category_id`), a `builds_on` array (0-based positions of the earlier steps it builds on; empty when none), `offset_days` counted from the anchor date to compute each due date on instantiation, and step fields (`kind` of `content` / `checklist` / `action`, `goes_out_offset_days`, `goes_out_time`, `due_time`, `optional`, `off_by_default`, `owner_user_id`, `owner_name`, `reviewer`, `action`).
@@ -2259,6 +2321,7 @@ Create a reusable content playbook — an ordered template of content-plan items
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `name` | string | Yes | Playbook name |
 | `description` | string | No | Free-text description |
 | `visibility` | string | No | `team` (default) or `private` |
@@ -2284,6 +2347,7 @@ Create a playbook by capturing existing content plans as reusable template items
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `plan_ids` | uuid[] | Yes | Plan UUIDs to capture as ordered template items |
 | `name` | string | No | Playbook name (derived if omitted) |
 | `description` | string | No | Free-text description |
@@ -2305,6 +2369,7 @@ Edit a content playbook. Any playbook is fully editable. Pass only the fields to
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `playbook_id` | integer | Yes | ID of the playbook to update |
 | `name` | string | No | New name |
 | `description` | string | No | New description (pass `null` to clear) |
@@ -2331,6 +2396,7 @@ Run a playbook: create one content plan per playbook item, in order, as a batch.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `playbook_id` | integer | Yes | ID of the playbook to instantiate |
 | `anchor_date` | string | No | ISO date YYYY-MM-DD. Each item's `offset_days` is added to it to compute that plan's due date |
 | `project_id` | string (uuid) | No | Scope the created plans to this project |
@@ -2359,6 +2425,45 @@ If `anchor_date` is omitted, the playbook's persisted `anchor_date` (if any) is 
 
 ---
 
+### `list_playbook_suggestions`
+
+Lists call-detected playbook suggestions in the team (`suggested`, `started`, `dismissed`). Read-only. Each row includes the detected `initiative`, matching `playbook`, source `call`, `supporting_quote`, extracted `variables`, and optional `anchor_date`.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
+| `status` | string | No | Filter: `suggested` (default), `started`, `dismissed`, or `all` |
+| `limit` | integer | No | Page size, 1–50 (default 20) |
+| `cursor` | string | No | Opaque pagination cursor from `next_cursor` |
+
+**Output:** `suggestions[]` (each: `id`, `initiative`, `playbook`, `call`, `visibility`, `variables`, `anchor_date`, `supporting_quote`, `status`, `run`, `created_at`, `updated_at`) and `next_cursor`.
+
+**Example prompts:**
+- "Any playbook suggestions from our recent customer calls?"
+
+---
+
+### `dismiss_playbook_suggestion`
+
+Dismiss a call-detected playbook suggestion so that initiative will not be suggested again. Optionally pass `instruction: { text }` (1–300 chars) to also save a standing call-guidance rule for future calls. Already-started suggestions are refused (409).
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
+| `suggestion_id` | string (uuid) | Yes | UUID of the suggestion from `list_playbook_suggestions` |
+| `instruction` | object | No | Optional `{ text }` standing call-guidance rule saved atomically on first dismissal |
+
+**Output:** `suggestion` (updated suggestion object) and `team` (`{ id, name }`).
+
+**Example prompts:**
+- "Dismiss that newsletter playbook suggestion"
+
+---
+
 ### Playbook cycles
 
 A **cycle** is a running instance of a playbook: `instantiate_playbook` creates one, with one step (a plan) per playbook item. These ten tools read and drive cycles. A step is identified by its `plan_uuid`.
@@ -2369,8 +2474,11 @@ A **cycle** is a running instance of a playbook: `instantiate_playbook` creates 
 
 List the playbook cycles in the specified team (`team_id`): active by default, or filtered by playbook or status. Cycles whose steps you cannot see (a private playbook you do not own) are omitted. To rename a cycle or change its topic use `update_playbook_cycle`. Read-only.
 
+**Parameters:**
+
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `playbook_id` | integer | No | Only cycles of this playbook (from `list_playbooks`) |
 | `status` | string | No | `active` (default; at least one step still open), `complete` (every step Complete or Dismissed), or `all` |
 | `page` | integer | No | Page number (default 1) |
@@ -2386,8 +2494,11 @@ List the playbook cycles in the specified team (`team_id`): active by default, o
 
 Read one cycle with its steps in order (including any steps added mid-cycle via `add_playbook_step`). Each step's `plan_uuid` is how you change it: to change a step's title, prompt, due date, assignee, typed owner, time of day, attach an existing document, or dismiss it, use `update_plan` with the step's `plan_uuid`; to complete or reopen it, `update_playbook_step_status`; to rename the cycle or change its topic, `update_playbook_cycle`. Read-only.
 
+**Parameters:**
+
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `run_id` | integer | Yes | Cycle id, from `list_playbook_cycles` / `instantiate_playbook`, or the trailing number of a cycle `link_url` |
 
 **Output:** `cycle` (same shape as a `list_playbook_cycles` row) and `steps`. Each step carries `position`, `plan_uuid`, `title`, `description`, `prompt` (the instructions), `stage`, `done`, `due_date`, `assigned_to` / `assigned_to_name`, `builds_on` (earlier steps it builds on), `document` (the produced document with link, or null), `step` (`kind`, `goes_out_date`, `reviewer`, `optional`, plus `owner_name`, `due_time`, and `goes_out_time` when set), `result` (recorded link / note once completed, or null) and `link_url`. Use a step's `plan_uuid` with `get_plan` for full detail or `update_playbook_step_status` to finish or reopen it.
@@ -2400,8 +2511,11 @@ Read one cycle with its steps in order (including any steps added mid-cycle via 
 
 List the open playbook steps (not Complete or Dismissed) assigned to you, across all running playbooks, soonest due first (undated last). Pass `owner_name` to list the open steps owned by a typed owner name instead (matched case-insensitively across the team's running playbooks). Read-only. This is the daily "what do I need to do" check.
 
+**Parameters:**
+
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `due_by` | string | No | `YYYY-MM-DD`. Only steps due on or before this date (overdue included). Omit for all open steps |
 | `run_id` | integer | No | Only steps of this running playbook |
 | `owner_name` | string | No | Return the open steps owned by this typed owner name (an agent, or anyone who is not a team member), matched case-insensitively, instead of steps assigned to you. Get the exact spelling from `list_playbook_owner_names` |
@@ -2416,8 +2530,11 @@ List the open playbook steps (not Complete or Dismissed) assigned to you, across
 
 List the typed owner names (`owner_name`) in use on your team's playbook steps — agents, or people who are not team members, typed as a step's owner instead of picking a team member. Alphabetical, in the spelling first used. A name drops off the list once no step uses it. Read-only.
 
-**Parameters:** none.
+**Parameters:**
 
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 **Output:** `owner_names` (alphabetical string array) and `total` (integer).
 
 **Example prompts:** "Which owner names are we using on playbook steps?"
@@ -2430,8 +2547,11 @@ Add one step to a **running** playbook cycle (`run_id`) without changing the pla
 
 Position: right after `after_plan_uuid`, or at the end when omitted. `builds_on` may only name earlier steps in the same cycle. A typed `owner_name` is for `content` and `checklist` steps (never `action`), and times of day (`due_time`, `goes_out_time`) require their corresponding date (`due_date`, `goes_out_date`). Refusals change nothing.
 
+**Parameters:**
+
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `run_id` | integer | Yes | Running playbook id (from `list_playbook_cycles` or `instantiate_playbook`) |
 | `title` | string | Yes | The step's title |
 | `description` | string | No | What the step is for |
@@ -2462,8 +2582,11 @@ Update a playbook cycle step's completion status (`complete` or `reopen`) and re
 - **`action: "complete"`:** marks `content` or `checklist` step Complete with optional `result_url` and `note`. **Open `action` steps cannot be completed over external MCP** (always refused with `"Complete this action from its current Marcora conversation"`); action steps complete only inside a Marcora conversation (with both `result_url` and `note`). Calling it again on a step that is already Complete keeps its original `completed_at` / `completed_by`, while newly supplied `result_url` or `note` overwrite previous values (omit them to keep what is recorded). Refuses Dismissed steps (409).
 - **`action: "reopen"`:** unticks a completed **checklist** step back to `Accepted` and clears completion evidence (`completed_at: 0`, `result_url: null`, `note: null`). Non-checklist steps are refused (409); `result_url` and `note` are rejected if sent. Reopening a step that is not Complete changes nothing.
 
+**Parameters:**
+
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `plan_uuid` | string (uuid) | Yes | The step's `plan_uuid`, from `get_playbook_cycle` or `list_my_playbook_steps` |
 | `action` | string | Yes | `complete` or `reopen` |
 | `result_url` | string | No | `http(s)` link to the result (`complete` only; **required** for `action` steps). Rejected on `reopen` |
@@ -2485,6 +2608,7 @@ To change a step's title, prompt, due date, assignee or to dismiss it, use `upda
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `run_id` | integer | Yes | Cycle id, from `list_playbook_cycles` / `instantiate_playbook` |
 | `name` | string | No | New cycle name. Omit to keep it |
 | `topic` | string or null | No | New topic. Omit to keep it; `null` or blank clears it |
@@ -2498,8 +2622,11 @@ To change a step's title, prompt, due date, assignee or to dismiss it, use `upda
 
 Start "Generate all" on a cycle: generate the document for every step that has none yet, in step order, on the server (it keeps going after the call returns). Requires an **Admin** or **Creator** role. Each step is generated with the cycle's topic and the steps it builds on. Generates open `content` steps assigned to or created by the caller (including steps you created that are assigned to a teammate); checklist and action steps, dismissed steps, already-generated steps, and teammates' private or unowned steps are skipped with a reason. **Uses the team's Studio Credits, one generation per step**; if credits run out the batch stops cleanly and the remaining steps are reported as `not_started`. Only one batch runs per cycle at a time: calling again while one runs returns `started: false` with the running batch. Not idempotent. For a single step use `produce_plan`.
 
+**Parameters:**
+
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `run_id` | integer | Yes | Cycle id from `list_playbook_cycles` / `instantiate_playbook` |
 
 **Output:** `started`, `nothing_to_generate`, `batch`, `pieces` (each: `position`, `plan_uuid`, `title`, `status` of `queued` / `generating` / `done` / `failed` / `blocked` / `skipped` / `not_started`, `reason`, `message`, `generation_id`, `depends_on`) and `cycle_link_url`. Async: poll `get_cycle_generation` (and `get_generation_status` for one step's `generation_id`).
@@ -2512,8 +2639,11 @@ Start "Generate all" on a cycle: generate the document for every step that has n
 
 Read the latest "Generate all" batch of a cycle: overall status (`running`, `completed`, `stopped`, `interrupted`) and each step's status with a reason and message where relevant. Returns `batch: null` when none was ever started. Read-only.
 
+**Parameters:**
+
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `run_id` | integer | Yes | Cycle id from `list_playbook_cycles` |
 
 **Output:** `batch` (or null) and `cycle_link_url`.
@@ -2538,6 +2668,7 @@ List workflows for the specified team (`team_id`). Supports an optional status f
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `status` | string | No | Filter by status: `active`, `inactive`, or `archived`. Omit to return all. Active means allowed to run, not running — the list does not show schedules |
 | `search` | string | No | Substring match against workflow name |
 | `page` | integer | No | Page number (default 1) |
@@ -2572,6 +2703,7 @@ Read-only. Returns one workflow template by `workflow_id`: its name, description
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `workflow_id` | string (uuid) | Yes | UUID of the workflow to fetch |
 
 **Output:** An object with a single `workflow` key.
@@ -2607,6 +2739,7 @@ Create a new workflow template for the specified team (`team_id`). New workflows
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `name` | string | Yes | Human-readable workflow name. Confirm with the user before creating |
 | `description` | string | No | One or two sentences; becomes part of the runner's system prompt |
 | `steps` | array | Yes | Ordered list of steps. Each should be specific enough that a fresh agent can execute it without follow-up questions |
@@ -2635,6 +2768,7 @@ Partial update of a workflow template — only the keys you send mutate; unspeci
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `workflow_id` | string (uuid) | Yes | UUID of the workflow to update |
 | `name` | string | No | New name |
 | `description` | string | No | New description |
@@ -2663,6 +2797,7 @@ Manually run a workflow now. Creates a run record and starts an automated agent 
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `workflow_id` | string (uuid) | Yes | UUID of the workflow to run |
 | `input_values` | object | No | Object matching the workflow's declared `inputs` schema. Pass `{}` or omit for workflows with no inputs. Call `get_workflow` first if unsure |
 
@@ -2693,6 +2828,7 @@ Inspect workflow run history. Two modes, controlled by whether `run_id` is suppl
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `workflow_id` | string (uuid) | Yes | UUID of the workflow |
 | `run_id` | string (uuid) | No | If supplied → single-run detail; if omitted → paginated list of runs |
 | `status` | string | No | List-mode filter (e.g. `failed`). Ignored in single mode |

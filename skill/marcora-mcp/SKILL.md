@@ -31,7 +31,7 @@ If the user says not to use Marcora for a task, don't call any `marcora:*` tool.
 
 If the user hands you a Marcora URL, the UUID in the path **is** the object id — use it directly; don't `web_browse` the page (the `marcora.ai` domain means this is Marcora-tool territory).
 
-- `app.marcora.ai/library/<uuid>` and `app.marcora.ai/canvas/<uuid>` are the same **Content document** (saved view vs. editor view) → `get_content(content_id=<uuid>)` to read it, `update_content(content_id=<uuid>, …)` to revise it.
+- `app.marcora.ai/library/<uuid>` and `app.marcora.ai/canvas/<uuid>` are the same **Content document** (saved view vs. editor view) → `get_content(team_id, content_id=<uuid>)` to read it, `update_content(team_id, content_id=<uuid>, …)` to revise it.
 - `app.marcora.ai/project/<uuid>` → `get_project`.
 
 *(A `/canvas/<uuid>` link is occasionally a blueprint draft rather than a finished document — only matters if `get_content` comes back empty.)*
@@ -87,6 +87,7 @@ Also on demand:
 
 ## Rules for every call
 
+- **Pass `team_id` on every team-scoped call.** Only `get_current_user_info`, `learn_marcora_tools`, `list_community_blueprints`, `get_community_blueprint_details`, `list_marcora_collections`, and `add_marcora_collection` omit it.
 - **Hand over links exactly as returned.** Copy any `link_url` (or other URL field) character for character. Never retype an id, shorten a URL, or build one from a pattern — a single wrong character gives the user a dead link that still looks right.
 - **Show names, not UUIDs.** UUIDs are for tool calls; the user sees the human-readable name plus the link.
 - **State your plan in one sentence before any call that creates, changes or spends credits**, and confirm before actions the user didn't explicitly ask for.
