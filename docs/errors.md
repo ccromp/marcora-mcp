@@ -66,22 +66,22 @@ Neither error returns any context or the project's brief.
 
 ### "Marcora is already updating this document."
 
-**Cause:** `ask_content_assistant` was called on a document that already has a Content Assistant run in progress, or `apply_grounding_fix` tried to apply a fix to a document another run still holds (it comes back per finding in `errors[]`). Marcora runs one request per document at a time. A run that may edit the document also holds it until that run finishes or fails; a `chat_only_mode: true` Content Assistant run doesn't hold it, but a second call on the same document is still refused while it runs.
+**Cause:** `ask_content_assistant` was called on a document that already has a Content Assistant run in progress, or `apply_finding_fix` tried to apply a fix to a document another run still holds (it comes back per finding in `errors[]`). Marcora runs one request per document at a time. A run that may edit the document also holds it until that run finishes or fails; a `chat_only_mode: true` Content Assistant run doesn't hold it, but a second call on the same document is still refused while it runs.
 
 **Solutions:**
-- Wait for the earlier run to finish (poll `get_generation_status` with its `generation_id` until it reaches a terminal status), then retry. For `apply_grounding_fix`, retry just the findings that came back with this error.
+- Wait for the earlier run to finish (poll `get_generation_status` with its `generation_id` until it reaches a terminal status), then retry. For `apply_finding_fix`, retry just the findings that came back with this error.
 - To make several changes to one document, send them one at a time, or combine them into one `prompt`.
 - Do not retry in a tight loop.
 
 ### Grounding and Context Intelligence finding errors
 
 **Cause:**
-- **`"Finding not found."`** — returned as a tool error (`isError: true`) by `get_ci_finding` when the `finding_id` is unknown or belongs to another team, or per finding in `apply_grounding_fix`'s `errors[]` when a `finding_id` is unknown or unreadable to the caller (that finding is skipped while the remaining findings in the call still run).
-- **`"Nothing was applied. This document has private source history..."`** — returned as a tool error (`isError: true`) by `apply_grounding_fix` when a fix on a document with private source history would update a context item in your Reference Library.
+- **`"Finding not found."`** — returned as a tool error (`isError: true`) by `get_ci_finding` when the `finding_id` is unknown or belongs to another team, or per finding in `apply_finding_fix`'s `errors[]` when a `finding_id` is unknown or unreadable to the caller (that finding is skipped while the remaining findings in the call still run).
+- **`"Nothing was applied. This document has private source history..."`** — returned as a tool error (`isError: true`) by `apply_finding_fix` when a fix on a document with private source history would update a context item in your Reference Library.
 - **`"This check cannot use the document’s private sources..."`** — returned as a tool error (`isError: true`) by `check_content_grounding` when the document was built from Only me sources, which are never sent to an AI app.
 
 **Solutions:**
-- For `"Nothing was applied. This document has private source history..."`, follow the next step named in the message: call `apply_grounding_fix` again with the same `finding_ids` and without `context_item_overrides` when that fixes the document itself; otherwise revise the document with `update_content`, then re-check.
+- For `"Nothing was applied. This document has private source history..."`, follow the next step named in the message: call `apply_finding_fix` again with the same `finding_ids` and without `context_item_overrides` when that fixes the document itself; otherwise revise the document with `update_content`, then re-check.
 - For `"This check cannot use the document’s private sources..."`, when the private sources are the caller's own, the message includes a link to check the document privately in Marcora; relay that link to the user.
 
 ### Content generation timeout
