@@ -16,8 +16,8 @@
 **Cause:** Your account doesn't have permission to perform the requested action.
 
 **Solutions:**
-- Check your team role — some actions require an Admin or Creator seat. Creating documents (`create_content`, `produce_plan`, `generate_cycle_content`, `create_blueprint_draft`) now requires an Admin or Creator role (*"Only Admins and Creators can create documents."*), Connected Apps (`find_app`, `add_context` `import_from`) and Webhooks require a Creator or Admin seat (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*), and `update_workflow` and `run_workflow` can only be called by the workflow's creator (`created_by_user_id`)
-- Verify you're on the correct active team
+- Check your team role — some actions require an Admin or Creator seat. Creating documents (`create_content`, `produce_plan`, `generate_cycle_content`, `create_blueprint_draft`) now requires an Admin or Creator role (*"Only Admins and Creators can create documents."*), connected-app call imports (`add_context` `import_from`) and Webhooks require a Creator or Admin seat (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*; `find_app` works for any active team role), and `update_workflow` and `run_workflow` can only be called by the workflow's creator (`created_by_user_id`)
+- Verify you passed the right `team_id` (check `get_current_user_info`)
 - Private content/collections are only accessible by their creator
 
 ## Connection Errors
@@ -55,13 +55,13 @@
 ### "Project not found" / "You are not a member of project …"
 
 **Cause:** `get_relevant_context` was called with a `project_id` you can't search.
-- **`Project not found`** — the project doesn't exist, or belongs to a team other than your active team.
+- **`Project not found`** — the project doesn't exist, or belongs to a team other than the `team_id` you passed.
 - **`You are not a member of project <id>`** — the project is private and you are not one of its members.
 
 Neither error returns any context or the project's brief.
 
 **Solutions:**
-- Run `list_projects` to confirm the project id. If the project is in another of your teams, switch with `set_active_team` (this changes your active team everywhere).
+- Check `get_current_user_info` and run `list_projects` with the right `team_id` to confirm the project id.
 - For a private project, ask one of its members to add you — or search without `project_id`.
 
 ### "Marcora is already updating this document."
@@ -95,11 +95,11 @@ Neither error returns any context or the project's brief.
 
 ### Invalid category_id or dimension_option_ids
 
-**Cause:** Using an ID that doesn't exist for your team.
+**Cause:** Using an ID that doesn't exist for that team.
 
 **Solutions:**
-- Use `list_content_categories` to get valid category IDs
-- Use `list_targeting_dimensions` to get valid dimension option IDs
+- Use `list_content_categories(team_id)` to get valid category IDs
+- Use `list_targeting_dimensions(team_id)` to get valid dimension option IDs
 
 ### "This action needs N Studio Credits and your team has M"
 
@@ -107,7 +107,7 @@ Neither error returns any context or the project's brief.
 
 **Solutions:**
 - Add credits or upgrade through the link in the message, then retry.
-- Check what's left with `get_current_user_info` (`ai_credits_available`).
+- Check what's left with `get_current_user_info` (`teams[].ai_credits_available`).
 
 ## Account Setup
 
@@ -117,7 +117,7 @@ Neither error returns any context or the project's brief.
 
 This is expected, not a fault, even though the result is flagged as an error. The connection is fine: the server still lists all its tools and authentication has succeeded. Only the *calls* are held.
 
-An account with no setup running is not held. A team added from inside an existing account, a setup that failed, and a setup that stalled all get normal tool answers. `get_team_info` and `set_active_team` are also exempt from the hold so you can list your teams or switch back to an already-ready team while another team is setting up.
+An account with no setup running is not held. A team added from inside an existing account, a setup that failed, and a setup that stalled all get normal tool answers. `get_current_user_info` is also exempt from the hold so you can list your teams and call another already-ready `team_id` while one team is setting up.
 
 **Solutions:**
 - Retry the same call. The call did not run, so repeating it cannot duplicate anything. Each attempt waits up to 30 seconds, so keep retrying only while the notice keeps coming, for up to 5 minutes in total, then tell the user setup is still processing and to try again later. Website imports can take several minutes.

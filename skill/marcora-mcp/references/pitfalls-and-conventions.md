@@ -24,7 +24,7 @@ Read this before a call you are unsure about, or when you hit a convention you d
 
 - **Targeting dimension IDs are *option* IDs, not dimension IDs.** Drill into the `options` array.
 
-- **`update_project` is team-scoped.** A project belonging to a different team the user is also a member of won't be visible until they switch active teams in the app.
+- **`update_project` is team-scoped via `team_id`.** Pass the `team_id` of the team the project belongs to (call `get_current_user_info` to see your teams) — no app team switch is needed.
 
 - **Empty-string inputs to `update_project` are silently ignored.** Net effect: passing `name=""` is a safe no-op rather than a clobber. There's intentionally no way to clear a project name through this tool.
 

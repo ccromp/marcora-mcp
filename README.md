@@ -125,9 +125,7 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 
 | Category | Tool | Description |
 |---|---|---|
-| Account | `get_current_user_info` | Get profile, subscription, and usage info |
-| Account | `get_team_info` | List every team you belong to + each team's members (numeric user_ids for assignment) |
-| Account | `set_active_team` | Switch your active team (returns `previous_team_id` to restore) |
+| Account | `get_current_user_info` | Get profile, enabled `teams[]`, roles, subscription plans, credits, and member rosters |
 | Context & Resources | `get_brand_foundation` | Get team's Brand Foundation (company overview, voice, style, examples) |
 | Context & Resources | `update_brand_foundation` | Overwrite one Brand Foundation element |
 | Context & Resources | `list_context_collections` | List context collections |
@@ -168,8 +166,7 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Content | `update_content` | Update a content document |
 | Content | `ask_content_assistant` | Run the in-document Content Assistant on a document |
 | Sharing & Export | `create_external_share` | Create a public share link |
-| Sharing & Export | `get_share_link_activity` | Check whether a share link was opened, by how many viewers, and when |
-| Sharing & Export | `list_share_link_activity` | List the workspace's share links with their activity |
+| Sharing & Export | `get_share_link_activity` | List workspace share links (`share_link` omitted) or inspect one link's viewers and opens |
 | Sharing & Export | `convert_markdown_to_word_doc` | Export markdown as Word doc |
 | Projects | `list_projects` | List all projects |
 | Projects | `get_project` | Get project details, including its brief |
@@ -219,7 +216,7 @@ See [docs/tools.md](docs/tools.md) for the complete tool reference.
 ## Security, Privacy & Runtime Disclosures
 
 - **External service & authentication:** This package connects over HTTPS to Marcora's hosted MCP server at `https://mcp.marcora.ai/`. Connecting requires a Marcora account (a permanent Free tier is available at [marcora.ai/pricing](https://marcora.ai/pricing)) authenticated via OAuth 2.1 with PKCE (`/oauth/authorize`, `/oauth/token`, `/oauth/register`, `/oauth/revoke`) or a user-generated Bearer API token from [Integration Settings](https://app.marcora.ai/integration-settings).
-- **Runtime tool surface (`79` tools) & Studio Credit costs:** At runtime, `https://mcp.marcora.ai/` serves **79 MCP tools**: **39 read-only tools** (`readOnlyHint: true`, `destructiveHint: false`, always free to call) and **40 non-read-only tools** (`readOnlyHint: false`, of which **20** have `destructiveHint: false` and **20** have `destructiveHint: true` because they overwrite existing records in place, trigger scans/workflows, or send team invites). Those 40 tools create or update workspace records or consume team Marcora Studio Credits when AI generation, scans, or Word exports run (`create_content` on the `instructions` generation path, `produce_plan`, `generate_cycle_content` (one generation per step), `create_blueprint_draft`, `create_project` with `project_brief_instructions`, `ask_content_assistant`, `check_content_grounding`, `trigger_health_audit_scan`, `convert_markdown_to_word_doc` at 2 Studio Credits per conversion, and `run_workflow`).
+- **Runtime tool surface (`77` tools) & Studio Credit costs:** At runtime, `https://mcp.marcora.ai/` serves **77 MCP tools**: **38 read-only tools** (`readOnlyHint: true`, `destructiveHint: false`, always free to call) and **39 non-read-only tools** (`readOnlyHint: false`, of which **19** have `destructiveHint: false` and **20** have `destructiveHint: true` because they overwrite existing records in place, trigger scans/workflows, or send team invites). Those 39 tools create or update team records or consume team Marcora Studio Credits when AI generation, scans, or Word exports run (`create_content` on the `instructions` generation path, `produce_plan`, `generate_cycle_content` (one generation per step), `create_blueprint_draft`, `create_project` with `project_brief_instructions`, `ask_content_assistant`, `check_content_grounding`, `trigger_health_audit_scan`, `convert_markdown_to_word_doc` at 2 Studio Credits per conversion, and `run_workflow`). Every team-scoped tool requires an explicit numeric `team_id` (and team-scoped writes echo `team: { id, name }`).
 - **Server-side background agents, scheduled workflows & connected apps:** Calling `run_workflow` starts an automated agent session on Marcora's backend that executes the workflow's steps using Marcora tools and any third-party apps the user has connected in Marcora (`allowed_tools` on a workflow is a prompt instruction to the workflow runner, not a separate hard permission check). Workflows created (`create_workflow`) or activated (`update_workflow` with `status: "active"`) that have an `On` schedule are dispatched automatically by Marcora's server-side scheduler independently of the local MCP client. Calling `ask_content_assistant` starts an asynchronous background AI assistant run on an existing document that may edit the document body in place.
 - **Advisory nature of MCP annotations & Hermes `trust: "untrusted"` scope:** MCP `ToolAnnotations` (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) are advisory hints; each MCP host decides whether and how to prompt for confirmation. In Hermes Agent, `plugin.json` declares `"trust": "untrusted"` and `"timeout": 180` on the `marcora` server so Hermes's host policy prompts before client-initiated calls to non-read-only tools, but client-side `trust: "untrusted"` and MCP annotations only govern calls initiated by the local client and do not prevent server-side scheduled workflow runs or background agent execution once a workflow is started or activated on Marcora.
 - **Privacy Policy:** [marcora.ai/privacy-policy](https://marcora.ai/privacy-policy)

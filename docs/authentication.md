@@ -41,8 +41,8 @@ Include your API key as a Bearer token in the `Authorization` header. Most MCP c
 
 Both authentication methods grant access to all tools within the scope of your Marcora account:
 
-- You can access data belonging to your **active team**
-- Your role on the team (Admin, Creator, Viewer, or Collaborator) determines what actions you can perform
+- You can access data belonging to any enabled team you belong to by passing its `team_id` on team-scoped calls (`get_current_user_info` lists your teams)
+- Your role on that team (Admin, Creator [`editor`], Viewer, or Collaborator) determines what actions you can perform
 - Private content and collections are only visible to their creator
 - Team-visible content is accessible to team members (Collaborators see only documents in the projects they belong to, plus their own)
 

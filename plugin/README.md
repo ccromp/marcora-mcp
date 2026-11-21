@@ -26,7 +26,7 @@ Marcora is built for product marketers and go-to-market teams at B2B SaaS compan
 
 ## What's in the Plugin
 
-- **The Marcora connector** links Claude to your Marcora account through Marcora's hosted server at `https://mcp.marcora.ai`. It works within your active team, with the same permissions you have in the Marcora web app. When Claude uses a Marcora tool, the request and the information it needs, such as your prompt or a document's text, go to Marcora. Marcora handles that data under its [privacy policy](https://marcora.ai/privacy-policy).
+- **The Marcora connector** links Claude to your Marcora account through Marcora's hosted server at `https://mcp.marcora.ai`. Each team-scoped call operates on the team you pass in `team_id` (across any enabled team you belong to), with the same permissions you have in the Marcora web app. When Claude uses a Marcora tool, the request and the information it needs, such as your prompt or a document's text, go to Marcora. Marcora handles that data under its [privacy policy](https://marcora.ai/privacy-policy).
 - **Marcora's companion skill** teaches Claude to use Marcora well: which tool fits each job, how your context fits together, and the steps for everyday work like creating content, setting up Projects, and building Workflows. The skill is instructions only. It runs no code and sends nothing on its own.
 
 ## Get Started

@@ -2,6 +2,8 @@
 
 The Marcora MCP Server exposes a set of tools that your AI assistant can call directly to interact with your workspace. Each tool maps to a specific action — from generating content to retrieving context — and can be invoked naturally through conversation.
 
+> **Per-call `team_id`:** every team-scoped tool requires an explicit positive integer **`team_id`** parameter (and team-scoped writes echo `team: { id, name }`). Call `get_current_user_info` (or read `initialize` server instructions) to list your teams; there is no global active-team switch. Tools outside a single team (`get_current_user_info`, `learn_marcora_tools`, `list_community_blueprints`, `get_community_blueprint_details`, `list_marcora_collections`, `add_marcora_collection`) do not take `team_id`.
+
 The tools below are available to any connected AI assistant once the Marcora MCP Server is configured.
 
 ---
@@ -10,7 +12,7 @@ The tools below are available to any connected AI assistant once the Marcora MCP
 
 ### `get_current_user_info`
 
-Returns profile and subscription information for the currently authenticated user, including active team, role, subscription plan, and AI-credit usage.
+Returns profile, enabled team memberships (`teams[]`), Studio Credits, subscription plans, and teammate rosters for the currently authenticated user. Read-only.
 
 **Parameters:** None
 
@@ -18,46 +20,50 @@ Returns profile and subscription information for the currently authenticated use
 
 | Field | Type | Description |
 |---|---|---|
-| `name` | string | User's display name |
-| `email` | string | User's email address |
-| `active_team_name` | string | Name of the user's active team |
-| `active_team_role` | string | User's role on the active team |
-| `plan_name` | string | Subscription plan display name |
-| `plan_slug` | string | Subscription plan identifier |
-| `subscription_status` | string | Current subscription status |
-| `ai_credits_available` | integer | Studio Credits the team can spend right now on credit-gated actions: the current period's remaining allowance plus any unexpired granted credits |
-| `ai_credits_max` | integer | The team's Studio Credit allowance for the current period. Excludes granted credits, so `ai_credits_available` can exceed it |
+| `name` | string \| null | User's display name |
+| `email` | string \| null | User's email address |
+| `teams` | array | Enabled teams the caller belongs to |
+| `teams[].team_id` | integer | Numeric team id to pass as `team_id` on team-scoped tools |
+| `teams[].team_name` | string | Team name |
+| `teams[].your_role` | string | Caller's role in this team: `admin`, `editor` (Creator in the UI), `collaborator`, or `viewer` |
+| `teams[].subscription_status` | string \| null | Current subscription status |
+| `teams[].plan_name` | string \| null | Subscription plan display name |
+| `teams[].plan_slug` | string \| null | Subscription plan identifier |
+| `teams[].ai_credits_available` | integer | Studio Credits the team can spend right now on credit-gated actions: the current period's remaining allowance plus any unexpired granted credits |
+| `teams[].ai_credits_max` | integer | The team's Studio Credit allowance for the current period. Excludes granted credits, so `ai_credits_available` can exceed it |
+| `teams[].members` | array | Team roster (`user_id`, `name`, `email`, `role`, `status`: `active` \| `invited`; `user_id` is `null` for pending invites) |
 
 **Example prompts:**
-- "What plan am I on?"
-- "Show me my account info"
-- "How much usage do I have left?"
+- "What teams am I on and what plan is each using?"
+- "Who's on my team?"
+- "How many Studio Credits does Acme have left?"
 
 ---
 
 ### `invite_user`
 
-Invite someone to your Marcora account by email. An invitation email is sent automatically, and the response also returns the exact invite link so you can share it directly (e.g. paste it to the person in Slack).
+Invite someone to the specified Marcora team (`team_id`) by email. An invitation email is sent automatically, and the response also returns the exact invite link so you can share it directly (e.g. paste it to the person in Slack).
 
 Roles: **creator** (a full team member who can create and edit content), **admin** (a team administrator), and **collaborator** (a project-scoped member who only works inside one project). Brand-new invitees get a sign-up link; people who already have a Marcora account and still belong to an active team get a login link and see the invitation in-app after they log in; people who have an account but no active team (e.g. a removed teammate) get a sign-up link to rejoin with their existing password.
 
 > **Who can invite whom.** You must be an **admin** to invite an admin or a creator (admins can invite any role). A **creator** can invite collaborators only. Viewers cannot invite anyone.
 
-> **`project_id` behavior.** Required for a **collaborator** — it's the project they'll collaborate on. Optional for a **creator/admin**, where it does **not** limit their access (they keep full team access); it just also adds them to that project and deep-links their invite so they land in it on first sign-in.
+> **`project_id` and existing-teammate behavior.** Required for a **collaborator** — it's the project they'll collaborate on, and an existing active teammate is added straight to that project (`outcome: "added_to_project"`, `invite_link: null`), or fails if they are already on it or have a pending invite. Optional for a **creator/admin** (`project_id` adds them to that project on acceptance and deep-links their invite); for `admin`/`creator`, an email that is already an active teammate or already has a pending invite always fails cleanly (never adds them directly to a project).
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
+| `team_id` | integer | Yes | Team id to invite into |
 | `email` | string | Yes | Email address of the person to invite |
 | `role` | string | Yes | `admin`, `creator`, or `collaborator` |
-| `project_id` | string | Conditional | Project UUID (from `list_projects`). Required for `collaborator`; optional for `creator`/`admin` to also add them to that project |
+| `project_id` | string | Conditional | Project UUID (from `list_projects`). Required for `collaborator`; optional for `creator`/`admin` |
 
 **Output:**
 
 | Field | Type | Description |
 |---|---|---|
-| `outcome` | string | `invited` (an invitation email was sent) or `added_to_project` (the email was already a team member and was added straight to the project) |
+| `outcome` | string | `invited` (an invitation email was sent) or `added_to_project` (an existing teammate invited as `collaborator` was added straight to the project) |
 | `emailed` | boolean | True when an invitation email was sent |
 | `invite_link` | string \| null | The exact link to share directly — the sign-up link (with the project deep-link when a project was given) for new users and for existing users with no active team, or the login URL for existing users who still belong to an active team. `null` when no invitation was sent |
 | `message` | string | Human-readable summary of what happened |
@@ -67,69 +73,14 @@ Roles: **creator** (a full team member who can create and edit content), **admin
 | `existing_user` | boolean \| null | True if the email already had a Marcora account. Such a user gets the login link if they still belong to an active team, or the sign-up link to rejoin if they have none (e.g. a removed teammate). False for a brand-new user (sign-up link) |
 | `invitation_id` | integer \| null | ID of the created/reused invitation, when one was sent |
 | `invite_token` | string \| null | Invitation token, when one was sent |
+| `team` | object | `{ id, name }` — the team this invitation applied to |
 
-> **Errors.** A collaborator with no `project_id` returns a 400. Inviting a creator/admin when you are not an admin returns a 403. An email that is already an active team member (with no project to add them to), or already has a pending invitation, returns a clear error.
+> **Errors.** A collaborator with no `project_id` returns a 400. Inviting a creator/admin when you are not an admin returns a 403. Inviting an `admin`/`creator` who is already an active teammate, adding a `collaborator` already on the project, or inviting an email with an existing pending invitation returns a clear error.
 
 **Example prompts:**
-- "Invite jordan@acme.com to the team as a creator"
+- "Invite jordan@acme.com to team 12 as a creator"
 - "Add sam@acme.com as a collaborator on the Website Update project"
 - "Invite priya@acme.com as an admin and give me the sign-up link to send her"
-
----
-
-### `get_team_info`
-
-**Always** use this when the user asks what team accounts they have, which teams they belong to / are on, or wants to switch teams — do **not** answer from memory or session context, which knows only the single currently-active team and will undercount (a user can belong to many teams). This tool is the only way to enumerate the full list. Returns every team you belong to, each with its full member roster. Read-only, no inputs. Also use it **before** assigning a plan or content to a teammate (to look up their numeric `user_id` — the value `assigned_to` expects), or to answer questions about the team's members and your role. Deliberately excludes credits/subscription — call `get_current_user_info` for those.
-
-**Parameters:** none.
-
-**Output:**
-
-| Field | Type | Description |
-|---|---|---|
-| `teams` | array | Every team the caller is an active member of |
-| `teams[].team_id` | integer | Numeric team id. Pass to `set_active_team` |
-| `teams[].team_name` | string | Team name |
-| `teams[].is_active` | boolean | True for the caller's currently active team (exactly one) |
-| `teams[].your_role` | string | The caller's role in this team (e.g. `admin`, `creator`, `viewer`, `collaborator`) |
-| `teams[].members` | array | The team's members |
-| `teams[].members[].user_id` | integer \| null | Numeric user id (what `assigned_to` expects). `null` for a pending invite |
-| `teams[].members[].name` | string | Member name (or the invited email for pending invites) |
-| `teams[].members[].email` | string \| null | Member email |
-| `teams[].members[].role` | string | Member's role |
-| `teams[].members[].status` | string | `active` or `invited` |
-
-**Example prompts:**
-- "Who's on my team?"
-- "Assign this plan to Sarah" (look up Sarah's `user_id`, then `update_plan`)
-
----
-
-### `set_active_team`
-
-Sets your active team — the team all subsequent Marcora tool calls operate against. Input: `team_id` (from `get_team_info`).
-
-> **⚠️ Global effect.** Switching your active team changes it **everywhere** for your account — open Marcora app tabs, running Marcora agent sessions, and every other connected MCP client — because it writes the same active-team setting the in-app switcher uses. Tell the user before switching, and don't switch while other work is mid-flight for them. The response returns `previous_team_id` so you can restore their original team when done: switch → do the work → `set_active_team` back to `previous_team_id`.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `team_id` | integer | Yes | The numeric `team_id` (from `get_team_info`) to switch to. Must be a team you belong to |
-
-**Output:**
-
-| Field | Type | Description |
-|---|---|---|
-| `previous_team_id` | integer \| null | The team that was active before this call. Pass it back to `set_active_team` to restore |
-| `active_team.team_id` | integer | The now-active team's id |
-| `active_team.team_name` | string | The now-active team's name |
-
-> **Errors.** A `team_id` you don't belong to (or that doesn't exist) returns a readable "you are not a member of that team" error. A missing / non-positive `team_id` returns a readable input error.
-
-**Example prompts:**
-- "Switch me to my Acme team"
-- "Work in my other team for this, then switch me back"
 
 ---
 
@@ -336,7 +287,7 @@ To check whether an app is connected, or to get its Connect link before importin
 
 > **Web pages require Admin or Creator role.** `connected_webpage_url` is rejected for Collaborators, matching the in-app *Add web page* rule. `content` and `import_url` remain available to Collaborators.
 >
-> **Connected Apps require a Creator or Admin seat.** `import_from` (and `find_app`) require a Creator or Admin seat on the workspace (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*).
+> **Connected Apps imports require a Creator or Admin seat.** `import_from` requires a Creator or Admin seat on the team (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*), while `find_app` works for any active team role.
 >
 > **Team audience on ordinary items:** when the user asks for the item to be saved for the team, pass `audience: "team"` (on `content`, `import_url` or `connected_webpage_url`), even with `collection_ids` / `collection_id` or `project_id`. It is accepted when the item will be team-visible. In a private collection or private project it is refused with a readable tool error (`isError: true`) and nothing is saved; a shared collection, a team-visible project or the Reference Library accepts it. The same call without `audience` would save into the private collection or project, where only its owner or members can see the item, so a refused team save is never saved privately. Every successful save returns `audience` (`"team"`, `"project_members"`, or `"only_me"`): who can actually see the item, whether or not `audience` was passed.
 
@@ -409,7 +360,7 @@ Looks up the apps Marcora offers to connect (for example Gong or Fathom), by nam
 
 **When to use it:** BEFORE telling the user you can't reach an app, and before sending them to connect one. Say only what it returns, and never claim an app is offered unless it appears in the result. Once an app is connected, use its own tools in your session to find what you need, and `add_context` `import_from` to bring its calls into Marcora.
 
-> **Creator or admin seat required.** Connected Apps (`find_app` and `add_context` `import_from`) and Webhooks require a creator or admin seat on the workspace (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*).
+> **Connected Apps imports require a creator or admin seat.** `add_context` `import_from` and Webhooks require a creator or admin seat (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*); `find_app` itself works for any active team role.
 
 **Parameters:**
 
@@ -812,7 +763,7 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 
 | Error | Meaning | What to do |
 |---|---|---|
-| `Project not found` | The project doesn't exist, or belongs to a team other than your active team | Check `list_projects`, or `set_active_team` if the project is in another team |
+| `Project not found` | The project doesn't exist, or belongs to a team other than the `team_id` you passed | Check `get_current_user_info` and `list_projects` with the right `team_id` |
 | `You are not a member of project <id>` | The project is private and you are not one of its members | Ask a project member to add you, or search without `project_id` |
 
 Neither error returns any context or brief.
@@ -843,8 +794,8 @@ Findings are returned **newest-first**. Each has a status lifecycle: `pending` (
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `status` | string | No | Filter by status: `pending` (the actionable queue), `acknowledged`, `dismissed`, `resolved`. Omit for all |
-| `severity` | string | No | Filter by severity as recorded by the scan (e.g. `high`, `medium`, `low`). Omit for all |
-| `process_type` | string | No | Filter by originating scan: `health_audit` (library-wide sweep) or `web_freshness` (tracked webpage changes). Omit for all |
+| `severity` | string | No | Filter by severity as recorded by the scan: `critical`, `warning`, or `info`. Omit for all |
+| `process_type` | string | No | Filter by originating scan: `health_audit` (library-wide sweep), `web_freshness` (tracked webpage changes), `impact_scan` (downstream change impact), or `content_grounding` (document grounding check). Omit for all |
 | `page` | integer | No | Page number (default 1) |
 | `per_page` | integer | No | Items per page (default 20, max 100) |
 
@@ -943,7 +894,7 @@ Start a Context Intelligence **health audit** — a library-wide AI sweep of you
 
 The scan runs in the **background**: the response returns immediately with a `scan_run_id`, and findings land as the scan progresses — check `list_ci_findings` afterwards.
 
-**⚠️ Cost + gating:** the scan uses team Studio Credits — Marcora estimates the cost first and won't start a run the team's balance can't cover. Only one health audit can run at a time, and a cooldown applies after each completed run. **Starting a new audit clears the previous health-audit findings.**
+**⚠️ Cost + gating:** the scan uses team Studio Credits — Marcora estimates the cost first and won't start a run the team's balance can't cover. Only one health audit can run at a time, and a cooldown applies after each completed run. **A clean completion clears prior pending `health_audit`, `web_freshness`, and `impact_scan` findings** (preserving `content_grounding` and non-pending statuses).
 
 **Parameters:** None
 
@@ -952,7 +903,7 @@ The scan runs in the **background**: the response returns immediately with a `sc
 | Field | Type | Description |
 |---|---|---|
 | `scan_run_id` | string (uuid) \| null | ID of the started scan run |
-| `status` | string | `running` |
+| `status` | string | `queued` (or `queued`/`running` if an audit is already in progress) |
 | `message` | string | Human-readable status message |
 
 **Errors:**
@@ -1218,7 +1169,7 @@ Returns all content categories available to your team. Categories organize bluep
 
 ### `list_targeting_dimensions`
 
-Returns targeting dimensions and their options for the current team. Dimensions are categories (e.g. Buying Stage, Persona) with selectable options used to target content generation.
+Returns targeting dimensions and their options for the specified team (`team_id`). Dimensions are categories (e.g. Buying Stage, Persona) with selectable options used to target content generation.
 
 **Parameters:** None
 
@@ -1860,75 +1811,38 @@ Creates a public share link for content, with optional expiration. Accessible pu
 
 ### `get_share_link_activity`
 
-Checks what happened to one share link: whether it was opened, how many times, how many recorded viewers, and when. Pass the link you sent (`https://app.marcora.ai/s/<token>`) or just its token. Read-only: checking never counts as an open and never notifies anyone.
+Lists tracked share links in the team (`share_link` omitted) or checks detailed activity for one share link (`share_link` provided). Read-only: checking never counts as an open and never notifies anyone.
 
-`opened` and `opens` come from the link's lifetime counter. Opens recorded before Marcora kept open details have no viewer, place or device, so `opens` can be higher than the viewers and log show: `opens_without_details` says how many and `coverage_note` explains it. An empty viewer list does not mean the link was never opened. Viewers are numbered, never named: a viewer number stands for an anonymous browser identifier, not a verified person, so these stats cannot confirm that a particular recipient opened the link. Place is approximate and comes from the network. Automated opens (email scanners, data centers) are reported separately and are never counted.
+`opened` and `opens` come from the link's lifetime counter, while `viewers` and `open_log` cover only opens recorded with open details: `opens_without_details` and `coverage_note` explain any older gap. Automated opens (email scanners, data centers) are reported separately under `automated` and excluded from counts.
 
-Only workspace Admins and Creators who can open the link's document can use it; a link in another of your workspaces works if you have that access there. Anything else, including a link that does not exist, returns the same "Share link not found" error. Workspaces whose plan does not include open tracking get `tracking_locked: true` and no activity.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `share_link` | string | Yes | The share link (`https://app.marcora.ai/s/<token>`) or just the token |
-| `limit` | integer | No | Open-log page size, 1–100 (default 50) |
-| `offset` | integer | No | Open-log rows to skip (default 0) |
-
-**Output:**
-
-| Field | Type | Description |
-|---|---|---|
-| `opened` | boolean | Whether anyone has opened the link (lifetime counter) |
-| `summary` | string | Plain-language summary |
-| `coverage_note` | string \| null | Set when some opens have no details; explains what the viewer and log figures cover |
-| `link` | object | `share_url`, `status` (`active` \| `expired` \| `off`), `shared_at`, `expires_at`, `shared_by`, `content_id`, `content_title` |
-| `workspace` | object | `name`, `is_active` (whether it is your active workspace) |
-| `opens` | integer | Lifetime counted opens (automated opens excluded) |
-| `unique_viewers` | integer | Distinct recorded viewer identifiers; not a verified count of people |
-| `first_opened_at` / `last_opened_at` | string \| null | First and last counted open (ISO 8601), or null if never opened |
-| `opens_without_details` | integer | Counted opens with no viewer, place or device; 0 when fully covered |
-| `viewers` | array | Per viewer: `viewer` (number), `opens`, `first_opened_at`, `last_opened_at`, `place` (`city`, `region`, `country`), `network` (`name`, `kind`), `device`, `returning` |
-| `automated` | object | Automated opens, not counted: `opens`, `last_at`, `network` |
-| `open_log` | object | `total`, `limit`, `offset`, `items[]` newest first: `viewed_at`, `device`, `viewer`, `returning`, `place`, `network`, `likely_automated` |
-| `tracking_locked` | boolean | `true` when the plan has no open tracking; only `workspace` and `message` are returned |
-
-**Example prompts:**
-- "Has anyone opened the link I sent?"
-- "Did anyone come back to that document?"
-- "Show the latest opens for this share link"
-
----
-
-### `list_share_link_activity`
-
-Lists the active workspace's share links with their activity, newest activity first, like the Shared tab in Marcora: for each link its content, status, lifetime opens, number of viewers and the last open. Use it to find which links were opened or not opened, or to find a link when you don't have its URL; use `get_share_link_activity` for one link's full detail. Read-only.
-
-`opens` is the lifetime counter, while `viewers` counts only opens that have details, so older links can show opens with no viewers: that is missing history, not no activity. Automated opens are never counted. Only links whose content you can open are listed. Available to workspace Admins and Creators; workspaces whose plan does not include open tracking get `tracking_locked: true` and no links.
+Only team Admins and Creators (`admin` / `editor`) who can open the link's document can use it; teams whose plan does not include open tracking get `tracking_locked: true` and no activity.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `filter` | string | No | `opened` or `not_opened` (lifetime counter) |
-| `query` | string | No | Match the content title (max 100 characters) |
-| `limit` | integer | No | Links per page, 1–100 (default 25) |
-| `offset` | integer | No | Matching links to skip (default 0) |
+| `team_id` | integer | Yes | Team id to inspect |
+| `share_link` | string | No | Pass the share URL (`https://app.marcora.ai/s/<token>`) or UUID token for detail mode; omit for list mode |
+| `filter` | string | No | List mode only: `opened` or `not_opened` (cannot combine with `share_link`) |
+| `query` | string | No | List mode only: match content title, max 100 chars (cannot combine with `share_link`) |
+| `links_limit` | integer | No | List mode only: links per page, 1–100 (default 25) |
+| `links_offset` | integer | No | List mode only: links to skip (default 0) |
+| `opens_limit` | integer | No | Detail mode only: open-log rows per page, 1–100 (default 50; requires `share_link`) |
+| `opens_offset` | integer | No | Detail mode only: open-log rows to skip (default 0; requires `share_link`) |
 
 **Output:**
 
 | Field | Type | Description |
 |---|---|---|
-| `workspace` | object | `name`, `is_active` |
-| `counts` | object | `all`, `opened`, `not_opened` |
-| `summary_7d` | object | `opens_7d`, `viewers_7d`, `returning_viewers_7d`, `not_opened_count` (active links nobody has opened), `oldest_not_opened_shared_at` |
-| `links` | array | Per link: `share_url`, `content_id`, `content_title`, `status`, `shared_at`, `expires_at`, `shared_by`, `opened`, `opens`, `viewers`, `last_open` (most recent counted open with details, or null) |
-| `note` | string | Explanatory note |
-| `tracking_locked` | boolean | `true` when the plan has no open tracking; only `workspace` and `message` are returned |
+| `mode` | string | `"list"` or `"detail"` |
+| `tracking_locked` | boolean | `true` when the team plan has no open tracking; only `mode`, `tracking_locked`, `team`, and `message` return |
+| `team` | object | `{ id, name }` of the team |
+| `links_page` | object | List mode when unlocked: `counts`, `summary_7d`, `note`, `links[]`, `total`, `limit`, `offset` |
+| `link_detail` | object | Detail mode when unlocked: `opened`, `summary`, `coverage_note`, `link`, `opens`, `unique_viewers`, `first_opened_at`, `last_opened_at`, `opens_without_details`, `viewers[]`, `automated`, `open_log` |
 
 **Example prompts:**
-- "Which of our shared documents were opened?"
-- "Show links nobody has opened yet"
-- "Find the share activity for my proposal"
+- "Which of Acme's shared documents were opened?"
+- "Has anyone opened this share link?"
 
 ---
 
@@ -2117,9 +2031,7 @@ Returns a paginated list of plans visible to the authenticated user. Use filters
 | `category_id` | integer | No | Filter to plans in this content category |
 | `assignee_scope` | string | No | Whose plans to return: `me` (default), `created_by_me`, or `all_visible` |
 | `run_id` | integer | No | Only the steps of one playbook cycle (the `run_id` from `list_playbook_cycles` / `instantiate_playbook`). Combine with `assignee_scope: "all_visible"` to see every step of the cycle, not only yours |
-| `due_before` | string | No | ISO date YYYY-MM-DD. Note: does not apply yet |
-| `due_after` | string | No | ISO date YYYY-MM-DD. Note: does not apply yet |
-| `search_text` | string | No | Substring match on plan title. Note: does not apply yet |
+| `due_before` | string | No | ISO date YYYY-MM-DD. Filters open plans strictly before `due_before` (`due_date < due_before`, excluding `In_Process`, `Complete`, and `Dismissed`) |
 | `sort` | string | No | `due_asc_nulls_last` (default) or `created_desc` |
 | `page` | integer | No | Page number (default 1) |
 | `per_page` | integer | No | Items per page (default 20, max 100) |
@@ -2195,7 +2107,7 @@ Fetch a single plan by UUID with full details including linked references, conte
 
 ### `create_plan`
 
-Create a new content plan in the authenticated user's active team.
+Create a new content plan in the specified team (`team_id`).
 
 **Starting stage by source:**
 - `cora_requested`, `playbook` → starts at **Accepted**
@@ -2217,7 +2129,7 @@ Create a new content plan in the authenticated user's active team.
 | `targeting_dimension_ids` | integer[] | No | Integer dimension option IDs to pre-attach (from `list_targeting_dimensions`) |
 | `source` | string | No | `user_added`, `cora_proactive`, `cora_requested`, `workflow`, or `playbook`. Default: `cora_requested`. Immutable after creation |
 | `source_metadata` | object | No | Contextual metadata (JSON). Immutable after creation |
-| `assigned_to` | integer | No | Integer user ID. Defaults to creator. Must be a current team member |
+| `assigned_to` | integer | No | Integer user ID. Defaults to creator. Must be an enabled member of that team |
 | `plan_uuid` | string (uuid) | No | Client-supplied UUIDv4 for optimistic creates. Server generates if omitted |
 
 **Output:** Full plan object (same fields as `get_plan`).
@@ -2255,7 +2167,7 @@ Partial update of a plan: mutable fields and stage transitions. All fields are o
 | `project_id` | string/null | No | Project UUID. `null` is ignored: pass a new value to change it |
 | `category_id` | integer/null | No | Content category ID. `null` is ignored: pass a new value to change it |
 | `due_date` | string/null | No | ISO YYYY-MM-DD. Pass `null` to clear (also clears `due_time`) |
-| `assigned_to` | integer | No | Integer user ID. Must be a current team member. Choosing a team member also clears `owner_name` |
+| `assigned_to` | integer | No | Integer user ID. Must be an enabled member of that team. Choosing a team member also clears `owner_name` |
 | `visibility` | string | No | `private` or `team` (creator-only) |
 | `reference_document_ids` | string[] | No | A non-empty array REPLACES the full set of reference documents while keeping existing cycle step links unless `builds_on_plan_ids` is sent or earlier same-cycle plan UUIDs are included; any other plan or unknown ID is rejected. `[]` is ignored, so this cannot clear the set |
 | `builds_on_plan_ids` | string[]/null | No | REPLACES the `plan_uuid`s of earlier same-cycle steps this step builds on while keeping reference documents. Self, later, out-of-cycle, and unknown IDs are rejected. Pass `[]` or `null` to clear step links |
@@ -2310,7 +2222,7 @@ Produce (generate) the actual content a plan describes — the MCP equivalent of
 
 ### `list_playbooks`
 
-List all content playbooks visible to the caller in the current team (team-visible playbooks plus the caller's own private ones). Returns summaries only — call `get_playbook` for a playbook's items. Use before `instantiate_playbook` / `update_playbook` to find the right id.
+List all content playbooks visible to the caller in the specified team (`team_id`) (team-visible playbooks plus the caller's own private ones). Returns summaries only — call `get_playbook` for a playbook's items. Use before `instantiate_playbook` / `update_playbook` to find the right id.
 
 **Parameters:** none.
 
@@ -2455,7 +2367,7 @@ A **cycle** is a running instance of a playbook: `instantiate_playbook` creates 
 
 ### `list_playbook_cycles`
 
-List the playbook cycles in the current team: active by default, or filtered by playbook or status. Cycles whose steps you cannot see (a private playbook you do not own) are omitted. To rename a cycle or change its topic use `update_playbook_cycle`. Read-only.
+List the playbook cycles in the specified team (`team_id`): active by default, or filtered by playbook or status. Cycles whose steps you cannot see (a private playbook you do not own) are omitted. To rename a cycle or change its topic use `update_playbook_cycle`. Read-only.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
@@ -2547,7 +2459,7 @@ Position: right after `after_plan_uuid`, or at the end when omitted. `builds_on`
 
 Update a playbook cycle step's completion status (`complete` or `reopen`) and record or clear evidence, shown on the step in `get_playbook_cycle`. Works for steps that produce no document, which `update_plan` cannot complete. You must be able to edit the step (its assignee or creator). Plans that are not cycle steps are refused (use `update_plan`).
 
-- **`action: "complete"`:** marks `content`, `checklist`, or `action` step Complete with optional `result_url` and `note` (**BOTH required for `action` steps**). Calling it again on a step that is already Complete keeps its original `completed_at` / `completed_by`, while newly supplied `result_url` or `note` overwrite previous values (omit them to keep what is recorded). Refuses Dismissed steps (409).
+- **`action: "complete"`:** marks `content` or `checklist` step Complete with optional `result_url` and `note`. **Open `action` steps cannot be completed over external MCP** (always refused with `"Complete this action from its current Marcora conversation"`); action steps complete only inside a Marcora conversation (with both `result_url` and `note`). Calling it again on a step that is already Complete keeps its original `completed_at` / `completed_by`, while newly supplied `result_url` or `note` overwrite previous values (omit them to keep what is recorded). Refuses Dismissed steps (409).
 - **`action: "reopen"`:** unticks a completed **checklist** step back to `Accepted` and clears completion evidence (`completed_at: 0`, `result_url: null`, `note: null`). Non-checklist steps are refused (409); `result_url` and `note` are rejected if sent. Reopening a step that is not Complete changes nothing.
 
 | Parameter | Type | Required | Description |
@@ -2584,7 +2496,7 @@ To change a step's title, prompt, due date, assignee or to dismiss it, use `upda
 
 ### `generate_cycle_content`
 
-Start "Generate all" on a cycle: generate the document for every step that has none yet, in step order, on the server (it keeps going after the call returns). Requires an **Admin** or **Creator** role. Each step is generated with the cycle's topic and the steps it builds on. Only content steps assigned to you (or created by you) are generated; checklist and action steps, dismissed steps, already-generated steps and teammates' steps are skipped with a reason. **Uses the team's Studio Credits, one generation per step**; if credits run out the batch stops cleanly and the remaining steps are reported as `not_started`. Only one batch runs per cycle at a time: calling again while one runs returns `started: false` with the running batch. Not idempotent. For a single step use `produce_plan`.
+Start "Generate all" on a cycle: generate the document for every step that has none yet, in step order, on the server (it keeps going after the call returns). Requires an **Admin** or **Creator** role. Each step is generated with the cycle's topic and the steps it builds on. Generates open `content` steps assigned to or created by the caller (including steps you created that are assigned to a teammate); checklist and action steps, dismissed steps, already-generated steps, and teammates' private or unowned steps are skipped with a reason. **Uses the team's Studio Credits, one generation per step**; if credits run out the batch stops cleanly and the remaining steps are reported as `not_started`. Only one batch runs per cycle at a time: calling again while one runs returns `started: false` with the running batch. Not idempotent. For a single step use `produce_plan`.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
@@ -2620,7 +2532,7 @@ Workflows are reusable, multi-step automations that Marcora runs on demand or on
 
 ### `list_workflows`
 
-List workflows for your active team. Supports an optional status filter and a name substring search. Call this before `create_workflow` to check for duplicate names.
+List workflows for the specified team (`team_id`). Supports an optional status filter and a name substring search. Call this before `create_workflow` to check for duplicate names.
 
 **Parameters:**
 
@@ -2687,7 +2599,7 @@ Read-only. Returns one workflow template by `workflow_id`: its name, description
 
 ### `create_workflow`
 
-Create a new workflow template for your active team. New workflows are saved **Inactive**, and any schedule is saved **Paused** — set the workflow Active with `update_workflow` once the user asks for it. Check `list_workflows` with a `search` filter for duplicate names first.
+Create a new workflow template for the specified team (`team_id`). New workflows are saved **Inactive**, and any schedule is saved **Paused** — set the workflow Active with `update_workflow` once the user asks for it. Check `list_workflows` with a `search` filter for duplicate names first.
 
 > **Scheduling:** include `schedule_config` ONLY if the user explicitly wants the workflow scheduled. Otherwise omit it and the workflow runs on demand via `run_workflow`.
 
