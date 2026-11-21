@@ -25,7 +25,7 @@ Returns profile, enabled team memberships (`teams[]`), Studio Credits, subscript
 | `teams` | array | Enabled teams the caller belongs to |
 | `teams[].team_id` | integer | Numeric team id to pass as `team_id` on team-scoped tools |
 | `teams[].team_name` | string | Team name |
-| `teams[].your_role` | string | Caller's role in this team: `admin`, `editor` (Creator in the UI), `collaborator`, or `viewer` |
+| `teams[].your_role` | string | Caller's role in this team: `admin`, `creator`, `collaborator`, or `viewer` |
 | `teams[].subscription_status` | string \| null | Current subscription status |
 | `teams[].plan_name` | string \| null | Subscription plan display name |
 | `teams[].plan_slug` | string \| null | Subscription plan identifier |
@@ -1861,7 +1861,7 @@ Lists tracked share links in the team (`share_link` omitted) or checks detailed 
 
 `opened` and `opens` come from the link's lifetime counter, while `viewers` and `open_log` cover only opens recorded with open details: `opens_without_details` and `coverage_note` explain any older gap. Automated opens (email scanners, data centers) are reported separately under `automated` and excluded from counts.
 
-Only team Admins and Creators (`admin` / `editor`) who can open the link's document can use it; teams whose plan does not include open tracking get `tracking_locked: true` and no activity.
+Only team Admins and Creators (`admin` / `creator`) who can open the link's document can use it; teams whose plan does not include open tracking get `tracking_locked: true` and no activity.
 
 **Parameters:**
 
@@ -1870,11 +1870,11 @@ Only team Admins and Creators (`admin` / `editor`) who can open the link's docum
 | `team_id` | integer | Yes | Team id to inspect |
 | `share_link` | string | No | Pass the share URL (`https://app.marcora.ai/s/<token>`) or UUID token for detail mode; omit for list mode |
 | `filter` | string | No | List mode only: `opened` or `not_opened` (cannot combine with `share_link`) |
-| `query` | string | No | List mode only: match content title, max 100 chars (cannot combine with `share_link`) |
-| `links_limit` | integer | No | List mode only: links per page, 1–100 (default 25) |
-| `links_offset` | integer | No | List mode only: links to skip (default 0) |
-| `opens_limit` | integer | No | Detail mode only: open-log rows per page, 1–100 (default 50; requires `share_link`) |
-| `opens_offset` | integer | No | Detail mode only: open-log rows to skip (default 0; requires `share_link`) |
+| `query` | string | No | List mode only: match content title, max 100 chars; longer values are truncated (cannot combine with `share_link`) |
+| `links_limit` | integer | No | List mode only: links per page, 1–100 (default 25; non-integers are truncated and out-of-range values are clamped to 1–100) |
+| `links_offset` | integer | No | List mode only: links to skip (default 0; non-integers are truncated and negative values are clamped to 0) |
+| `opens_limit` | integer | No | Detail mode only: open-log rows per page, 1–100 (default 50; non-integers are truncated and out-of-range values are clamped to 1–100; requires `share_link`) |
+| `opens_offset` | integer | No | Detail mode only: open-log rows to skip (default 0; non-integers are truncated and negative values are clamped to 0; requires `share_link`) |
 
 **Output:**
 
