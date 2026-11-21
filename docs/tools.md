@@ -2517,7 +2517,7 @@ Read one cycle with its steps in order (including any steps added mid-cycle via 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
-| `run_id` | integer | Yes | Cycle id, from `list_playbook_cycles` / `instantiate_playbook`, or the trailing number of a cycle `link_url` |
+| `run_id` | integer | Yes | Cycle id — the integer `run_id` from `list_playbook_cycles` / `instantiate_playbook`, not a UUID |
 
 **Output:** `cycle` (same shape as a `list_playbook_cycles` row, including `project_id` / `project_name` and `playbook_name: "Deleted template"` when deleted) and `steps`. Each step carries `position`, `plan_uuid`, `title`, `description`, `prompt` (the instructions), `stage`, `done`, `due_date`, `assigned_to` / `assigned_to_name`, `use_cycle_source`, `builds_on` (earlier steps it builds on), `document` (the produced document with link, or null), `step` (`kind`, `optional`, `do_on_date`, `draft_lead_days`, `schedule_time_zone`, `schedule` [`outcome`: `null` \| `waiting_content` \| `waiting` \| `overdue` \| `invalidated` \| `cancelled` \| `skipped` \| `claimed` \| `dispatching` \| `started` \| `failed` \| `unknown`], `goes_out_date`, plus `owner_name`, `due_time`, and `goes_out_time` when set), `result` (recorded link / note once completed, or null) and `link_url`. Use a step's `plan_uuid` with `get_plan` for full detail or `update_playbook_step_status` to finish or reopen it.
 
