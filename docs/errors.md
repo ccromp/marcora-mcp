@@ -117,7 +117,7 @@ Neither error returns any context or the project's brief.
 
 This is expected, not a fault, even though the result is flagged as an error. The connection is fine: the server still lists all its tools and authentication has succeeded. Only the *calls* are held.
 
-An account with no setup running is not held. A team added from inside an existing account, a setup that failed, and a setup that stalled all get normal tool answers.
+An account with no setup running is not held. A team added from inside an existing account, a setup that failed, and a setup that stalled all get normal tool answers. `get_team_info` and `set_active_team` are also exempt from the hold so you can list your teams or switch back to an already-ready team while another team is setting up.
 
 **Solutions:**
 - Retry the same call. The call did not run, so repeating it cannot duplicate anything. Each attempt waits up to 30 seconds, so keep retrying only while the notice keeps coming, for up to 5 minutes in total, then tell the user setup is still processing and to try again later. Website imports can take several minutes.
