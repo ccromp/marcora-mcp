@@ -46,7 +46,7 @@ These are Marcora's core nouns. Internalize them before calling any tool.
 ### Lifecycle states worth knowing
 
 - **Content `stage`**: `in_progress` (being generated or edited) → `ready` (final).
-- **Async generation `status`**: `pending` → `gathering context` → `processing` → `completed` (or `failed`). Applies to blueprint/Multi-model `create_content`, `produce_plan`, `create_blueprint`, `create_blueprint_draft`, and `finalize_blueprint_draft` (Content Assistant runs use `ask_content_assistant` / `apply_grounding_fix` and terminate at `complete`). Poll `marcora:get_generation_status` until `completed` (or `complete`).
+- **Async generation `status`**: `pending` → `gathering context` → `processing` → `completed` (or `failed`). Applies to blueprint/Multi-model `create_content`, `produce_plan`, `create_blueprint`, `create_blueprint_draft`, and `finalize_blueprint_draft` (Content Assistant runs use `ask_content_assistant` / `apply_finding_fix` and terminate at `complete`). Poll `marcora:get_generation_status` until `completed` (or `complete`).
 - **Project `status`**: `active` or `archived`. `Project visibility`: `team` or `private`.
 
 ---

@@ -138,7 +138,7 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Context & Resources | `update_context` | Update an existing context item |
 | Context & Resources | `list_context_items` | List context items in your library (optional semantic `search`) |
 | Context & Resources | `get_context_item` | Get a context item's full markdown content |
-| Context & Resources | `get_relevant_context` | Search context library by prompt (with a `project_id`, also returns the project's brief) |
+| Context & Resources | `get_relevant_context` | Search context library by prompt (with optional `only_these_collections` filter; with a `project_id`, also returns the project's brief) |
 | Context & Resources | `list_call_instructions` | List your standing call instructions (guidance and word fixes) and automatic call imports |
 | Context & Resources | `add_call_instruction` | Save a standing call instruction (`guidance` or `word_fix`) for future calls |
 | Context & Resources | `update_call_instruction` | Edit or switch on/off a standing call instruction |
@@ -149,10 +149,10 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Context Intelligence | `trigger_health_audit_scan` | Start a library-wide context health audit |
 | Content Grounding | `check_content_grounding` | Check a document's claims against your context library |
 | Content Grounding | `get_grounding_result` | Read a grounding scan's result (poll with `scan_id`) |
-| Content Grounding | `apply_grounding_fix` | Apply a finding's recommended fix by id |
+| Content Grounding | `apply_finding_fix` | Apply recommended fixes for grounding or health-audit findings by id |
 | Reference | `list_content_categories` | List content categories |
 | Reference | `list_targeting_dimensions` | List targeting dimensions and options |
-| Reference | `learn_marcora_tools` | Marcora's guide to its own tools, by topic (for assistants without the skill) |
+| Reference | `learn_marcora_tools` | Search/read Marcora Documentation pages (`{}`, `page`, `query`) or compact `topic` sections |
 | Blueprints | `list_blueprints` | List all blueprints |
 | Blueprints | `get_blueprint` | Get blueprint details by UUID |
 | Blueprints | `create_blueprint` | Create a reusable content template |
@@ -191,8 +191,7 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Plans & Playbooks | `list_my_playbook_steps` | List open playbook steps assigned to you (or to a typed `owner_name`), soonest due first |
 | Plans & Playbooks | `list_playbook_owner_names` | List the typed owner names in use on the team's playbook steps |
 | Plans & Playbooks | `add_playbook_step` | Add a step to a running playbook cycle without changing its template |
-| Plans & Playbooks | `complete_playbook_step` | Mark a cycle step Complete with a result link and note |
-| Plans & Playbooks | `reopen_playbook_step` | Reopen a completed checklist step of a cycle |
+| Plans & Playbooks | `update_playbook_step_status` | Mark a cycle step Complete (`action: "complete"`) or reopen a completed checklist step (`action: "reopen"`) |
 | Plans & Playbooks | `update_playbook_cycle` | Rename a cycle and change its topic |
 | Plans & Playbooks | `generate_cycle_content` | Generate the content for every step of a cycle that has none (uses Studio Credits) |
 | Plans & Playbooks | `get_cycle_generation` | Check the progress of a cycle's "Generate all" batch |

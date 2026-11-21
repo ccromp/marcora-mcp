@@ -712,7 +712,7 @@ Searches the team's context library and returns the passages most relevant to a 
 
 **How results are ranked:** each passage is scored on its own and against the whole document it belongs to, and the two scores are blended; weak matches are dropped, so fewer than 10 can come back. `dimension_option_ids` lean the ranking toward the chosen audience, persona or industry. It searches the reference library plus the project, collections and shared collections the user can access.
 
-`collection_ids` and `project_id` are **additive**: they broaden the search to ALSO include those collections / that project's context alongside your general reference library — they do not restrict results to only that collection or project.
+`collection_ids` and `project_id` are **additive** by default: they broaden the search to ALSO include those collections / that project's context alongside your general reference library — they do not restrict results to only that collection or project unless you pass `only_these_collections: true` (which restricts the search strictly to `collection_ids`, excluding the general Reference Library, and cannot combine with `project_id` or `calls`).
 
 **When to use it:**
 - The user wants writing grounded in their team's brand or company context (a blog post, email, social post, landing page, press release, ad or messaging), including *"write it and save it in Marcora"*: call it with `include_brand_foundation: true`, write it yourself from what it returns, then save it with `create_content` `content` if asked to.
@@ -740,13 +740,14 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `prompt` | string | Yes | Search string describing what context you need |
-| `project_id` | string (uuid) | No | **Additive** — ALSO searches that project's context alongside the general library. Not an exclusive filter |
-| `collection_ids` | array | No | **Additive** — ALSO searches those collections alongside the general library. Not an exclusive filter |
+| `project_id` | string (uuid) | No | **Additive** — ALSO searches that project's context alongside the general library (rejected when `only_these_collections: true`) |
+| `collection_ids` | array | No | **Additive** by default — ALSO searches those collections alongside the general library; set `only_these_collections: true` to search ONLY these positive integer collection IDs |
+| `only_these_collections` | boolean | No | Default `false`. When `true`, searches **strictly** the specified `collection_ids` and excludes the general Reference Library (requires non-empty positive integers in `collection_ids`; cannot be combined with `project_id` or `calls`) |
 | `dimension_option_ids` | array | No | Targeting dimension option IDs that bias relevancy toward an audience / persona / industry |
 | `context_rag_ids` | array | No | Previously returned chunk IDs to exclude (for pagination) |
 | `include_brand_foundation` | boolean | No | When `true`, also returns the team's Brand Foundation in the response. Default `false`. Recommended `true` on the **first** call of a conversation (and when paginating, the first page), then `false`/omit on follow-ups so it isn't re-sent each time |
 | `include_only_me` | boolean | No | Default `false`: only Team items are searched. `true` also searches your own Only me items, including Only me calls, never another member's |
-| `calls` | object | No | Also search the team's calls: `{ date_from, date_to, kinds, companies }`, every field optional (dates `YYYY-MM-DD` or ISO 8601; `kinds` from `customer`, `external`, `team_meeting`, `one_on_one`, `recorded`; `companies` match the whole company name ignoring case and spaces, and empty or non-text values are refused; `{}` is every call you may use). Each call carries its date, kind and company in its heading. Only Team calls come back, never a teammate's Only me call; `include_only_me: true` adds your own Only me calls. Leave it out and nothing changes |
+| `calls` | object | No | Also search the team's calls: `{ date_from, date_to, kinds, companies }`, every field optional (dates `YYYY-MM-DD` or ISO 8601; `kinds` from `customer`, `external`, `team_meeting`, `one_on_one`, `recorded`; `companies` match the whole company name ignoring case and spaces, and empty or non-text values are refused; `{}` is every call you may use). Each call carries its date, kind and company in its heading. Only Team calls come back, never a teammate's Only me call; `include_only_me: true` adds your own Only me calls. Cannot be combined with `only_these_collections: true` |
 | `include_project_brief` | boolean | No | Default `true`. When `project_id` is given, also returns that project's brief as a top-level `project_brief` block. Leave it `true` (or omit it) on the **first** call for a project in a conversation; set `false` on later calls for the same project so the brief isn't re-sent. Ignored when `project_id` is omitted |
 
 **Output:**
@@ -829,7 +830,7 @@ Neither error returns any context or brief.
 
 > **In ChatGPT** the three tools below appear as `list_context_intelligence_findings`, `get_context_intelligence_finding` and `update_context_intelligence_finding_status`. Everywhere else the names stay as documented here.
 
-Context Intelligence is Marcora's automated review layer for your reference/context library. Health-audit and web-freshness scans produce **findings** — stale content, contradictions, outdated web sources, classification gaps — each with a status lifecycle (`pending` → `acknowledged` / `dismissed` / `resolved`). These tools list and inspect findings, record your decision on them, and kick off a new health-audit sweep. To **apply** a finding's suggested fix, use [`apply_grounding_fix`](#apply_grounding_fix) — it works on health-audit findings and content-grounding findings alike.
+Context Intelligence is Marcora's automated review layer for your reference/context library. Health-audit and web-freshness scans produce **findings** — stale content, contradictions, outdated web sources, classification gaps — each with a status lifecycle (`pending` → `acknowledged` / `dismissed` / `resolved`). These tools list and inspect findings, record your decision on them, and kick off a new health-audit sweep. To **apply** a finding's suggested fix, use [`apply_finding_fix`](#apply_finding_fix) — it works on health-audit findings and content-grounding findings alike.
 
 ### `list_ci_findings`
 
@@ -868,7 +869,7 @@ Findings are returned **newest-first**. Each has a status lifecycle: `pending` (
 
 Fetch one Context Intelligence finding in full detail by its UUID (from `list_ci_findings`). Use it when you want the specifics of a finding — the full recommendation, the suggested fix content, or which context items it involves — before deciding to act on it.
 
-The `suggested_fix` object (when present) contains the proposed replacement content. Review it with the user, then **apply** it with [`apply_grounding_fix`](#apply_grounding_fix) — or record a decision without applying anything using `update_ci_finding_status`.
+The `suggested_fix` object (when present) contains the proposed replacement content. Review it with the user, then **apply** it with [`apply_finding_fix`](#apply_finding_fix) — or record a decision without applying anything using `update_ci_finding_status`.
 
 **Parameters:**
 
@@ -887,7 +888,7 @@ The `suggested_fix` object (when present) contains the proposed replacement cont
 | `status` | string | `pending`, `acknowledged`, `dismissed`, or `resolved` |
 | `process_type` | string | Originating scan (`health_audit` or `web_freshness`) |
 | `finding_type` | string | The kind of issue detected |
-| `suggested_fix` | object \| null | Proposed fix: `field`, `new_value`, `context_item_id`. Apply it with `apply_grounding_fix` |
+| `suggested_fix` | object \| null | Proposed fix: `field`, `new_value`, `context_item_id`. Apply it with `apply_finding_fix` |
 | `context_item_ids` | array \| null | Context items this finding involves |
 | `created_at` | integer | Unix timestamp of creation |
 | `resolved_at` | integer \| null | Unix timestamp when resolved, or `null` |
@@ -910,7 +911,7 @@ Update the status of a Context Intelligence finding — **acknowledge** it, **di
 Status meanings:
 - `acknowledged` — seen, kept on the radar (still open).
 - `dismissed` — not relevant / won't fix — removes it from the actionable queue.
-- `resolved` — the underlying issue was fixed (records who resolved it and when). This records the resolution **only** — it does **not** apply the suggested fix. To actually apply it, use `apply_grounding_fix` (which resolves the finding for you on success).
+- `resolved` — the underlying issue was fixed (records who resolved it and when). This records the resolution **only** — it does **not** apply the suggested fix. To actually apply it, use `apply_finding_fix` (which resolves the finding for you on success).
 
 **Parameters:**
 
@@ -977,12 +978,12 @@ Three tools:
 |---|---|
 | `check_content_grounding` | Runs a scan on new or existing content |
 | `get_grounding_result` | Reads a scan's result |
-| `apply_grounding_fix` | Applies a finding's recommended fix |
+| `apply_finding_fix` | Applies a finding's recommended fix |
 
 **Two things to get right:**
 
 1. **Grounding is asynchronous.** `check_content_grounding` waits about 20 seconds inline; a fresh scan usually needs 120–150. If it comes back `running`, **poll `get_grounding_result` with the `scan_id`** — calling `check_content_grounding` again starts a *second*, redundant scan.
-2. **Review before applying.** Each finding carries its full `suggested_fix`. Show it to the user and get a decision. `apply_grounding_fix` writes to their library.
+2. **Review before applying.** Each finding carries its full `suggested_fix`. Show it to the user and get a decision. `apply_finding_fix` writes to their library.
 
 Grounding uses team Studio Credits — Marcora estimates the cost first and won't start a run the team's balance can't cover.
 
@@ -1052,7 +1053,7 @@ Read the two-pass grounding result of a scan (`supported`, `conflict`, `gap`, `n
 **Which id to pass — this matters:**
 
 - **`scan_id`** — reads that exact scan, whatever its status. **This is what you want when polling**: it always reports the run you started. For completed scans, it reads that scan's captured per-scan claims and completion-time finding statuses/counts (a frozen snapshot that stays unchanged even after later scans run or findings are dismissed or applied; if a cited source was later erased, it returns `Grounding result not found.`).
-- **`content_id`** (no `scan_id`) — reads the latest **completed** grounding for that document alongside its **live** finding statuses and summary counts. Good for "what's this document's grounding state right now": findings dismissed via `update_ci_finding_status` or resolved via `apply_grounding_fix` read as `dismissed` or `resolved` with updated counts immediately without re-scanning. It deliberately **skips a scan that is still running**, so it is the wrong call for polling: you would get the *previous* result back marked `complete`.
+- **`content_id`** (no `scan_id`) — reads the latest **completed** grounding for that document alongside its **live** finding statuses and summary counts. Good for "what's this document's grounding state right now": findings dismissed via `update_ci_finding_status` or resolved via `apply_finding_fix` read as `dismissed` or `resolved` with updated counts immediately without re-scanning. It deliberately **skips a scan that is still running**, so it is the wrong call for polling: you would get the *previous* result back marked `complete`.
 
 **Parameters:**
 
@@ -1078,7 +1079,7 @@ Read the two-pass grounding result of a scan (`supported`, `conflict`, `gap`, `n
 
 ---
 
-### `apply_grounding_fix`
+### `apply_finding_fix`
 
 Apply Marcora's recommended fix for one or more findings — "yes, do recommendation `<id>`".
 
@@ -1118,9 +1119,9 @@ You never compose the fix yourself. Every finding already stores its recommended
 - **finding_ids must be finding_id UUIDs** (400, tool error `isError: true`).
 - **context_item_overrides names a finding not in finding_ids** (400, tool error `isError: true`) — the override would be ignored, so it is rejected rather than silently dropped.
 - **You are not authorized to perform this action** (403) — applying requires an Admin or Creator role.
-- Per-finding failures (already resolved, not a grounding finding) arrive in `errors[]`, not as a thrown error.
+- Per-finding failures (already resolved, not a grounding/health-audit finding) arrive in `errors[]`, not as a thrown error; `web_freshness` and `impact_scan` findings return in `errors[]` pointing to `update_ci_finding_status`.
 - **Finding not found.** — per finding, in `errors[]`: a `finding_id` that is unknown or that you cannot read. That finding is skipped; the others still run.
-- **Marcora is already updating this document.** — per finding, in `errors[]`: another run on that document (for example the user's own Content Assistant request, or an earlier `apply_grounding_fix` call) is still in progress. Wait for it to finish, then retry those findings.
+- **Marcora is already updating this document.** — per finding, in `errors[]`: another run on that document (for example the user's own Content Assistant request, or an earlier `apply_finding_fix` call) is still in progress. Wait for it to finish, then retry those findings.
 - **Nothing was applied. This document has private source history** (an `isError` result) — a fix on such a document cannot update a context item in your reference library. The message names the next step that will work: call again with the same `finding_ids` and without `context_item_overrides` when that fixes the document itself; otherwise revise the document with `update_content`, then re-check.
 
 **Example prompts:**
@@ -1161,7 +1162,7 @@ Each entry in `findings[]`:
 
 | Field | Type | Description |
 |---|---|---|
-| `finding_id` | string (uuid) | Pass to `apply_grounding_fix` |
+| `finding_id` | string (uuid) | Pass to `apply_finding_fix` |
 | `type` | string | `conflict` or `gap` |
 | `subject` | string \| null | What the finding is about |
 | `statement` | string \| null | What the document says versus what the library says |
@@ -1231,21 +1232,30 @@ Returns targeting dimensions and their options for the current team. Dimensions 
 
 ### `learn_marcora_tools`
 
-Returns Marcora's guide to its own tools: what each Marcora object is, which tool fits which request, the order the tools chain in, and the mistakes to avoid. It carries the same guidance as the companion `marcora-mcp` skill, for AI assistants that don't have the skill installed. Your assistant calls it once before multi-step Marcora work, or when it's unsure which tool fits.
+Reads Marcora's workflow documentation and tool-picking guide. Call before multi-step Marcora work or whenever you are unsure which tool fits a workflow, what a parameter or status means, or how tools chain.
 
 Read-only: it reads no workspace data, changes nothing, and uses no credits.
+
+**Modes (pass at most one parameter — combining parameters is rejected):**
+- **`{}` (no parameters):** returns the Marcora Documentation table of contents (`mode: "docs_toc"`, `pages[]` with `slug`, `title`, `summary`).
+- **`page`:** returns one full Marcora Documentation page by slug (e.g. `"add-context-items"`), exact title, or UUID (`mode: "docs_page"`).
+- **`query`:** semantic search across Marcora Documentation returning up to 3 matching whole pages in full (`mode: "docs_query"`, <= 28,000 chars).
+- **`topic`:** returns a compact skill-guide section (`overview`, `choosing-tools`, `generate-content`, `projects-and-briefs`, `add-context`, `find-context`, `grounding`, `workflows`, `plans-and-playbooks`, `pitfalls`, `edge-cases`, `recipes`, or `glossary`).
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `topic` | string | No | The section to return. Omit for an overview (the object model, the context model, a which-tool table, and the list of topics). One of: `choosing-tools`, `generate-content`, `projects-and-briefs`, `add-context`, `find-context`, `grounding`, `workflows`, `plans-and-playbooks`, `pitfalls`, `edge-cases`, `recipes`, `glossary`. |
+| `page` | string | No | Workflow documentation page slug (from `{}`), exact title, or item UUID to read in full |
+| `query` | string | No | Natural-language query to retrieve up to 3 matching full documentation pages |
+| `topic` | string | No | Compact usage-guide section name: `overview`, `choosing-tools`, `generate-content`, `projects-and-briefs`, `add-context`, `find-context`, `grounding`, `workflows`, `plans-and-playbooks`, `pitfalls`, `edge-cases`, `recipes`, or `glossary` |
 
-**Output:** An object with `topic` (the section returned, or `overview`), `title`, `guide_version` (the matching skill version), `content` (the guidance, in markdown), and `topics` (every topic with a title and a one-line summary).
+**Output:** Returns `mode: "docs_toc"` (`provisioned`, `pages[]`), `mode: "docs_page"` (`page`, `title`, `content`), `mode: "docs_query"` (`provisioned`, `query`, `pages[]` with `page`, `title`, `content`, `score`), or compact topic output (`topic`, `title`, `guide_version`, `content`, `topics[]`).
 
 **Example prompts:**
 - "Before you start, check how Marcora's tools fit together"
-- "Which Marcora tool should I use to set a project brief?"
+- "Read the documentation page on `add-context-items`"
+- "Search Marcora docs for how grounding coverage works"
 
 ---
 
@@ -1595,7 +1605,7 @@ Poll the status of an async generation by `generation_id`. These flows produce a
 - `create_content` with a `blueprint_uuid` or `generation_mode: "multi_model"` (document generation), and `produce_plan`
 - `create_blueprint`, `create_blueprint_draft`, and `finalize_blueprint_draft` (blueprint creation and draft finalization)
 - `ask_content_assistant` (the in-document Content Assistant)
-- `apply_grounding_fix` (each job in `jobs[]` carries a `generation_id`, but jobs whose fixes land in the same document share one, because they are applied together in one run; poll each distinct `generation_id` once. It runs as a Content Assistant flow, so read `document_updated`; for a shared `generation_id` it covers every finding in that run)
+- `apply_finding_fix` (each job in `jobs[]` carries a `generation_id`, but jobs whose fixes land in the same document share one, because they are applied together in one run; poll each distinct `generation_id` once. It runs as a Content Assistant flow, so read `document_updated`; for a shared `generation_id` it covers every finding in that run)
 
 The response always includes `status`, `generation_id`, and `flow_type` (plus `error_message` when `status` is `"failed"` and `generation_mode` when known). `content` is `null` until the run finishes.
 
@@ -1603,7 +1613,7 @@ The response always includes `status`, `generation_id`, and `flow_type` (plus `e
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `generation_id` | string (uuid) | Yes | The generation ID returned by `create_content` (with `blueprint_uuid` or `generation_mode: "multi_model"`), `produce_plan`, `create_blueprint`, `create_blueprint_draft`, `finalize_blueprint_draft`, `ask_content_assistant`, or `apply_grounding_fix` |
+| `generation_id` | string (uuid) | Yes | The generation ID returned by `create_content` (with `blueprint_uuid` or `generation_mode: "multi_model"`), `produce_plan`, `create_blueprint`, `create_blueprint_draft`, `finalize_blueprint_draft`, `ask_content_assistant`, or `apply_finding_fix` |
 
 **Output:**
 
@@ -1611,7 +1621,7 @@ The response always includes `status`, `generation_id`, and `flow_type` (plus `e
 |---|---|---|
 | `generation_id` | string (uuid) | The generation ID being checked |
 | `status` | string | Status of this run. Document and blueprint generation (`blueprint`, `document`, `blueprint_item`, or `blueprint_draft` flow) terminates at `completed`; Content Assistant flow terminates at `complete`; `failed` on error. Intermediate values: `pending`, `processing`, `streaming` |
-| `flow_type` | string | `blueprint` (generated from a blueprint), `document` (generated without a blueprint, e.g. Multi-model `create_content` or `produce_plan` without a blueprint), `blueprint_item` (`create_blueprint` or `finalize_blueprint_draft`), `blueprint_draft` (`create_blueprint_draft`), or `ai_assistant` (`ask_content_assistant` / `apply_grounding_fix`) |
+| `flow_type` | string | `blueprint` (generated from a blueprint), `document` (generated without a blueprint, e.g. Multi-model `create_content` or `produce_plan` without a blueprint), `blueprint_item` (`create_blueprint` or `finalize_blueprint_draft`), `blueprint_draft` (`create_blueprint_draft`), or `ai_assistant` (`ask_content_assistant` / `apply_finding_fix`) |
 | `error_message` | string | Present when `status` is `"failed"`; explains why the background generation failed |
 | `generation_mode` | string | `quick` or `multi_model`. Omitted when not recorded |
 | `content` | object \| null | `null` until the run completes. Shape depends on `flow_type` (below) |
@@ -2462,13 +2472,13 @@ List the playbook cycles in the current team: active by default, or filtered by 
 
 ### `get_playbook_cycle`
 
-Read one cycle with its steps in order (including any steps added mid-cycle via `add_playbook_step`). Each step's `plan_uuid` is how you change it: to change a step's title, prompt, due date, assignee, typed owner, time of day, attach an existing document, or dismiss it, use `update_plan` with the step's `plan_uuid`; to complete it, `complete_playbook_step`; to rename the cycle or change its topic, `update_playbook_cycle`. Read-only.
+Read one cycle with its steps in order (including any steps added mid-cycle via `add_playbook_step`). Each step's `plan_uuid` is how you change it: to change a step's title, prompt, due date, assignee, typed owner, time of day, attach an existing document, or dismiss it, use `update_plan` with the step's `plan_uuid`; to complete or reopen it, `update_playbook_step_status`; to rename the cycle or change its topic, `update_playbook_cycle`. Read-only.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `run_id` | integer | Yes | Cycle id, from `list_playbook_cycles` / `instantiate_playbook`, or the trailing number of a cycle `link_url` |
 
-**Output:** `cycle` (same shape as a `list_playbook_cycles` row) and `steps`. Each step carries `position`, `plan_uuid`, `title`, `description`, `prompt` (the instructions), `stage`, `done`, `due_date`, `assigned_to` / `assigned_to_name`, `builds_on` (earlier steps it builds on), `document` (the produced document with link, or null), `step` (`kind`, `goes_out_date`, `reviewer`, `optional`, plus `owner_name`, `due_time`, and `goes_out_time` when set), `result` (recorded link / note once completed, or null) and `link_url`. Use a step's `plan_uuid` with `get_plan` for full detail or `complete_playbook_step` to finish it.
+**Output:** `cycle` (same shape as a `list_playbook_cycles` row) and `steps`. Each step carries `position`, `plan_uuid`, `title`, `description`, `prompt` (the instructions), `stage`, `done`, `due_date`, `assigned_to` / `assigned_to_name`, `builds_on` (earlier steps it builds on), `document` (the produced document with link, or null), `step` (`kind`, `goes_out_date`, `reviewer`, `optional`, plus `owner_name`, `due_time`, and `goes_out_time` when set), `result` (recorded link / note once completed, or null) and `link_url`. Use a step's `plan_uuid` with `get_plan` for full detail or `update_playbook_step_status` to finish or reopen it.
 
 **Example prompts:** "What's due next in the launch cycle?" · "What did step 2 produce?"
 
@@ -2533,36 +2543,23 @@ Position: right after `after_plan_uuid`, or at the end when omitted. `builds_on`
 
 ---
 
-### `complete_playbook_step`
+### `update_playbook_step_status`
 
-Mark a cycle step Complete and record the evidence: a result link and/or a short note (an `action` step needs BOTH), shown on the step in `get_playbook_cycle`. Works for steps that produce no document, which `update_plan` cannot complete. You must be able to edit the step (its assignee or creator). Calling it again on a step that is already Complete keeps its original `completed_at` / `completed_by`, but a newly supplied `result_url` or `note` **overwrites** the previously recorded one (the earlier value is not kept); omit them to leave the recorded result unchanged. Only a checklist step can be undone, with `reopen_playbook_step`, so only call this when the work is done. A Dismissed step is refused (409). Plans that are not cycle steps are refused (use `update_plan`).
+Update a playbook cycle step's completion status (`complete` or `reopen`) and record or clear evidence, shown on the step in `get_playbook_cycle`. Works for steps that produce no document, which `update_plan` cannot complete. You must be able to edit the step (its assignee or creator). Plans that are not cycle steps are refused (use `update_plan`).
+
+- **`action: "complete"`:** marks `content`, `checklist`, or `action` step Complete with optional `result_url` and `note` (**BOTH required for `action` steps**). Calling it again on a step that is already Complete keeps its original `completed_at` / `completed_by`, while newly supplied `result_url` or `note` overwrite previous values (omit them to keep what is recorded). Refuses Dismissed steps (409).
+- **`action: "reopen"`:** unticks a completed **checklist** step back to `Accepted` and clears completion evidence (`completed_at: 0`, `result_url: null`, `note: null`). Non-checklist steps are refused (409); `result_url` and `note` are rejected if sent. Reopening a step that is not Complete changes nothing.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `plan_uuid` | string (uuid) | Yes | The step's `plan_uuid`, from `get_playbook_cycle` or `list_my_playbook_steps` |
-| `result_url` | string | No | http(s) link to the result, e.g. a submission confirmation. Omit to keep what is recorded |
-| `note` | string | No | Note on what was done. Omit to keep what is recorded |
+| `action` | string | Yes | `complete` or `reopen` |
+| `result_url` | string | No | `http(s)` link to the result (`complete` only; **required** for `action` steps). Rejected on `reopen` |
+| `note` | string | No | Short note on what was done (`complete` only; **required** for `action` steps). Rejected on `reopen` |
 
 **Output:** `plan_uuid`, `title`, `stage`, `completed_at`, `completed_by`, `result_url`, `note`, `run_id`, `link_url`, `cycle_link_url`.
 
-**Example prompts:** "Mark the press-release step done, here's the confirmation page"
-
-
----
-
-### `reopen_playbook_step`
-
-Reopen a completed **checklist** step: it goes back to `Accepted` and its recorded result is cleared (the "untick" of `complete_playbook_step`). Only checklist steps can be reopened; any other step kind is refused (409). Reopening a step that is not Complete changes nothing. You must be able to edit the step (its assignee or creator).
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `plan_uuid` | string (uuid) | Yes | The step's `plan_uuid`, from `get_playbook_cycle` (its `step.kind` says whether it is a checklist step) |
-
-**Output:** `plan_uuid`, `title`, `stage`, `completed_at` (0 once reopened), `completed_by`, `result_url`, `note`, `run_id`, `link_url`, `cycle_link_url`.
-
-**Example prompts:** "I ticked that off by mistake, reopen it"
+**Example prompts:** "Mark the press-release step done, here's the confirmation page" · "I ticked that checklist step off by mistake, reopen it"
 
 ---
 
@@ -2570,7 +2567,7 @@ Reopen a completed **checklist** step: it goes back to `Accepted` and its record
 
 Rename a cycle and/or change its topic. Pass only what changes: `name` replaces the cycle name (it cannot be blank); `topic` replaces the topic (up to 4,000 characters; `null` or blank clears it). The topic is folded into the prompt of content steps generated afterwards, so steps already generated are not changed by it.
 
-To change a step's title, prompt, due date, assignee or to dismiss it, use `update_plan` with the step's `plan_uuid` (from `get_playbook_cycle`); to complete it, `complete_playbook_step`.
+To change a step's title, prompt, due date, assignee or to dismiss it, use `update_plan` with the step's `plan_uuid` (from `get_playbook_cycle`); to complete or reopen it, `update_playbook_step_status`.
 
 **Parameters:**
 

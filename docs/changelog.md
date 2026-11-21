@@ -2,6 +2,16 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## Unreleased (merged playbook step & finding fix tools, documentation search, collection-only filter)
+
+### Changed
+
+- **`update_playbook_step_status` (replaces `complete_playbook_step` + `reopen_playbook_step`):** single tool taking `action: "complete" | "reopen"`. `complete` marks `content`, `checklist`, or `action` steps Complete (requiring both `result_url` and `note` on `action` steps); `reopen` unticks completed `checklist` steps back to `Accepted` and clears completion evidence (rejects `result_url`/`note`).
+- **`apply_finding_fix` (replaces `apply_grounding_fix` + `apply_ci_finding_fix`):** single batch fix-application tool covering both content-grounding findings and Context Intelligence `health_audit` recommendations (`web_freshness` and `impact_scan` findings return in `errors[]` pointing to `update_ci_finding_status`).
+- **`learn_marcora_tools`:** upgraded with documentation modes — `{}` returns the Marcora Documentation table of contents (`docs_toc`), `page` reads a full page by slug/title/UUID (`docs_page`), `query` performs semantic search collapsed to <=3 full pages <=28,000 chars (`docs_query`), and `topic` serves one of the 13 compact usage-guide sections (`overview` + 12 topics).
+- **`get_relevant_context`:** adds optional `only_these_collections: true` flag to search strictly within specified positive-integer `collection_ids` (excluding the Reference Library; cannot combine with `project_id` or `calls`).
+- **Tool description trims:** trimmed all `brand` tool descriptions strictly under 2,048 characters (`0` tools >= 2,048c).
+
 ## 2026-11-20 (playbook action steps are a plain instruction)
 
 ### Skill → v0.8.5 · plugin → v1.3.4
