@@ -2173,7 +2173,7 @@ Fetch a single plan by UUID with full details including linked references, conte
 | `plan.stage` | string | Current stage |
 | `plan.source` | string | How the plan was created (immutable) |
 | `plan.prompt` | string | Content prompt pre-set for this plan |
-| `plan.blueprint_id` | string | Blueprint UUID, or null |
+| `plan.blueprint_id` | integer | Internal blueprint ID, or null |
 | `plan.project_id` | string | Project UUID, or null |
 | `plan.category_id` | integer | Content category ID, or null |
 | `plan.due_date` | string | Due date, or null |

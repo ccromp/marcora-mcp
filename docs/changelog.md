@@ -2,7 +2,7 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
-## Unreleased (merged playbook step & finding fix tools, documentation search, collection-only filter)
+## Unreleased (merged playbook step & finding fix tools, documentation search, collection-only filter, plan `blueprint_id` outputSchema)
 
 ### Changed
 
@@ -11,6 +11,7 @@ All notable changes to the Marcora MCP server will be documented in this file.
 - **`learn_marcora_tools`:** upgraded with documentation modes — `{}` returns the Marcora Documentation table of contents (`docs_toc`), `page` reads a full page by slug/title/UUID (`docs_page`), `query` performs semantic search collapsed to <=3 full pages <=28,000 chars (`docs_query`), and `topic` serves one of the 13 compact usage-guide sections (`overview` + 12 topics).
 - **`get_relevant_context`:** adds optional `only_these_collections: true` flag to search strictly within specified positive-integer `collection_ids` (excluding the Reference Library; cannot combine with `project_id` or `calls`).
 - **Tool description trims:** trimmed all `brand` tool descriptions strictly under 2,048 characters (`0` tools >= 2,048c).
+- **`create_plan`, `get_plan`, `update_plan`:** fixed `outputSchema` to declare `blueprint_id` as `["integer", "null"]` (matching the integer ID returned at runtime and sibling playbook tools, rather than `["string", "null"]`).
 
 ## 2026-11-20 (playbook action steps are a plain instruction)
 
