@@ -2780,7 +2780,7 @@ Create a new workflow template for the specified team (`team_id`). New workflows
 
 ### `update_workflow`
 
-Partial update of a workflow template — only the keys you send mutate; unspecified keys are preserved. Call `get_workflow` first to read the current values, then send the minimal diff. Only the workflow's creator (`created_by_user_id`) can update it; anyone else gets an access-denied error.
+Partial update of a workflow — only the keys you send mutate; unspecified keys are preserved. Call `get_workflow` first to read the current values, then send the minimal diff. Who can update it: for a workflow set up from a template, the owner or a team admin if it is shared with the team, only the owner if it is private, and it changes through its setup (a direct edit returns `setup_required`); for any other workflow, only its creator (`created_by_user_id`).
 
 > **Status:** `{ workflow_id, status: "active" }` sets it Active; `{ workflow_id, status: "inactive" }` sets it Inactive (its schedule is kept exactly as it was); `{ workflow_id, status: "archived" }` soft-deletes. Any other value is refused and nothing is saved — there is no `paused` workflow status. Setting a workflow Active does not turn its schedule On.
 
@@ -2811,7 +2811,7 @@ Partial update of a workflow template — only the keys you send mutate; unspeci
 
 ### `run_workflow`
 
-Manually run a workflow now. Creates a run record and starts an automated agent session that carries out the workflow's steps, using Marcora tools and your connected apps; the session is instructed to use only the tools in the workflow's `allowed_tools`. Inspect the returned `status` to know what happened. Only the workflow's creator (`created_by_user_id`) can run it manually; anyone else gets an access-denied error. Only an **Active** workflow can run; an Inactive or archived one is refused. The schedule plays no part in a manual run.
+Manually run a workflow now. Creates a run record and starts an automated agent session that carries out the workflow's steps, using Marcora tools and your connected apps; the session is instructed to use only the tools in the workflow's `allowed_tools`. Inspect the returned `status` to know what happened. Who can run it: for a workflow set up from a template and shared with the team, any team member; if it is private, only its owner; for any other workflow, only its creator (`created_by_user_id`). Only an **Active** workflow can run; an Inactive or archived one is refused. The schedule plays no part in a manual run.
 
 > **Check `status`:** `running` → dispatch succeeded, the agent session is live; `failed` → dispatch failed, read `error_reason` for the cause; `skipped` → the runner decided no work was needed (rare for manual runs).
 
