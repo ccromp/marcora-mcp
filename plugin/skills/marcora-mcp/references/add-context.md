@@ -1,0 +1,60 @@
+# Add reference context
+
+Read this before calling `add_context`: saving pasted text, a one-off URL snapshot, or a refreshable web page to the Reference Library or a project.
+
+---
+
+### Workflow 3 — Add reference context to the user's library
+
+**Goal.** Persist a reference document (brand guidelines, persona research, competitor analysis, product spec, customer interview) so future generations can draw on it.
+
+**Preconditions.** None.
+
+**Steps.**
+1. **Disambiguate scope.** Ask if it's not obvious from context:
+   - Top-level (Reference Library) → available across all projects (`collection_ids: []`, `collection_id: null`, `project_id: null`).
+   - Collection-organized (`collection_id` / `collection_ids`) and/or project-scoped (`project_id`) → project and collection placement are independent on ordinary items, so an item can belong to a project, to one or more collections, or to both at once.
+   - Project brief → strategic anchor for a project (use `references/projects-and-briefs.md`, not this one).
+   - Document-specific (one-off context for a single generation) → don't store; pass `collection_ids` or `dimension_option_ids` on `create_content` instead.
+2. If the user wants it in a collection: `marcora:list_context_collections`. Use an existing collection if a fit; otherwise `marcora:create_context_collection`.
+3. `marcora:add_context` with `name` and the body, plus optional `collection_id` / `collection_ids` (pass `collection_ids` to file an item in multiple shared team collections at once, where `collection_ids[0]` is the primary collection unless `collection_id` is also set, or omit both to keep the item in the Reference Library — an item is either in the Reference Library or in one or more collections, never both) and/or optional `project_id` (project and collection placement are independent on ordinary items and on `update_context`, so an item can belong to a project and to one or more collections at once). Pick the body argument based on what you have — provide **exactly one** of these four (zero or more than one → 400):
+   - **`content`** — paste markdown directly. Best for short or hand-authored material.
+   - **`import_url`** — pass a public URL imported **once**: Marcora fetches it and converts the page to clean markdown, stored as a **static snapshot** that cannot be refreshed. Use for one-off sources — a blog post, a presigned-link export from Google Docs or a connected-app sandbox, etc. Don't `web_browse`/`web_fetch` it into your conversation first just to forward the bytes.
+   - **`connected_webpage_url`** — pass a URL to track as a live, refreshable **web page** (`content_type: "webpage"`): the URL is stored so it can be re-pulled later via `update_context(team_id, context_item_id, refresh_webpage=true)` or the app's refresh button. Use this for the customer's own pages and anything you'll want to keep current. Dedupes by URL: re-adding a tracked URL updates that item in place and **overwrites** its stored content with the fresh fetch (so `add_context` is marked destructive). **Admin/Creator only** — collaborators are rejected.
+   - **`import_from`** — bring in calls from a call-recording app the user has connected: `import_from: { toolkit, call_ids }`, with `toolkit` one of `fathom`, `gong`, `fireflies`, `googlemeet` or `wispr_flow_mcp` and `call_ids` 1 to 10 of that app's own call ids (find them with the app's own list or search tool in your session, then pass them all in this ONE call). Marcora fetches and cleans each transcript itself through the user's own connection, so **never retype or paste a transcript**, and no transcript text comes back. Use it instead of the other three, and without `as_call`, `call_date`, `call_kind` or `call_company`. `audience`, `project_id` and `collection_id` work as for calls: Only me and filed in Calls unless you say otherwise (a Collaborator must pass `project_id`; choose one of `project_id` or `collection_id`); `name` is ignored because each call keeps its own title. The result lists every call, in order, as `imported`, `duplicate`, `not_ready` (the app has no transcript yet; try later) or `failed`, with where it was filed and who can see it. If the app is not connected, the error names the app and carries its Connect link: hand the user that link and retry once they have connected. When at least one call imported, the result carries `automatic_import_link`: offer it so the user can set up automatic import; it opens the rule editor with these choices filled in and nothing is saved until the user saves it.
+
+Google Meet and Wispr Flow imports are Beta. For Google Meet, pass the bare ID from conferenceRecords/{id}, or doc:{document_id} for a saved transcript. Recent discovery is organizer-only within 30 days; a known conference record still requires access. Saved transcripts require your own active Google Meet and Google Docs connections in the same team; discovery also requires Google Drive and searches by document creation window. The document must contain a date and timestamped speaker-labelled transcript, not just Gemini notes. Meet supplies no original meeting title or participant emails; automatic Meet imports stay Only me and do not support attendance filters. For Wispr Flow, use a meeting ID from search: recorded meetings only, not dictation or scratchpad. Wispr attendee search uses calendar invitees; narrow a search that reaches 1,000 matches.
+
+**Is the app connected? Use `find_app`.** `marcora:find_app` (read-only) looks up the apps Marcora offers by name (for example "Gong") or by what they do (for example "call recordings"). Call it BEFORE telling the user you can't reach an app, and before sending them to connect one; say only what it returns, and never claim an app is offered unless it appears in the result. Each match carries the user's own `connection_state` (`connected`, `not_connected`, or `expired`: it worked before and needs renewing), `brings_in_calls` (whether `import_from` can bring in its calls) and a `connect_link` to offer for an app that is not connected (it opens the Integrations page on that app; nothing connects until the user acts). Present `connect_link` exactly as returned. Connected Apps and Webhooks require a **creator** or **admin** seat (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*).
+
+**Team audience on ordinary items.** When the user asks for an ordinary item to be saved for the team, pass `audience: "team"` (on `content`, `import_url` or `connected_webpage_url`), even with `collection_ids` / `collection_id` or `project_id`. It is accepted when the item will be team-visible. In a private collection or private project it is refused with a readable tool error (`isError: true`) and nothing is saved; a shared collection, a team-visible project or the Reference Library accepts it. The same call without `audience` would save into the private collection or project, where only its owner or members can see the item, so a refused team save is never saved privately. (`audience: "only_me"` applies to calls only and is rejected on an ordinary item.) Every successful `add_context` save returns `audience` (`"team"`, `"project_members"`, or `"only_me"`): who can actually see the item, whether or not `audience` was passed.
+
+**Import wait.** `import_url` and `connected_webpage_url` imports wait up to about 25 seconds. If the page loads in that time the result has `import_status: "ready"` (the body is not in the result; `get_context_item` returns it). If the page can't be read — including binary/undecoded bodies (`This page has too little readable text to save as a context item. Nothing was added.`) or DNS/unreachable domains (`This site could not be reached. Check the URL and try again. Nothing was added.`) — the call returns a readable tool error (`isError: true`) and nothing is added. If the import is still running after 25 seconds, the result has `import_status: "processing"`: poll `get_context_item` until it is `ready`.
+
+**Plan capacity.** When the team's plan limits context items, the `add_context` result carries `capacity` (`used`, `limit`, `remaining`); on a plan with no limit it is absent. At the limit, a call that would create an item (`content`, `import_url` or a new web page) returns an error that states the limit; deleting an item makes room. Re-adding a `connected_webpage_url` the team already tracks still refreshes it.
+
+**Output to user.** "Added: [link]. Want to use this in a content generation now?"
+
+---
+
+## Standing call instructions (`list_call_instructions`, `add_call_instruction`, `update_call_instruction`, `remove_call_instruction`)
+
+When the user states a lasting preference about how Marcora handles their calls — rather than a one-off request — manage their standing call instructions (the same list they edit in Settings):
+
+- **`list_call_instructions`** — List the user's saved call instructions (`scope: "all"` default, `"default"` for workspace-wide defaults, or `automatic_call_import_id` for one automatic call import) plus their `automatic_call_imports` (`{ automatic_call_import_id, name, enabled }`) and per-scope `limits`. Call it before adding one (to avoid duplicates) or to resolve an `instruction_id` to edit or remove.
+- **`add_call_instruction`** — Save a standing rule of one of two kinds:
+  - `kind: "guidance"` (`text`, max 300 chars): steers what Marcora suggests from calls (e.g. *"never suggest content plans about pricing sheets"*, *"only suggest case studies from calls"*, *"use our One-Pager blueprint for one-pagers"*).
+  - `kind: "word_fix"` (`find` max 100 chars, `replace` max 200 chars; case-insensitive match): corrects a recurring transcription error (e.g. find `"Market Core"`, replace `"MarketCore"`).
+  - Applies to all of the user's calls by default (`scope: "default"`); pass `automatic_call_import_id` (from `list_call_instructions`) to limit it to one automatic call import. Tell the user exactly what was saved, and note that instructions apply to calls processed from now on (already-imported calls are not changed).
+- **`update_call_instruction`** — Edit `text` (`guidance`) or `find` / `replace` (`word_fix`), or switch an instruction off (`enabled: false`) or back on (`enabled: true`) without losing it. To move an instruction to a different automatic call import, remove it and add it again.
+- **`remove_call_instruction`** — Permanently remove an instruction by `instruction_id` (`"stop doing that"`, `"forget that fix"`). Confirm which instruction if the user's wording could match more than one; to pause an instruction while keeping it, use `update_call_instruction(team_id, instruction_id, enabled=false)` instead.
+
+---
+
+## E19 — Multi-collection context placement (`collection_ids`, `add_collection_id`, `remove_collection_id`)
+
+**Symptom.** Assigning a collection removes an item from the top-level Reference Library, or `update_context(team_id, context_item_id, collection_ids=[...])` replaces existing collection memberships when you only meant to attach one more collection.
+
+**Cause.** Reference Library (`collection_ids: []`, `collection_id: null`) and collections (`collection_ids` ordered array with `collection_id` primary, plus `collections` `{id, name}` entries) are mutually exclusive. On `update_context`, `collection_ids` replaces the full collection set; `collection_ids: []` or `collection_id: null` / `0` returns the item to the Reference Library.
+
+**What to do.** Pass `add_collection_id` or `remove_collection_id` on `marcora:update_context` to attach or detach one collection without replacing other memberships; use `collection_ids` only for full replacement.

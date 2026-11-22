@@ -1,0 +1,18 @@
+name: Check skill copies
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - release/next
+
+jobs:
+  check-skill-copies:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify plugin and Cursor skill copies match skill/marcora-mcp
+        run: bash scripts/check-skill-copies.sh
