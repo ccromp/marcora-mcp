@@ -184,9 +184,9 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Plans & Playbooks | `create_playbook` | Author a reusable playbook of plan items |
 | Plans & Playbooks | `create_playbook_from_plans` | Capture existing plans as a playbook |
 | Plans & Playbooks | `update_playbook` | Rename, re-describe, or restructure a playbook |
-| Plans & Playbooks | `instantiate_playbook` | Run a playbook into a cycle of plans (optionally anchored to a date, with a topic) |
-| Plans & Playbooks | `list_playbook_suggestions` | List call-detected playbook suggestions (`suggested`, `started`, `dismissed`) |
-| Plans & Playbooks | `dismiss_playbook_suggestion` | Dismiss a call-detected playbook suggestion (optionally saving a call rule) |
+| Plans & Playbooks | `instantiate_playbook` | Run a playbook into a cycle of plans (optionally anchored to a date, with a topic, or from a `suggestion_id`) |
+| Plans & Playbooks | `list_playbook_suggestions` | List playbook suggestions (`calls` default; `include: "all"` adds workflow suggestions) |
+| Plans & Playbooks | `dismiss_playbook_suggestion` | Dismiss a call or workflow playbook suggestion (optionally saving a call rule for call suggestions) |
 | Plans & Playbooks | `list_playbook_cycles` | List running playbook cycles with progress |
 | Plans & Playbooks | `get_playbook_cycle` | Read one cycle with its ordered steps |
 | Plans & Playbooks | `list_my_playbook_steps` | List open playbook steps assigned to you (or to a typed `owner_name`), soonest due first |

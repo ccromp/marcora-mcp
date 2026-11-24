@@ -2427,7 +2427,7 @@ Run a playbook: create one content plan per playbook item, in order, as a batch.
 | `targeting_dimension_ids` | integer[] | No | Run-wide targeting dimension options applied to created content steps for this run (beats template defaults; `[]` clears template defaults for the run; overridden per step by `step_overrides`) |
 | `context_collection_ids` | integer[] | No | Run-wide context collections applied to created content steps for this run (beats template defaults; `[]` clears template defaults for the run; overridden per step by `step_overrides`) |
 | `step_overrides` | array | No | Per-step overrides (`[{ item_id, owner?, prompt?, blueprint_id?, targeting_dimension_ids?, context_collection_ids? }]`; precedence: step override > run-wide > template default; nothing saved on template). Any step kind accepts `owner` (`{ user_id }` or `{ name }`; changing owner or setting typed `name` turns `do_on_date` off, while keeping the same member owner keeps it on). Only content steps accept `prompt` (non-blank; `{Variable}` filled; blank prompts refused), `blueprint_id` (UUID, integer, or `null`), `targeting_dimension_ids`, or `context_collection_ids` (passing content-only fields on checklist/action steps is refused) |
-| `suggestion_id` | string (uuid) | No | Start a call-detected playbook suggestion from `list_playbook_suggestions` (starts uncovered steps) |
+| `suggestion_id` | string (uuid) | No | Start a call or workflow playbook suggestion from `list_playbook_suggestions` (call suggestions start uncovered steps; workflow suggestions lock workflow-prefilled variables and allow passing additional variables; replays return the started cycle) |
 | `skip_item_ids` | integer[] | No | Ids (from `get_playbook`) of OPTIONAL steps to leave out of this cycle. A step that is not optional is refused, and at least one step must remain |
 | `include_item_ids` | integer[] | No | Ids (from `get_playbook`) of OFF-BY-DEFAULT (`off_by_default`) steps to include in this running playbook. Any off-by-default step not named here is left out, and any `builds_on` link to a left-out step is dropped. Unknown IDs are refused |
 
@@ -2440,6 +2440,8 @@ Run a playbook: create one content plan per playbook item, in order, as a batch.
 | `run` | object | The created cycle: `id`, `name` (auto-named `"<playbook> — <Mon YYYY>"` unless you passed a name), `context` (the `topic` you passed, or null), `anchor_date`, `project_id`, `project_name`, and `link_url` (`https://app.marcora.ai/runs/{playbook_run_uuid}`) — share it to hand the user their new cycle |
 | `created_count` | integer | Number of plans created (one per playbook item) |
 | `plans` | array | The created content plans (same shape as `create_plan` / `get_plan`), each with its own `link_url` (`https://app.marcora.ai/plans/{plan_uuid}`). Stage `Accepted`, source `playbook` |
+| `suggestion` | object | Present when started via `suggestion_id`: updated call or workflow suggestion object (`status: "started"`) |
+| `covered_plan_uuids` | uuid[] | Present when started via `suggestion_id`: plan UUIDs already covering steps in a call suggestion's initiative (empty `[]` for workflow suggestions) |
 
 **Example prompts:**
 - "Run my launch playbook"
@@ -2449,37 +2451,40 @@ Run a playbook: create one content plan per playbook item, in order, as a batch.
 
 ### `list_playbook_suggestions`
 
-Lists call-detected playbook suggestions in the team (`suggested`, `started`, `dismissed`). Read-only. Each row includes the detected `initiative`, matching `playbook`, source `call`, `supporting_quote`, extracted `variables`, and optional `anchor_date`.
+Lists playbook suggestions visible to the caller in the team (`suggested`, `started`, `dismissed`). Read-only. By default (`include` omitted or `"calls"`), returns call-detected suggestions in the legacy shape (`initiative`, `playbook`, `call`, `supporting_quote`, `coverage`, `variables`, and optional `anchor_date`). Pass `include: "all"` to see workflow-suggested playbooks alongside call suggestions (adding `type` and `source` on every row, with workflow rows carrying `workflow`, `competitor`, `change_kind`, and `evidence`), or `include: "workflows"` for workflow suggestions only. To start a suggestion, resolve `playbook.playbook_uuid` via `list_playbooks` to its numeric `playbook_id` and pass both `playbook_id` and `suggestion_id` to `instantiate_playbook`.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
-| `status` | string | No | Filter: `suggested` (default), `started`, `dismissed`, or `all` |
+| `status` | string | No | Filter: `suggested` (default), `started`, or `dismissed` |
+| `include` | string | No | `"calls"` (default, call-detected suggestions only in the legacy shape), `"all"` (call and workflow suggestions with `type` and `source`), or `"workflows"` (workflow suggestions only; cannot combine with `call_context_item_id`) |
+| `call_context_item_id` | string (uuid) | No | Filter call suggestions to one call transcript's `context_item_id` (cannot combine with `include: "workflows"`) |
 | `limit` | integer | No | Page size, 1–50 (default 20) |
 | `cursor` | string | No | Opaque pagination cursor from `next_cursor` |
 
-**Output:** `suggestions[]` (each: `id`, `initiative`, `playbook`, `call`, `visibility`, `variables`, `anchor_date`, `supporting_quote`, `status`, `run`, `created_at`, `updated_at`) and `next_cursor`.
+**Output:** `suggestions[]` and `next_cursor`. Call rows carry `id`, `initiative`, `playbook`, `call`, `visibility`, `variables`, `anchor_date`, `supporting_quote`, `coverage`, `status`, `run`, `created_at`, `updated_at` (plus `type: "call"` and `source` when `include: "all"`). Workflow rows carry `id`, `type: "workflow"`, `source`, `workflow` (`{ id, name, run_id }`), `competitor`, `change_kind` (`"price" | "plan" | "launch"`), `evidence` (`{ line, url, page }`), `playbook`, `visibility`, `variables`, `anchor_date: null`, `status`, `run`, `created_at`, `updated_at`.
 
 **Example prompts:**
-- "Any playbook suggestions from our recent customer calls?"
+- "Any playbook suggestions from our recent calls or workflows?"
+- "Show workflow-suggested playbooks to run"
 
 ---
 
 ### `dismiss_playbook_suggestion`
 
-Dismiss a call-detected playbook suggestion so that initiative will not be suggested again. Optionally pass `instruction: { text }` (1–300 chars) to also save a standing call-guidance rule for future calls. Already-started suggestions are refused (409).
+Dismiss a call or workflow playbook suggestion so it will not be suggested again. Optionally pass `instruction: { text }` (1–300 chars) on a call suggestion to save a standing call-guidance rule for future calls (`instruction` is ignored for workflow suggestions). Already-started suggestions are refused (409).
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
-| `suggestion_id` | string (uuid) | Yes | UUID of the suggestion from `list_playbook_suggestions` |
-| `instruction` | object | No | Optional `{ text }` standing call-guidance rule saved atomically on first dismissal |
+| `suggestion_id` | string (uuid) | Yes | UUID of the call or workflow suggestion from `list_playbook_suggestions` |
+| `instruction` | object | No | Call suggestions only: optional `{ text }` standing call-guidance rule saved atomically on first dismissal (ignored for workflow suggestions) |
 
-**Output:** `suggestion` (updated suggestion object) and `team` (`{ id, name }`).
+**Output:** `suggestion` (updated call or workflow suggestion object) and `team` (`{ id, name }`).
 
 **Example prompts:**
 - "Dismiss that newsletter playbook suggestion"
