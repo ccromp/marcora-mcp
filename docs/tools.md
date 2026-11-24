@@ -1721,6 +1721,7 @@ Retrieves the full markdown body of a specific document by its `content_id` (UUI
 | `category` | object/null | Content category, or null if not categorized |
 | `visibility` | string | Visibility setting (e.g. `private`, `team`) |
 | `link_url` | string | Direct URL to view in Marcora |
+| `published_copies` | array | Connected app copies this document is published or linked to (`workflow_id`, `destination_name`, `app`, `external_url`, `label`, `state`, `edited_since_published`, `last_published_at`; empty array if none) |
 
 **Example prompts:**
 - "Summarize what my latest case study says about pricing"
@@ -1783,6 +1784,75 @@ Update a content document by `content_id`. Partial-update semantics — every fi
 - "Add this doc to the Q4 GTM project"
 - "Rename this document to 'Acme Pricing One-Pager'"
 - "Replace the body of my pricing one-pager with the markdown above"
+
+---
+
+### `publish_content`
+
+Check publish status, publish a content document to a connected app destination, update all linked copies, or link an existing external copy (`mode`: `status`, `publish`, `update_everywhere`, or `link`).
+
+> **Setup is app-only:** publish destinations can only be set up in the Marcora app (`https://app.marcora.ai/workflows`), not over MCP. Collaborators are refused.
+
+> **First-run approval & `publish_unrecorded`:** when a publish is `awaiting_approval`, it waits for a person to approve in Marcora (`link_url`). Do **not** retry or publish again. When a publish reports `publish_unrecorded` (sent to the app but not recorded), do **not** publish again; link the existing copy (`mode: "link"` or in Marcora).
+
+> **Polling:** after `status: "started"`, poll `publish_content` with `mode: "status"` and read each destination's `last_run` (`status`, `error_reason`, `error_summary`, `can_cancel`) and `link`.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
+| `content_id` | string (uuid) | Yes | UUID of the content document to check or publish |
+| `mode` | string | Yes | `status`, `publish`, `update_everywhere`, or `link` |
+| `workflow_id` | string (uuid) | No | Destination workflow UUID (from `mode: "status"`). Required for `publish` and `link`; not accepted for `status` or `update_everywhere` |
+| `confirm_private_document` | boolean | No | Set `true` only after the document owner explicitly confirms publishing a private document to a team destination. Never retry after `private_document_owner_required` |
+| `decision` | string | No | `mode: "publish"` only, after `needs_decision` (`outside_edit`): `skip` or `replace` |
+| `new_copy` | boolean | No | `mode: "publish"` only, after `blocked` (`already_sent` or `created_unlinked`): set `true` only if the user wants a new copy while keeping the old link as history |
+| `reference` | string | No | `mode: "link"` only: the existing external copy's HTTPS URL or copy ID (destination confirmer only) |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `mode` | string | Operation that ran |
+| `content_id` | string (uuid) | Document UUID |
+| `link_url` | string | Direct URL to open the document in Marcora |
+| `team` | object | `{ id, name }` of the team the call ran in |
+| `workflow_id` | string (uuid) | `publish` and `link` modes: the destination |
+| `status` | string | `publish` mode: `started`, `needs_decision`, `blocked`, or `skipped`. `link` mode: `linked` |
+| `awaiting_approval` | boolean | `started`: `true` when the run is waiting for first-run approval in Marcora |
+| `first_run_state` | string | `started`: the destination's first-run approval state, when known |
+| `run` | object | `started`: run summary (`id`, `workflow_template_id`, `status`, `trigger_type`, `error_reason`, `error_summary`, `result_summary`, `link_url`) |
+| `reason` | string | `needs_decision` (`outside_edit`) or `blocked` (`already_sent`, `created_unlinked`, `publish_unrecorded`) |
+| `choices` | array | `needs_decision`: the available choices (`skip`, `replace`) |
+| `outside_edit` | object | `needs_decision`: `state`, `changed_at`, `changed_by`, `checked_at` |
+| `offer` | string | `blocked`: suggested follow-up (`new_copy` or `link_existing`) |
+| `message` | string | `blocked`: plain-language explanation |
+| `is_private`, `is_owner` | boolean | `status` mode: privacy and ownership of the document |
+| `published_to` | array | `status` mode: the document's current published copies. Each has `workflow_id`, `name`, `app`, `account` (`name`, `is_you`), `can_publish`, `is_confirmer`, `first_run`, `last_run`, `can_detect_outside_edits`, `can_detect_sent` and a `link` (`publication_id`, `state`, `external_url`, `label`, `last_published_at`, `edited_since_published`, `outside_edit`) |
+| `destinations` | array | `status` mode: available destinations. Each has `workflow_id`, `name`, `app`, `account` (`name`, `is_you`), `can_publish`, `is_confirmer`, `first_run`, `last_run`, `can_detect_outside_edits`, `can_detect_sent` and `has_link` |
+| `last_run` | object \| null | Inside `published_to` and `destinations` entries: the latest run for that destination (`id`, `status`, `error_reason`, `error_summary`, `requested_by` (`name`), `requested_at`, `can_cancel`, `link_url`), or `null` |
+| `setup_url`, `setup_note` | string | `status` mode: where destinations are set up (Marcora app only) |
+| `results` | array | `update_everywhere` mode: one outcome per destination (same shape as `publish` outcomes) |
+| `failed` | array | `update_everywhere` mode: per-destination failures (`workflow_id`, `error`, optional `reason`) |
+| `publication_id` | string (uuid) | `link` mode: the created publication |
+| `external_url` | string \| null | `link` mode: the linked external URL, or `null` when only an ID was linked |
+| `next_step` | string | Actionable guidance for the caller |
+
+All timestamps in the output are ISO 8601 strings.
+
+**Errors.** In `status`, `publish` and `link` modes, a refusal comes back as an `isError` result; the machine code is `structuredContent.reason` (not an HTTP status):
+- `private_document_needs_confirmation`: the document is private. Ask its owner to confirm, then repeat with `confirm_private_document: true`.
+- `private_document_owner_required`: only the document owner can confirm publishing a private document. Do not retry.
+- `access_denied`: Collaborators and callers without access are refused.
+- Invalid or missing parameters for the chosen `mode` come back as a plain `isError` message.
+
+In `update_everywhere` mode, the same private-document refusals are not top-level errors: they are reported per destination in `failed[]` (`workflow_id`, `error`, and `reason` set to `private_document_needs_confirmation` or `private_document_owner_required`), and the call itself succeeds, so check `failed[]`. Parameter errors and `access_denied` still return an `isError` result.
+
+**Example prompts:**
+- "Check where my launch post is published"
+- "Publish this document to our Google Docs destination"
+- "Update every published copy of this document"
 
 ---
 

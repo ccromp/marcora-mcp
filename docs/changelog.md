@@ -2,6 +2,16 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## Unreleased
+
+### Added
+
+- **`publish_content`:** check publish status and available destinations (`mode: "status"`), publish or update a document to a connected app destination (`mode: "publish"`), update every linked copy (`mode: "update_everywhere"`), or link an existing external copy (`mode: "link"`). Outcomes come back as data: `started` (poll with `mode: "status"`), `needs_decision` (`outside_edit`: `skip` or `replace`), `blocked` (`already_sent`, `created_unlinked`, `publish_unrecorded`) and `skipped`; a run waiting on first-run approval reports `awaiting_approval`. Refusals (private document, Collaborator) come back as `isError` results with a `reason` in `structuredContent`; in `update_everywhere` mode, private-document refusals are reported per destination in `failed[]` instead. Destinations are set up in the Marcora app, not over MCP.
+
+### Changed
+
+- **`get_content` `published_copies`:** `get_content` now includes an additive `published_copies` array listing each connected app copy the document is currently published or linked to (`workflow_id`, `destination_name`, `app`, `external_url`, `label`, `state`, `edited_since_published`, `last_published_at`).
+
 ## 2026-11-24 (HTML cleaning on context content, source labels & collection headers, get_playbook_cycle run_id)
 
 ### Skill → v0.8.7 · plugin → v1.3.7
