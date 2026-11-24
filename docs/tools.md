@@ -1822,15 +1822,16 @@ Check publish status, publish a content document to a connected app destination,
 | `status` | string | `publish` mode: `started`, `needs_decision`, `blocked`, or `skipped`. `link` mode: `linked` |
 | `awaiting_approval` | boolean | `started`: `true` when the run is waiting for first-run approval in Marcora |
 | `first_run_state` | string | `started`: the destination's first-run approval state, when known |
-| `run` | object | `started`: run summary (`id`, `status`, `error_reason`, `error_summary`, `result_summary`, `link_url`) |
+| `run` | object | `started`: run summary (`id`, `workflow_template_id`, `status`, `trigger_type`, `error_reason`, `error_summary`, `result_summary`, `link_url`) |
 | `reason` | string | `needs_decision` (`outside_edit`) or `blocked` (`already_sent`, `created_unlinked`, `publish_unrecorded`) |
 | `choices` | array | `needs_decision`: the available choices (`skip`, `replace`) |
 | `outside_edit` | object | `needs_decision`: `state`, `changed_at`, `changed_by`, `checked_at` |
 | `offer` | string | `blocked`: suggested follow-up (`new_copy` or `link_existing`) |
 | `message` | string | `blocked`: plain-language explanation |
 | `is_private`, `is_owner` | boolean | `status` mode: privacy and ownership of the document |
-| `published_to` | array | `status` mode: the document's current published copies, each with its destination, `first_run`, `last_run` and a `link` (`state`, `external_url`, `label`, `last_published_at`, `edited_since_published`, `outside_edit`) |
-| `destinations` | array | `status` mode: available destinations (`workflow_id`, `name`, `app`, `account`, `can_publish`, `is_confirmer`, `first_run`, `last_run`, `has_link`) |
+| `published_to` | array | `status` mode: the document's current published copies. Each has `workflow_id`, `name`, `app`, `account` (`name`, `is_you`), `can_publish`, `is_confirmer`, `first_run`, `last_run`, `can_detect_outside_edits`, `can_detect_sent` and a `link` (`publication_id`, `state`, `external_url`, `label`, `last_published_at`, `edited_since_published`, `outside_edit`) |
+| `destinations` | array | `status` mode: available destinations. Each has `workflow_id`, `name`, `app`, `account` (`name`, `is_you`), `can_publish`, `is_confirmer`, `first_run`, `last_run`, `can_detect_outside_edits`, `can_detect_sent` and `has_link` |
+| `last_run` | object \| null | Inside `published_to` and `destinations` entries: the latest run for that destination (`id`, `status`, `error_reason`, `error_summary`, `requested_by` (`name`), `requested_at`, `can_cancel`, `link_url`), or `null` |
 | `setup_url`, `setup_note` | string | `status` mode: where destinations are set up (Marcora app only) |
 | `results` | array | `update_everywhere` mode: one outcome per destination (same shape as `publish` outcomes) |
 | `failed` | array | `update_everywhere` mode: per-destination failures (`workflow_id`, `error`, optional `reason`) |
@@ -1840,11 +1841,13 @@ Check publish status, publish a content document to a connected app destination,
 
 All timestamps in the output are ISO 8601 strings.
 
-**Errors** (returned as an `isError` result; the machine code is `structuredContent.reason`, not an HTTP status):
+**Errors.** In `status`, `publish` and `link` modes, a refusal comes back as an `isError` result; the machine code is `structuredContent.reason` (not an HTTP status):
 - `private_document_needs_confirmation`: the document is private. Ask its owner to confirm, then repeat with `confirm_private_document: true`.
 - `private_document_owner_required`: only the document owner can confirm publishing a private document. Do not retry.
 - `access_denied`: Collaborators and callers without access are refused.
 - Invalid or missing parameters for the chosen `mode` come back as a plain `isError` message.
+
+In `update_everywhere` mode, the same private-document refusals are not top-level errors: they are reported per destination in `failed[]` (`workflow_id`, `error`, and `reason` set to `private_document_needs_confirmation` or `private_document_owner_required`), and the call itself succeeds, so check `failed[]`. Parameter errors and `access_denied` still return an `isError` result.
 
 **Example prompts:**
 - "Check where my launch post is published"

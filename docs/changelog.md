@@ -6,7 +6,7 @@ All notable changes to the Marcora MCP server will be documented in this file.
 
 ### Added
 
-- **`publish_content`:** check publish status and available destinations (`mode: "status"`), publish or update a document to a connected app destination (`mode: "publish"`), update every linked copy (`mode: "update_everywhere"`), or link an existing external copy (`mode: "link"`). Outcomes come back as data: `started` (poll with `mode: "status"`), `needs_decision` (`outside_edit`: `skip` or `replace`), `blocked` (`already_sent`, `created_unlinked`, `publish_unrecorded`) and `skipped`; a run waiting on first-run approval reports `awaiting_approval`. Private-document refusals and Collaborator refusals come back as `isError` results with a `reason` in `structuredContent`. Destinations are set up in the Marcora app, not over MCP.
+- **`publish_content`:** check publish status and available destinations (`mode: "status"`), publish or update a document to a connected app destination (`mode: "publish"`), update every linked copy (`mode: "update_everywhere"`), or link an existing external copy (`mode: "link"`). Outcomes come back as data: `started` (poll with `mode: "status"`), `needs_decision` (`outside_edit`: `skip` or `replace`), `blocked` (`already_sent`, `created_unlinked`, `publish_unrecorded`) and `skipped`; a run waiting on first-run approval reports `awaiting_approval`. Refusals (private document, Collaborator) come back as `isError` results with a `reason` in `structuredContent`; in `update_everywhere` mode, private-document refusals are reported per destination in `failed[]` instead. Destinations are set up in the Marcora app, not over MCP.
 
 ### Changed
 
