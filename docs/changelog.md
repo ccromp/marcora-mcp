@@ -6,6 +6,7 @@ All notable changes to the Marcora MCP server will be documented in this file.
 
 ### Changed
 
+- **`get_relevant_context` default-scope collection item name matching:** when `only_these_collections` is not `true`, readable team collection items whose name or a distinctive word of it appears in `prompt` also surface in their own named collection block (`--- From the "<name>" collection: <desc> ---`, up to 3 items, max 3 passages each), alongside library passages; excludes Calls and collections already passed in `collection_ids` (`collection_ids` still searches whole collections).
 - **`get_relevant_context` passage source labels and collection headers:** every passage in `relevant_context` now starts with `<!-- source: company|third_party|unclassified -->` right after its BEGIN marker (`third_party` marks external reference material, another team's shared Marcora Collection item, or calls; `unclassified` is never `third_party`), and blocks carry named headers (`--- From the "<name>" collection: <desc> ---`, `--- From the "<title>" Marcora Collection: <desc> ---` placed in their own blocks after the Reference Library, `--- Calls ---`, or `--- Collection Context ---` fallback, dropping `: <desc>` when empty).
 
 ## 2026-11-21 (per-call `team_id`, merged tools, docs-backed `learn_marcora_tools`, collection-only search, playbook/plan/invite parity)
