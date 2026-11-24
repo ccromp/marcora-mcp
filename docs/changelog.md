@@ -2,6 +2,12 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## Unreleased
+
+### Changed
+
+- **`get_relevant_context` independent Marcora Collection scopes:** added Marcora Collections no longer compete in the general Reference Library search (they never take Reference Library slots). Pass a collection's ID in `collection_ids` to search the full collection in its own `--- From the "<title>" Marcora Collection: <desc> ---` block; when `only_these_collections` is not `true`, name/concept discovery can also surface matching items from readable team collections or added Marcora Collections in separate blocks (with discovery off, callers pass `collection_ids`).
+
 ## 2026-11-24 (HTML cleaning on context content, source labels & collection headers, get_playbook_cycle run_id)
 
 ### Skill → v0.8.7 · plugin → v1.3.7
