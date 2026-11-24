@@ -35,3 +35,19 @@ Read this before creating an external share link or exporting a document to Word
 **Cause.** This tool takes `markdown_content` as a parameter — it does not pull content by ID.
 
 **What to do.** Two-step: `marcora:get_content(team_id, content_id)` → `marcora:convert_markdown_to_word_doc(team_id, markdown_content=...)`. Optionally pass `document_url` (the original content's `link_url`) so the .docx footer links back.
+
+---
+
+## Recipe F — Publish a document to a connected app destination
+
+**Goal.** Publish a Marcora document to a configured destination (e.g. Google Docs, Notion), update all linked copies, or link an existing external copy.
+
+**Steps.**
+1. Call `marcora:publish_content(team_id, content_id, mode="status")` first to inspect `destinations[]` (`workflow_id`, `app`, `first_run`), `published_to[]`, `is_private`, and `is_owner`.
+   - If `destinations[]` is empty, tell the user that publish destinations can only be set up in the Marcora app (`setup_url`), not over MCP.
+2. Call `marcora:publish_content(team_id, content_id, mode="publish", workflow_id=...)` (or `mode="update_everywhere"` to refresh all current copies).
+   - **Started:** a publish returns `status: "started"` straight away. Poll `publish_content(mode="status")` and read the destination's `last_run.status`, `last_run.error_summary` and `link.external_url`; never publish again just because the run is still running.
+   - **Private documents:** if `private_document_needs_confirmation` is returned (or `status` shows `is_private: true, is_owner: true`), ask the owner to confirm before repeating with `confirm_private_document: true`. Never retry `private_document_owner_required`.
+   - **First-run approval:** if the run returns `awaiting_approval`, tell the user to approve it in Marcora (`link_url`) — do **not** retry.
+   - **Outside edits / already sent / unrecorded:** surface `needs_decision` (`outside_edit` → ask `skip` vs `replace`) or `blocked` (`already_sent` → offer `new_copy: true`; `created_unlinked` / `publish_unrecorded` → do not publish again; use `mode="link"` with `reference` or link in Marcora).
+

@@ -166,6 +166,7 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Content | `list_content` | List all content (optional semantic `search`) |
 | Content | `get_content` | Get full content by ID |
 | Content | `update_content` | Update a content document |
+| Content | `publish_content` | Check publish status, publish a document to a connected app destination, update all linked copies, or link an existing external copy |
 | Content | `ask_content_assistant` | Run the in-document Content Assistant on a document |
 | Sharing & Export | `create_external_share` | Create a public share link |
 | Sharing & Export | `get_share_link_activity` | List workspace share links (`share_link` omitted) or inspect one link's viewers and opens |

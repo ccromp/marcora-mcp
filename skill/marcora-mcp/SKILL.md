@@ -56,6 +56,7 @@ The Marcora MCP server is hosted; the user's MCP client connects directly. You d
 | Plan content (a launch calendar, ideas on the plans board), produce a plan, save / run a reusable sequence of content (playbook), or follow a running playbook cycle (what is due, add or attach a step, complete a step, generate all its content) | `create_plan`, `produce_plan`, playbook and cycle tools | `references/plans-and-playbooks.md` |
 | Create a blueprint (template), or browse / import one from the Blueprint Exchange | `create_blueprint`, `list_community_blueprints` | `references/blueprints.md` |
 | Share a document externally or export it to Word | `create_external_share`, `convert_markdown_to_word_doc` | `references/share-and-export.md` |
+| Publish a document to a connected app destination (Google Docs, Notion, etc.), update linked copies, or check publish status | `publish_content` | `references/share-and-export.md` |
 
 Also on demand:
 - **Two tools look like they both fit** (documents vs context items, briefs, editing vs the Content Assistant, refreshing web pages, search vs browse, teams) → `references/choosing-tools.md`.
