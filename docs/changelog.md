@@ -2,6 +2,12 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## Unreleased
+
+### Changed
+
+- **`list_content` and `list_context_items` title-first `search` ranking and `match` field:** a non-empty `search` ranks all visible rows with no cutoff by title tier first (`title_exact`, `title_prefix`, `title_words`, `title_fuzzy`), then semantic `meaning` (`relevance_score >= 0.4`), then unmatched rows (`none`) in default order, adding `match` to every row while leaving `relevance_score` unchanged (omitted if query embedding fails).
+
 ## 2026-11-24 (HTML cleaning on context content, source labels & collection headers, get_playbook_cycle run_id)
 
 ### Skill → v0.8.7 · plugin → v1.3.7

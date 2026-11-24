@@ -580,7 +580,7 @@ Each returned item carries its `collection_id` (primary collection ID, or `null`
 
 **Privacy:** items in private collections (where you are not the creator) and items in private projects (where you are not a member) are filtered out — they will not appear in the response.
 
-**Optional `search`:** pass a natural-language query to sort the list by similarity instead of recency. Each item is scored by its best-matching passage and carries a `relevance_score` (cosine `0`–`1`, higher = more similar); items with no indexed passages yet have a `null` score and sort last. Search only re-orders: every item the user can see is still returned, with no cutoff, so the response is as large as the library. To find the passages that are relevant to a question, use `get_relevant_context`.
+**Optional `search`:** pass a query to re-order all visible context items without dropping any (no cutoff, so the response is still the whole library). Title matches rank first (`title_exact` exact title, `title_prefix` starts-with, `title_words` all query words in title, `title_fuzzy` close spelling), then semantic `meaning` (`relevance_score >= 0.4`), then unmatched context items (`none`) in their default order. Each item carries `match` (indicating how it matched) and `relevance_score` (cosine `0`–`1`, higher = more similar; `null` for items with no indexed passages yet, or omitted if query embedding fails). To find the passages that are relevant to a question, use `get_relevant_context`.
 
 **Parameters:**
 
@@ -588,7 +588,7 @@ Each returned item carries its `collection_id` (primary collection ID, or `null`
 |---|---|---|---|
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `reference_library_only` | boolean | No | When `true`, returns only items not in any project or collection (`collection_ids: []` and `project_id: null`). Default `false` returns everything |
-| `search` | string | No | Optional natural-language query. When provided, every item you can see is scored by its best-matching passage and the list is sorted by that score instead of recency; each item gains a `relevance_score`. Nothing is dropped, so the response is still the whole library. Omit or leave empty for the normal recency-ordered list. To retrieve the passages relevant to a question, use `get_relevant_context` |
+| `search` | string | No | Optional query. Re-orders all visible context items with no cutoff: title matches first (`title_exact`, `title_prefix`, `title_words`, `title_fuzzy`), then `meaning` (cosine `relevance_score >= 0.4`), then unmatched items (`none`) in default order; adds `match` and `relevance_score` (omitted if query embedding fails) to each item. Omit or leave empty for newest-first order. To retrieve the passages relevant to a question, use `get_relevant_context` |
 | `collection_id` | integer | No | Return only items in this team collection or active Marcora Collection (id from `list_context_collections` or `list_marcora_collections`). Omit to include every accessible collection |
 | `content_type` | string | No | Return only items of this type, for example `call_transcript` (calls), `manual` (pasted text), or `webpage`. Omit for every type |
 | `date_from` | string | No | Return only items dated on or after this, as `YYYY-MM-DD` or ISO 8601. Compared with the call's own date (when it happened) for calls, and the created date (when it was added) for every other item. A call with no known date does not match a date bound (`date_from` must not be after `date_to`) |
@@ -617,7 +617,8 @@ Each returned item carries its `collection_id` (primary collection ID, or `null`
 | `link_url` | string | URL to view this context item in the Marcora web app |
 | `audience` | string | Present (`"only_me"`) only on an Only me item, visible to its owner alone; Team items omit it |
 | `call` | object | Call details (`date`, `kind`, `company`, `people`, `visibility`); present only on call items |
-| `relevance_score` | number \| null | Present only when a `search` query is supplied. Cosine similarity (`0`–`1`, higher = more similar) of the item's best-matching passage to the query; `null` when the item has no indexed passage yet |
+| `match` | string | Present only when a non-empty `search` query is supplied: `title_exact` (exact title), `title_prefix` (title starts with query words), `title_words` (all query words in title), `title_fuzzy` (close title spelling), `meaning` (cosine similarity `>= 0.4`), or `none` (unmatched) |
+| `relevance_score` | number \| null | Present only when a `search` query is supplied and query embedding succeeds. Cosine similarity (`0`–`1`, higher = more similar) of the item's best-matching passage to the query; `null` when the item has no indexed passage yet |
 
 **Other ways to discover context-item IDs:**
 - `get_project({ team_id, project_id }).context_items` — items attached to a specific project
@@ -1660,14 +1661,14 @@ The response always includes `status`, `generation_id`, and `flow_type` (plus `e
 
 Lists the team's content that the current user can see, as a single unified array with consistent field names, newest first. Use it to browse and filter the team's content and to find content IDs. The same `content_id` can be passed to `get_content`, `update_content`, and `create_external_share`.
 
-**Optional `search`:** pass a natural-language query to sort the list by similarity instead of recency; each row then carries a `relevance_score` (cosine `0`–`1`, higher = more similar). Search only re-orders: every visible row is still returned, with no cutoff. To find passages in the reference library that are relevant to a question, use `get_relevant_context`.
+**Optional `search`:** pass a query to re-order all visible content without dropping any (no cutoff). Title matches rank first (`title_exact` exact title, `title_prefix` starts-with, `title_words` all query words in title, `title_fuzzy` close spelling), then semantic `meaning` (`relevance_score >= 0.4`), then unmatched content (`none`) in its default order. Each row carries `match` (indicating how it matched) and `relevance_score` (cosine `0`–`1`, higher = more similar; `null` if not embedded yet, or omitted if query embedding fails). To find passages in the reference library that are relevant to a question, use `get_relevant_context`.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
-| `search` | string | No | Optional natural-language query. When provided, every visible row is scored by similarity to it and the list is sorted by that score instead of recency; each row gains a `relevance_score`. Nothing is dropped. Omit or leave empty for the normal recency-ordered list |
+| `search` | string | No | Optional query. Re-orders all visible content with no cutoff: title matches first (`title_exact`, `title_prefix`, `title_words`, `title_fuzzy`), then `meaning` (cosine `relevance_score >= 0.4`), then unmatched content (`none`) in default order; adds `match` and `relevance_score` (omitted if query embedding fails) to each row. Omit or leave empty for newest-first order |
 
 **Output:** An object with a single `content` key holding an array of items.
 
@@ -1682,7 +1683,8 @@ Lists the team's content that the current user can see, as a single unified arra
 | `projects` | string[] | Project names this content belongs to |
 | `blueprint` | object \| null | `{ blueprint_uuid, name }` of the blueprint the content was generated from, or `null` for freeform content or if the blueprint was deleted |
 | `web_url` | string | Direct URL to view this content in Marcora |
-| `relevance_score` | number | Present only when a `search` query is supplied. Cosine similarity (`0`–`1`, higher = more similar) of the row to the query |
+| `match` | string | Present only when a non-empty `search` query is supplied: `title_exact` (exact title), `title_prefix` (title starts with query words), `title_words` (all query words in title), `title_fuzzy` (close title spelling), `meaning` (cosine similarity `>= 0.4`), or `none` (unmatched) |
+| `relevance_score` | number \| null | Present only when a `search` query is supplied and query embedding succeeds. Cosine similarity (`0`–`1`, higher = more similar) of the row to the query; `null` when not embedded yet |
 
 **Example prompts:**
 - "Show me all my content"
