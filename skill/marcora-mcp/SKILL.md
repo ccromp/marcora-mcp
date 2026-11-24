@@ -4,7 +4,7 @@ description: "Use this skill BEFORE calling any Marcora MCP tool (create_content
 license: MIT
 metadata:
   mcp-server: marcora
-  version: 0.8.6
+  version: 0.8.7
 ---
 
 # Marcora AI Workflows

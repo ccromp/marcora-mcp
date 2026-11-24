@@ -2,12 +2,15 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
-## Unreleased
+## 2026-11-24 (HTML cleaning on context content, source labels & collection headers, get_playbook_cycle run_id)
+
+### Skill → v0.8.7 · plugin → v1.3.7
 
 ### Changed
 
 - **`get_relevant_context` passage source labels and collection headers:** every passage in `relevant_context` now starts with `<!-- source: company|third_party|unclassified -->` right after its BEGIN marker (`third_party` marks external reference material, another team's shared Marcora Collection item, or calls; `unclassified` is never `third_party`), and blocks carry named headers (`--- From the "<name>" collection: <desc> ---`, `--- From the "<title>" Marcora Collection: <desc> ---` placed in their own blocks after the Reference Library, `--- Calls ---`, or `--- Collection Context ---` fallback, dropping `: <desc>` when empty).
 - **`add_context` & `update_context` accept HTML in `content`:** pass Markdown or HTML (full documents or fragments) as-is with no conversion first. The server cleans HTML to Markdown before saving (headings including font-size headings, bold/italic, links, lists, and tables kept; fonts, colours, classes, and scripts dropped; images stripped; stray styling tags removed from Markdown; clean Markdown stored unchanged; code never touched), and refuses content that is empty after cleaning or over 2,000,000 characters with nothing saved.
+- **`get_playbook_cycle` `run_id` clarification:** clarified that `run_id` is the integer cycle id from `list_playbook_cycles` / `instantiate_playbook`, not a UUID or cycle `link_url`.
 
 ## 2026-11-21 (per-call `team_id`, merged tools, docs-backed `learn_marcora_tools`, collection-only search, playbook/plan/invite parity)
 
