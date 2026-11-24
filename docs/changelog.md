@@ -2,6 +2,12 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## Unreleased
+
+### Changed
+
+- **`get_relevant_context` passage source labels and collection headers:** every passage in `relevant_context` now starts with `<!-- source: company|third_party|unclassified -->` right after its BEGIN marker (`third_party` marks external reference material, another team's shared Marcora Collection item, or calls; `unclassified` is never `third_party`), and blocks carry named headers (`--- From the "<name>" collection: <desc> ---`, `--- From the "<title>" Marcora Collection: <desc> ---` placed in their own blocks after the Reference Library, `--- Calls ---`, or `--- Collection Context ---` fallback, dropping `: <desc>` when empty).
+
 ## 2026-11-21 (per-call `team_id`, merged tools, docs-backed `learn_marcora_tools`, collection-only search, playbook/plan/invite parity)
 
 ### Skill → v0.8.6 · plugin → v1.3.5

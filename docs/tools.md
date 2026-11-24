@@ -737,6 +737,10 @@ Set `include_brand_foundation: true` to also receive the team's Brand Foundation
 
 > **Calls and audience:** a Team call filed in a private project or private collection reads as Only me: its source carries `audience: "only_me"`. If you write material read from an Only me source into a team-visible document, the write is refused until the user agrees.
 
+> **Passage source labels and block headers (inside `relevant_context`):**
+> - Every passage starts with `<!-- source: company|third_party|unclassified -->` on the line right after its `<!-- ## BEGIN [...] -->` marker: `company` is your team's authoritative material (`company_authoritative`), `third_party` is external reference material (`reference_material`), another team's item (shared Marcora Collection), or a call / call-derived item, and `unclassified` is unclassified team material (never `third_party`). Treat `third_party` passages as claims about others or external material, never as your team's own facts or voice.
+> - Passages are grouped under headers: `--- From the "<name>" collection: <desc> ---` (team collection), `--- From the "<title>" Marcora Collection: <desc> ---` (Marcora Collection passages from the general search sit in their own blocks after the Reference Library), `--- Calls ---`, and `--- Project Context ---`. When a collection has no description, `: <desc>` is dropped; when a collection isn't readable, the header falls back to `--- Collection Context ---`.
+
 **`project_brief` object** (same shape as `get_project`'s `project_brief`):
 
 | Field | Type | Description |
