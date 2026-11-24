@@ -2,6 +2,12 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## Unreleased
+
+### Changed
+
+- **`get_relevant_context` default-scope collection item concept matching:** when `only_these_collections` is not `true`, up to 2 readable team collection items whose meaning matches `prompt` clearly better than the best general-pool match also surface in their own named collection blocks (`--- From the "<name>" collection: <desc> ---`, max 3 passages each), without repeating name-matched items; skips Calls, collections already passed in `collection_ids` (`collection_ids` still searches whole collections), and the current project's items (`project_id`).
+
 ## 2026-11-24 (HTML cleaning on context content, source labels & collection headers, get_playbook_cycle run_id)
 
 ### Skill → v0.8.7 · plugin → v1.3.7
