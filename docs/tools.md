@@ -394,6 +394,39 @@ Looks up the apps Marcora offers to connect (for example Gong or Fathom), by nam
 
 ---
 
+### `find_enablement_documents`
+
+Finds and browses documents curated in this team's Enablement Hub. Read-only. Only listed and usable when Enablement is enabled for at least one of your active non-collaborator teams.
+
+**When to use it:** when a user asks to browse or find sales enablement materials (battlecards, objection handling, case studies, pricing guides, product docs) in the Enablement Hub and wants links to open them. Do not use `get_relevant_context` or `list_content` to browse the Enablement Hub.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
+| `query` | string | No | Search text matched against document title, assigned category name or description, and document body (case-insensitive). Omit or leave blank to browse categories and their documents. |
+| `category_ids` | string[] | No | Enablement category UUIDs to filter by. Omit or pass `[]` to include all hub categories (and uncategorized hub documents when browsing). |
+| `limit` | integer | No | Maximum documents to return in search mode, 1 to 50. Default 25. |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `mode` | string | `"browse"` (no query) or `"search"` (ranked query match) |
+| `total_documents` | integer | Total matching published hub documents (before `limit` in search mode) |
+| `categories` | array | Enablement categories in display order (`id`, `name`, `description`, `position`, `document_count`, and ordered `documents` in browse mode) |
+| `documents` | array | Ranked matching hub documents in search mode (empty in browse mode). Each has `id`, `title`, `categories[]`, `internal_only`, `link_url`, and `updated_at`. |
+| `uncategorized_documents` | array | Published hub documents with no category (included in browse mode when `category_ids` is omitted) |
+
+Present each document's `link_url` character for character as returned, and call out `internal_only: true` documents so the user knows they cannot be shared outside the workspace.
+
+**Example prompts:**
+- "What battlecards do we have in the Enablement Hub?"
+- "Browse our Enablement Hub documents"
+
+---
+
 ### `list_call_instructions`
 
 Lists the user's standing call instructions: the saved guidance and word fixes Marcora applies to their calls, the same list they edit in Settings. Also returns the user's automatic call imports (`automatic_call_import_id`, `name`, `enabled`) so an instruction can be limited to one. Read-only.
@@ -1837,7 +1870,7 @@ Send a natural-language request to Marcora's in-document **Content Assistant** f
 
 ### `create_external_share`
 
-Creates a public share link for content, with optional expiration. Accessible publicly without a Marcora account.
+Creates a public share link for content, with optional expiration. Accessible publicly without a Marcora account. Documents marked Internal only cannot be shared outside the workspace.
 
 **Parameters:**
 
@@ -1845,7 +1878,8 @@ Creates a public share link for content, with optional expiration. Accessible pu
 |---|---|---|---|
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `content_id` | string | Yes | The ID of the content to share |
-| `expires_at` | integer | No | Unix timestamp for link expiration |
+| `expires_at` | integer | No | Unix timestamp in milliseconds for link expiration |
+| `confirm_private_sources` | string | No | Pass only after the user agrees. Sharing a document built from Only me material outside the workspace is refused with a confirmation token; repeat the same call with that token here only once the user has said yes. |
 
 **Output:**
 

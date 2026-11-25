@@ -143,6 +143,7 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Context & Resources | `update_call_instruction` | Edit or switch on/off a standing call instruction |
 | Context & Resources | `remove_call_instruction` | Permanently remove a standing call instruction |
 | Context & Resources | `find_app` | Look up available third-party apps connected to Marcora |
+| Enablement | `find_enablement_documents` | Find and browse curated Enablement Hub documents (visible when Enablement is on for a team) |
 | Context Intelligence | `list_ci_findings` | List findings from automated context-library scans |
 | Context Intelligence | `get_ci_finding` | Get one finding in full detail by UUID |
 | Context Intelligence | `update_ci_finding_status` | Acknowledge, dismiss, or resolve a finding |
@@ -167,7 +168,7 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Content | `get_content` | Get full content by ID |
 | Content | `update_content` | Update a content document |
 | Content | `ask_content_assistant` | Run the in-document Content Assistant on a document |
-| Sharing & Export | `create_external_share` | Create a public share link |
+| Sharing & Export | `create_external_share` | Create a public share link (refused for Internal only documents; supports `confirm_private_sources`) |
 | Sharing & Export | `get_share_link_activity` | List workspace share links (`share_link` omitted) or inspect one link's viewers and opens |
 | Sharing & Export | `convert_markdown_to_word_doc` | Export markdown as Word doc |
 | Projects | `list_projects` | List all projects |

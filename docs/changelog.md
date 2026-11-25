@@ -2,6 +2,16 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## Unreleased (Enablement Hub finder & external share updates)
+
+### Added
+
+- **`find_enablement_documents`:** finds and browses curated Enablement Hub documents for the caller's team (search by title, category name/description, or body text, or omit `query` to browse categories and their documents). Returns `title`, `categories`, `internal_only`, and reading-page `link_url`. Hidden from `tools/list` when Enablement is off for all of the caller's active non-collaborator teams and refused on `tools/call` for disabled teams.
+
+### Changed
+
+- **`create_external_share`:** accepts optional `confirm_private_sources` so a 409 private-source confirmation challenge can be completed over MCP, and documents that `Internal only` documents cannot be shared outside the workspace.
+
 ## 2026-11-24 (HTML cleaning on context content, source labels & collection headers, get_playbook_cycle run_id)
 
 ### Skill → v0.8.7 · plugin → v1.3.7

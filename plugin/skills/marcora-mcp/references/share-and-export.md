@@ -9,11 +9,14 @@ Read this before creating an external share link or exporting a document to Word
 **Goal.** Generate a public share URL for a piece of content.
 
 **Steps.**
-1. `marcora:create_external_share(team_id, content_id, expires_at?)` — `expires_at` is an optional Unix timestamp.
+1. `marcora:create_external_share(team_id, content_id, expires_at?, confirm_private_sources?)` — `expires_at` is an optional Unix timestamp in milliseconds.
 2. Hand the returned `share_link` to the user.
 3. Later, when the user asks whether it was opened: `marcora:get_share_link_activity(team_id, share_link)` with the link or its token, or omit `share_link` (`marcora:get_share_link_activity(team_id, filter?, query?)`) to list every link in that team. Report `summary` (from `link_detail`); if `opened` is true but the viewer list is short or empty, say some opens predate open details (`coverage_note`). Viewers are anonymous numbers, so never name who opened it. Never open the link yourself to check.
 
-**Precondition.** Content must be `completed` — async generations need to finish first.
+**Rules & Preconditions.**
+- Content must be `completed` — async generations need to finish first.
+- Documents marked **Internal only** cannot be shared outside the workspace (refused directly).
+- If the document used `only_me` material, the call returns a `confirm_private_sources` token instead of a link — ask the user, and only if they agree repeat the call with `confirm_private_sources` set to that token.
 
 ---
 
