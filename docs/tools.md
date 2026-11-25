@@ -2748,7 +2748,7 @@ Approves a pending document update (or confirms a `no_changes` plan update as do
 | `edited_body` | string | No | Optional edited markdown body replacing `proposed_body` on plan updates before saving (refused on workflow updates and `no_changes` updates) |
 | `confirm_private_sources` | string | No | One-time confirmation token from a prior private-source confirmation prompt after confirming sharing private sources with the target's audience |
 
-**Output:** `source_kind`, `update_id`, `state`, `content_id`, `link_url`, and `plan_stage` (when applicable).
+**Output:** `source_kind`, `update_id`, `state`, `target_content_id` (existing target document UUID, or `null` when creating a new workflow document), `content_id` (applied or newly created document UUID), `link_url`, and `plan_stage` (when applicable).
 
 **Example prompts:** "Approve that document update" · "Apply the pricing update with this tweak to the enterprise row"
 
@@ -2765,7 +2765,7 @@ Discards (rejects) a pending, conflict, or `no_changes` document update proposal
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `update_id` | string (uuid) | Yes | Document update proposal UUID to discard |
 
-**Output:** `source_kind`, `update_id`, `state`, `content_id`, `link_url`.
+**Output:** `source_kind`, `update_id`, `state`, `target_content_id` (target document UUID, or `null` for workflow create proposals), `content_id` (`null`), `link_url` (`null`).
 
 **Example prompts:** "Discard that proposed update"
 
