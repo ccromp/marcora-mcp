@@ -196,6 +196,10 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Plans & Playbooks | `update_playbook_cycle` | Rename a cycle and change its topic |
 | Plans & Playbooks | `generate_cycle_content` | Generate the content for every step of a cycle that has none (uses Studio Credits) |
 | Plans & Playbooks | `get_cycle_generation` | Check the progress of a cycle's "Generate all" batch |
+| Document Updates | `list_document_updates` | List document update proposals across plans, playbook steps, and workflows (ChatGPT sees plan updates only) |
+| Document Updates | `get_document_update` | Read one document update proposal with proposed/current body, diff, and evidence |
+| Document Updates | `approve_document_update` | Approve and apply a pending update proposal (or confirm `no_changes` on a plan update) |
+| Document Updates | `discard_document_update` | Discard a pending, conflict, or `no_changes` update proposal without modifying the document |
 | Workflows | `list_workflows` | List workflows |
 | Workflows | `get_workflow` | Get a workflow's full definition |
 | Workflows | `create_workflow` | Create a new workflow template |

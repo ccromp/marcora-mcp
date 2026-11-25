@@ -1616,11 +1616,14 @@ The response always includes `status`, `generation_id`, and `flow_type` (plus `e
 | Field | Type | Description |
 |---|---|---|
 | `generation_id` | string (uuid) | The generation ID being checked |
-| `status` | string | Status of this run. Document and blueprint generation (`blueprint`, `document`, `blueprint_item`, or `blueprint_draft` flow) terminates at `completed`; Content Assistant flow terminates at `complete`; `failed` on error. Intermediate values: `pending`, `processing`, `streaming` |
-| `flow_type` | string | `blueprint` (generated from a blueprint), `document` (generated without a blueprint, e.g. Multi-model `create_content` or `produce_plan` without a blueprint), `blueprint_item` (`create_blueprint` or `finalize_blueprint_draft`), `blueprint_draft` (`create_blueprint_draft`), or `ai_assistant` (`ask_content_assistant` / `apply_finding_fix`) |
+| `status` | string | Status of this run. Document, document-update, and blueprint generation (`blueprint`, `document`, `document_update`, `blueprint_item`, or `blueprint_draft` flow) terminates at `completed`; Content Assistant flow terminates at `complete`; `failed` on error. Intermediate values: `pending`, `processing`, `streaming` |
+| `flow_type` | string | `blueprint` (generated from a blueprint), `document` (generated without a blueprint, e.g. Multi-model `create_content` or `produce_plan` without a blueprint), `document_update` (update-mode `produce_plan` draft), `blueprint_item` (`create_blueprint` or `finalize_blueprint_draft`), `blueprint_draft` (`create_blueprint_draft`), or `ai_assistant` (`ask_content_assistant` / `apply_finding_fix`) |
 | `error_message` | string | Present when `status` is `"failed"`; explains why the background generation failed |
 | `generation_mode` | string | `quick` or `multi_model`. Omitted when not recorded |
-| `content` | object \| null | `null` until the run completes. Shape depends on `flow_type` (below) |
+| `plan_uuid` | string (uuid) | Present on `document_update` flows: UUID of the plan being updated |
+| `target_content_id` | string (uuid) \| null | Present on `document_update` flows: UUID of the target document |
+| `update` | object \| null | Present on `document_update` flows once completed: document update proposal detail (`null` while running; review or approve with `get_document_update` / `approve_document_update`, or discard with `discard_document_update`) |
+| `content` | object \| null | `null` until the run completes (stays `null` for `document_update` flows). Shape depends on `flow_type` (below) |
 
 **`content` — document generation** (`flow_type` `blueprint` or `document`; `blueprint_id` appears only with a blueprint):
 
@@ -2157,7 +2160,7 @@ Fetch a single plan by UUID with full details including linked references, conte
 | `plan.reference_documents` | array | Content items attached as reference material |
 | `plan.context_collections` | array | Context collections pre-attached to the plan |
 | `plan.targeting_dimensions` | array | Targeting dimension options pre-attached |
-| `plan.step` | object \| null | For playbook cycle steps: `kind`, `optional`, `do_on_date`, `draft_lead_days`, `due_time`, `goes_out_date`, `goes_out_time`, `owner_name`, `schedule_time_zone`, and `schedule` (`enabled`, `due_at`, `generate_at`, `attempted_at`, `time_zone`, `outcome`: `null` \| `waiting_content` \| `waiting` \| `overdue` \| `invalidated` \| `cancelled` \| `skipped` \| `claimed` \| `dispatching` \| `started` \| `failed` \| `unknown`, `execution_uuid`, `error`) |
+| `plan.step` | object \| null | For playbook cycle steps or update-mode plans: `kind`, `optional`, `do_on_date`, `draft_lead_days`, `due_time`, `goes_out_date`, `goes_out_time`, `owner_name`, `schedule_time_zone`, `document_update` (`{ mode: "update", target_content_id, target_title, target_link_url, target_can_open, review_mode: "approval" | "direct", instructions, pending_update_id, pending_state, pending_summary, stale, latest_update_id, latest_state, can_approve, last_outcome, last_error }` when configured), and `schedule` (`enabled`, `due_at`, `generate_at`, `attempted_at`, `time_zone`, `outcome`: `null` \| `waiting_content` \| `waiting` \| `overdue` \| `invalidated` \| `cancelled` \| `skipped` \| `claimed` \| `dispatching` \| `started` \| `failed` \| `unknown`, `execution_uuid`, `error`) |
 | `plan._produced_content` | object/null | Linked content summary `{content_id, name, stage, visibility}`, or null. Call `get_content` with `content_id` for the full item |
 | `plan._source_metadata_resolved` | object/null | Resolved source metadata, or null |
 
@@ -2185,6 +2188,7 @@ Create a new content plan in the specified team (`team_id`).
 | `due_date` | string | No | ISO date YYYY-MM-DD |
 | `draft_lead_days` | integer | No | Whole calendar days before `due_date` (0–365; stored lead only — MCP cannot enable auto-generate) |
 | `generation_settings` | object | No | Generation overrides `{ use_cycle_source?: boolean, calls_source?: object | null }` |
+| `document_update` | object/null | No | Configure this plan to update an existing target document instead of creating a new one: `{ mode?: "create" | "update", target_content_id?: uuid | null, target_document_id?: uuid | null (input alias), review_mode?: "approval" | "direct", instructions?: string | null (max 25,000 chars) }`. Passing `{ mode: "update" }` clears `blueprint_id` |
 | `prompt` | string | No | Content prompt that pre-populates the creation form when the plan is acted on |
 | `blueprint_id` | string \| integer | No | Blueprint UUID (preferred) or numeric ID |
 | `project_id` | string (uuid) | No | Project UUID to associate with |
@@ -2251,6 +2255,7 @@ Partial update of a plan: mutable fields and stage transitions. All fields are o
 | `owner_name` | string/null | No | Playbook steps: typed owner (agent or non-member, max 60 chars) matched case-insensitively to existing team spellings (`list_playbook_owner_names`). Not for action steps. `null` or `assigned_to` clears it |
 | `due_time` | string/null | No | Playbook steps: optional `"HH:MM"` 24-hour time of day due (no time zone). Needs a `due_date`; `null` clears it |
 | `goes_out_time` | string/null | No | Content steps in a playbook: optional `"HH:MM"` 24-hour time of day it goes out (no time zone). Needs the step's goes-out date; `null` clears it |
+| `document_update` | object/null | No | Content steps only: update an existing target document (`{ mode: "update", target_content_id?, review_mode?: "approval" | "direct", instructions? }`, or `{ mode: "create" }` / `null` to clear to new-document mode). Changing mode or target is refused (409) once produced or while a proposal is open |
 
 **Output:** Updated plan object with all fields (same shape as `get_plan`, including `step.schedule.outcome` union).
 
@@ -2265,9 +2270,9 @@ Partial update of a plan: mutable fields and stage transitions. All fields are o
 
 ### `produce_plan`
 
-Produce (generate) the actual content a plan describes — the MCP equivalent of the **Generate** button on the plans board. Requires an **Admin** or **Creator** role (Collaborators are refused with `"Only Admins and Creators can create documents."`). The plan must be in the `Accepted` stage (transition a `Suggested` plan first with `update_plan` `target_stage: "Accepted"`). Consumes team Studio Credits (charged at completion at the model's cost; typically Quick 1–2, Multi-model 6–7; starting needs 1 for Quick, 5 for Multi-model, otherwise `insufficient_credits` 402 and nothing is generated) and takes 1–5 minutes; confirm with the user before producing a plan they didn't explicitly ask to produce. The plan's `prompt`, targeting dimensions, context collections, and project association are used as generation inputs — set them via `update_plan` before producing.
+Produce (generate) the actual content a plan describes — or draft/redraft a document update proposal when `step.document_update.mode === "update"` — the MCP equivalent of the **Generate** button on the plans board. Requires an **Admin** or **Creator** role (Collaborators are refused with `"Only Admins and Creators can create documents."`). The plan must be in the `Accepted` stage (transition a `Suggested` plan first with `update_plan` `target_stage: "Accepted"`). Consumes team Studio Credits (charged at completion at the model's cost; typically Quick 1–2, Multi-model 6–7; starting needs 1 for Quick, 5 for Multi-model, otherwise `insufficient_credits` 402 and nothing is generated) and takes 1–5 minutes; confirm with the user before producing a plan they didn't explicitly ask to produce. The plan's `prompt`, targeting dimensions, context collections, and project association are used as generation inputs — set them via `update_plan` before producing.
 
-**Both paths are asynchronous** — the call returns immediately with a `generation_id`; poll `get_generation_status`. On completion the backend links the produced content and moves the plan to `In_Process` (then `Complete` when the content reaches ready).
+**Both paths are asynchronous** — the call returns immediately with a `generation_id`; poll `get_generation_status`. For new-document plans, completion links the produced content and moves the plan to `In_Process` (then `Complete` when ready). For update-mode plans (`flow_type: "document_update"`), completion surfaces `update` (review/approve with `get_document_update` / `approve_document_update`, unless `review_mode: "direct"`).
 
 **Parameters:**
 
@@ -2278,12 +2283,15 @@ Produce (generate) the actual content a plan describes — the MCP equivalent of
 | `generation_mode` | string | No | `quick` (one model) or `multi_model` (two drafts and a synthesis). Default: `multi_model` for a plan with a blueprint, `quick` for one without |
 | `ai_provider` | string | No | Quick only: which model family writes the document. Allowed values and default are in the tool's input schema. Ignored with `multi_model` |
 | `use_extended_thinking` | boolean | No | Quick only: whether the model reasons at length before writing. Default `true`; slower and costlier. Ignored with `multi_model` |
+| `redraft` | boolean | No | Update-mode plans only: `true` supersedes an open `pending`, `conflict`, or `no_changes` proposal and drafts a fresh update |
+| `instructions` | string/null | No | Update-mode plans only: optional one-off steering instructions for this draft only (max 25,000 chars; does not overwrite saved step instructions) |
+| `confirm_private_sources` | string/null | No | One-time disclosure token from a prior `private_sources_confirmation_required` refusal on `review_mode: "direct"` update plans |
 
 **Output:**
 
 | Field | Type | Description |
 |---|---|---|
-| `path` | string | `blueprint` (plan has a blueprint) or `freeform` (no blueprint) |
+| `path` | string | `blueprint` (plan has a blueprint) or `freeform` (no blueprint, including update-mode plans) |
 | `generation_id` | string | Poll `get_generation_status` with this until complete |
 | `plan_uuid` | string (uuid) | The plan being produced |
 
@@ -2321,7 +2329,7 @@ Fetch one content playbook by id, including its full ordered list of items.
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `playbook_id` | integer | Yes | ID of the playbook to fetch |
 
-**Output:** the playbook object — including `anchor_date` (persisted `YYYY-MM-DD` reference date, or `null`), `anchor_label`, `default_project_id`, `new_project_each_use`, `project_name_pattern`, `variables`, and `link_url` (opens the playbook in the Marcora web app) — with an ordered `items` array. Each item carries `id`, the plan fields it will stamp out (`name`, `title`, `description`, `prompt`, `blueprint_id`, `category_id`), a `builds_on` array (0-based positions of the earlier steps it builds on; empty when none), `offset_days` counted from the anchor date to compute each due date on instantiation, and step fields (`kind` of `content` / `checklist` / `action`, `goes_out_offset_days`, `goes_out_time`, `due_time`, `optional`, `off_by_default`, `owner_user_id`, `owner_name`, `targeting_dimension_ids`, readable `context_collection_ids`, `use_cycle_source`, `draft_lead_days`, `action`). (`reviewer` is deprecated and not returned by MCP.)
+**Output:** the playbook object — including `anchor_date` (persisted `YYYY-MM-DD` reference date, or `null`), `anchor_label`, `default_project_id`, `new_project_each_use`, `project_name_pattern`, `variables`, and `link_url` (opens the playbook in the Marcora web app) — with an ordered `items` array. Each item carries `id`, the plan fields it will stamp out (`name`, `title`, `description`, `prompt`, `blueprint_id`, `category_id`), a `builds_on` array (0-based positions of the earlier steps it builds on; empty when none), `offset_days` counted from the anchor date to compute each due date on instantiation, and step fields (`kind` of `content` / `checklist` / `action`, `goes_out_offset_days`, `goes_out_time`, `due_time`, `optional`, `off_by_default`, `owner_user_id`, `owner_name`, `targeting_dimension_ids`, readable `context_collection_ids`, `use_cycle_source`, `draft_lead_days`, `document_update` [`{ mode: "update", target_content_id, review_mode: "approval" | "direct", instructions, target_title, target_link_url, target_can_open }` when configured], `action`). (`reviewer` is deprecated and not returned by MCP.)
 
 **Example prompts:**
 - "What's in my launch-week playbook?"
@@ -2341,7 +2349,7 @@ Create a reusable content playbook — an ordered template of content-plan items
 | `description` | string | No | Free-text description |
 | `visibility` | string | No | `team` (default) or `private` |
 | `anchor_date` | string | No | Optional `YYYY-MM-DD` reference date the playbook is built around (a launch, event, campaign kickoff). Persisted on the playbook; each item's `offset_days` counts from it, and it becomes the default anchor when instantiating. Leave off for an evergreen/undated template |
-| `items` | array | No | Ordered playbook items (each becomes one plan on instantiation). Each item can carry `builds_on`: an array of 0-based positions, in this same `items` array, of EARLIER items the step builds on (a link to itself or a later item is rejected). When the playbook is run, each step's generation draws on the steps it builds on. Each item can also set step fields: `kind` (`content` default, `checklist` — a to-do the owner ticks off — or `action` — a plain instruction the owner's in-app agent carries out), `optional` (may be left out via `skip_item_ids`), `off_by_default` (`true` = starts unticked and is left out unless named in `include_item_ids`; implies `optional`), `owner_user_id` (an active team member), `owner_name` (typed owner up to 60 chars for content/checklist steps, matching `list_playbook_owner_names`, never action), `due_time` (`"HH:MM"`, needs `offset_days`), `goes_out_offset_days` (content steps: a second date, days after anchor), `goes_out_time` (`"HH:MM"`, needs `goes_out_offset_days`), and on content steps: `targeting_dimension_ids`, `context_collection_ids`, `use_cycle_source`, and `draft_lead_days` (0–365). (`reviewer` is deprecated and ignored: not written or returned by MCP; existing values are kept.) For `action` steps, `action: { instruction }`: one or two plain sentences saying what to do, up to 12,000 characters, `{Variable}` allowed. There is no fixed list of actions or apps. When the step's owner presses Run in the Marcora app, their in-app agent carries it out using the owner's own connected apps, asks the owner for exact approval before EVERY write to a connected app or anything that reaches another person, and saves the result on the step. An action step does not run over MCP. |
+| `items` | array | No | Ordered playbook items (each becomes one plan on instantiation). Each item can carry `builds_on`: an array of 0-based positions, in this same `items` array, of EARLIER items the step builds on (a link to itself or a later item is rejected). When the playbook is run, each step's generation draws on the steps it builds on. Each item can also set step fields: `kind` (`content` default, `checklist` — a to-do the owner ticks off — or `action` — a plain instruction the owner's in-app agent carries out), `optional` (may be left out via `skip_item_ids`), `off_by_default` (`true` = starts unticked and is left out unless named in `include_item_ids`; implies `optional`), `owner_user_id` (an active team member), `owner_name` (typed owner up to 60 chars for content/checklist steps, matching `list_playbook_owner_names`, never action), `due_time` (`"HH:MM"`, needs `offset_days`), `goes_out_offset_days` (content steps: a second date, days after anchor), `goes_out_time` (`"HH:MM"`, needs `goes_out_offset_days`), and on content steps: `targeting_dimension_ids`, `context_collection_ids`, `use_cycle_source`, `draft_lead_days` (0–365), and `document_update` (`{ mode?: "create" | "update", target_content_id?: uuid | null, target_document_id?: uuid | null, review_mode?: "approval" | "direct", instructions?: string | null }`; `{ mode: "update" }` clears `blueprint_id` and keeps `{Variable}` tokens raw). (`reviewer` is deprecated and ignored: not written or returned by MCP; existing values are kept.) For `action` steps, `action: { instruction }`: one or two plain sentences saying what to do, up to 12,000 characters, `{Variable}` allowed. There is no fixed list of actions or apps. When the step's owner presses Run in the Marcora app, their in-app agent carries it out using the owner's own connected apps, asks the owner for exact approval before EVERY write to a connected app or anything that reaches another person, and saves the result on the step. An action step does not run over MCP. |
 | `anchor_label` | string | No | What `anchor_date` is called in the app, e.g. "Launch day" (up to 60 characters). `null` clears it |
 | `default_project_id` | string (uuid) | No | Project a run of this playbook starts in by default. `null` clears it |
 | `new_project_each_use` | boolean | No | Automatically create a fresh project per cycle run when `project_id` / `new_project` are omitted |
@@ -2392,7 +2400,7 @@ Edit a content playbook. Any playbook is fully editable. Pass only the fields to
 | `description` | string | No | New description (pass `null` to clear) |
 | `visibility` | string | No | `team` or `private` (creator-only) |
 | `anchor_date` | string | No | Set the playbook's `YYYY-MM-DD` reference date. Omit to keep the current value; pass `null` to clear it |
-| `items` | array | No | If provided, sets the ordered item list. **Send every item you keep back with its `id` from `get_playbook`** (ids are re-issued each time items are saved, so use the latest read): an item sent with its `id` keeps omitted fields and step settings, including `builds_on` remapped to the kept items' new positions (links to removed steps are dropped; moving a step ahead of a step it builds on is rejected unless `builds_on` is also sent; pass `[]` or `null` to clear). An item without `id` is a new step. A list with no current ids that would reset checklist/action steps or step settings is refused and nothing is written; to rewrite steps on purpose, send `kind` on every item. Step fields: `kind`, `optional`, `off_by_default`, `owner_user_id`, `owner_name`, `due_time`, `goes_out_offset_days`, `goes_out_time`, `targeting_dimension_ids`, `context_collection_ids` (hidden collections the saving caller cannot see are preserved), `use_cycle_source`, `draft_lead_days`, `action` (same rules as `create_playbook`; `null` or `[]` clears readable fields; `reviewer` is deprecated and ignored). |
+| `items` | array | No | If provided, sets the ordered item list. **Send every item you keep back with its `id` from `get_playbook`** (ids are re-issued each time items are saved, so use the latest read): an item sent with its `id` keeps omitted fields and step settings, including `builds_on` remapped to the kept items' new positions (links to removed steps are dropped; moving a step ahead of a step it builds on is rejected unless `builds_on` is also sent; pass `[]` or `null` to clear). An item without `id` is a new step. A list with no current ids that would reset checklist/action steps or step settings is refused and nothing is written; to rewrite steps on purpose, send `kind` on every item. Step fields: `kind`, `optional`, `off_by_default`, `owner_user_id`, `owner_name`, `due_time`, `goes_out_offset_days`, `goes_out_time`, `targeting_dimension_ids`, `context_collection_ids` (hidden collections the saving caller cannot see are preserved), `use_cycle_source`, `draft_lead_days`, `document_update` (`{ mode?: "create" | "update", target_content_id?, review_mode?: "approval" | "direct", instructions? }` on content steps), `action` (same rules as `create_playbook`; `null` or `[]` clears readable fields; `reviewer` is deprecated and ignored). |
 | `anchor_label` | string | No | What `anchor_date` is called in the app, e.g. "Launch day" (up to 60 characters). `null` clears it |
 | `default_project_id` | string (uuid) | No | Project a run of this playbook starts in by default. `null` clears it |
 | `new_project_each_use` | boolean | No | Automatically create a fresh project per cycle run when `project_id` / `new_project` are omitted |
@@ -2426,7 +2434,7 @@ Run a playbook: create one content plan per playbook item, in order, as a batch.
 | `variables` | object | No | Values for the playbook's variables by name, e.g. `{ "Product": "Acme" }` (up to 500 characters each). Every variable the playbook marks required must be given |
 | `targeting_dimension_ids` | integer[] | No | Run-wide targeting dimension options applied to created content steps for this run (beats template defaults; `[]` clears template defaults for the run; overridden per step by `step_overrides`) |
 | `context_collection_ids` | integer[] | No | Run-wide context collections applied to created content steps for this run (beats template defaults; `[]` clears template defaults for the run; overridden per step by `step_overrides`) |
-| `step_overrides` | array | No | Per-step overrides (`[{ item_id, owner?, prompt?, blueprint_id?, targeting_dimension_ids?, context_collection_ids? }]`; precedence: step override > run-wide > template default; nothing saved on template). Any step kind accepts `owner` (`{ user_id }` or `{ name }`; changing owner or setting typed `name` turns `do_on_date` off, while keeping the same member owner keeps it on). Only content steps accept `prompt` (non-blank; `{Variable}` filled; blank prompts refused), `blueprint_id` (UUID, integer, or `null`), `targeting_dimension_ids`, or `context_collection_ids` (passing content-only fields on checklist/action steps is refused) |
+| `step_overrides` | array | No | Per-step overrides (`[{ item_id, owner?, prompt?, blueprint_id?, targeting_dimension_ids?, context_collection_ids?, target_content_id?, target_document_id?, review_mode?, document_update? }]`; precedence: step override > run-wide > template default; nothing saved on template). Any step kind accepts `owner` (`{ user_id }` or `{ name }`; changing owner or setting typed `name` turns `do_on_date` off, while keeping the same member owner keeps it on). Only content steps accept `prompt` (non-blank; `{Variable}` filled; blank prompts refused), `blueprint_id` (UUID, integer, or `null`), `targeting_dimension_ids`, `context_collection_ids`, `target_content_id`/`target_document_id` (UUID or `null` to clear), `review_mode` (`"approval"` \| `"direct"`), or `document_update` (`{ mode?, target_content_id?, review_mode?, instructions? }`; `{Variable}` tokens in `instructions` are filled; passing content-only fields on checklist/action steps is refused) |
 | `suggestion_id` | string (uuid) | No | Start a call-detected playbook suggestion from `list_playbook_suggestions` (starts uncovered steps) |
 | `skip_item_ids` | integer[] | No | Ids (from `get_playbook`) of OPTIONAL steps to leave out of this cycle. A step that is not optional is refused, and at least one step must remain |
 | `include_item_ids` | integer[] | No | Ids (from `get_playbook`) of OFF-BY-DEFAULT (`off_by_default`) steps to include in this running playbook. Any off-by-default step not named here is left out, and any `builds_on` link to a left-out step is dropped. Unknown IDs are refused |
@@ -2523,7 +2531,7 @@ Read one cycle with its steps in order (including any steps added mid-cycle via 
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `run_id` | integer | Yes | Cycle id — the integer `run_id` from `list_playbook_cycles` / `instantiate_playbook`, not a UUID |
 
-**Output:** `cycle` (same shape as a `list_playbook_cycles` row, including `project_id` / `project_name` and `playbook_name: "Deleted template"` when deleted) and `steps`. Each step carries `position`, `plan_uuid`, `title`, `description`, `prompt` (the instructions), `stage`, `done`, `due_date`, `assigned_to` / `assigned_to_name`, `use_cycle_source`, `builds_on` (earlier steps it builds on), `document` (the produced document with link, or null), `step` (`kind`, `optional`, `do_on_date`, `draft_lead_days`, `schedule_time_zone`, `schedule` [`outcome`: `null` \| `waiting_content` \| `waiting` \| `overdue` \| `invalidated` \| `cancelled` \| `skipped` \| `claimed` \| `dispatching` \| `started` \| `failed` \| `unknown`], `goes_out_date`, plus `owner_name`, `due_time`, and `goes_out_time` when set), `result` (recorded link / note once completed, or null) and `link_url`. Use a step's `plan_uuid` with `get_plan` for full detail or `update_playbook_step_status` to finish or reopen it.
+**Output:** `cycle` (same shape as a `list_playbook_cycles` row, including `project_id` / `project_name` and `playbook_name: "Deleted template"` when deleted) and `steps`. Each step carries `position`, `plan_uuid`, `title`, `description`, `prompt` (the instructions), `stage`, `done`, `due_date`, `assigned_to` / `assigned_to_name`, `use_cycle_source`, `builds_on` (earlier steps it builds on), `document` (the produced document with link, or null), `step` (`kind`, `optional`, `do_on_date`, `draft_lead_days`, `schedule_time_zone`, `schedule` [`outcome`: `null` \| `waiting_content` \| `waiting` \| `overdue` \| `invalidated` \| `cancelled` \| `skipped` \| `claimed` \| `dispatching` \| `started` \| `failed` \| `unknown`], `goes_out_date`, `document_update` when configured [`mode`, `target_content_id`, `review_mode`, `instructions`, `target_title`, `target_link_url`, `target_can_open`, `pending_update_id`, `pending_state`, `pending_summary`, `stale`, `latest_update_id`, `latest_state`, `can_approve`, `last_outcome`, `last_error`], plus `owner_name`, `due_time`, and `goes_out_time` when set), `result` (recorded link / note once completed, or null) and `link_url`. Use a step's `plan_uuid` with `get_plan` for full detail or `update_playbook_step_status` to finish or reopen it.
 
 **Example prompts:** "What's due next in the launch cycle?" · "What did step 2 produce?"
 
@@ -2585,6 +2593,7 @@ Position: right after `after_plan_uuid`, or at the end when omitted. `builds_on`
 | `targeting_dimension_ids` | integer[] | No | Content steps: targeting dimension options for this step (starts empty unless explicitly passed — no cycle inheritance) |
 | `context_collection_ids` | integer[] | No | Content steps: context collections for this step (starts empty unless passed — no cycle inheritance) |
 | `action` | object/null | No | Required for `kind: "action"`: `{ instruction }`, a plain sentence or two (up to 12,000 characters, `{Variable}` allowed) |
+| `document_update` | object/null | No | Content steps only: update an existing document instead of creating a new one (`{ mode: "create" \| "update", target_content_id \| target_document_id, review_mode: "approval" \| "direct", instructions }`). Setting `mode: "update"` requires a target UUID (`target_content_id` / `target_document_id`) |
 | `owner_user_id` | integer | No | Team member who owns the step (defaults to caller). Do not send together with `owner_name` |
 | `owner_name` | string | No | Typed owner (agent or non-member) instead of `owner_user_id`. Not for `action` steps. See `list_playbook_owner_names` |
 | `due_date` | string | No | `YYYY-MM-DD` deadline the step is due |
@@ -2595,7 +2604,7 @@ Position: right after `after_plan_uuid`, or at the end when omitted. `builds_on`
 | `after_plan_uuid` | string (uuid) | No | Place the step right after this step (`plan_uuid` from `get_playbook_cycle`). Omit to add at the end |
 | `builds_on` | uuid[] | No | `plan_uuid`s of EARLIER steps in this running playbook whose finished content this step draws on. A later step is refused |
 
-**Output:** `plan_uuid`, `title`, `stage`, `due_date`, `run_id`, `step` (`kind`, `optional`, `owner_name`, times of day, and other step settings), `link_url`, `cycle_link_url`.
+**Output:** `plan_uuid`, `title`, `stage`, `due_date`, `run_id`, `step` (`kind`, `optional`, `owner_name`, times of day, `document_update` when set, and other step settings), `link_url`, `cycle_link_url`.
 
 **Example prompts:** "Add a QA check step after step 3 of the launch cycle"
 
@@ -2646,7 +2655,7 @@ Targeting dimensions and context collections belong on individual content steps 
 
 ### `generate_cycle_content`
 
-Start "Generate all" on a cycle: generate the document for every step that has none yet, in step order, on the server (it keeps going after the call returns). Requires an **Admin** or **Creator** role. Each step is generated with the cycle's topic and the steps it builds on. Generates open `content` steps assigned to or created by the caller (including steps you created that are assigned to a teammate); checklist and action steps, dismissed steps, already-generated steps, and teammates' private or unowned steps are skipped with a reason. **Uses the team's Studio Credits, one generation per step**; if credits run out the batch stops cleanly and the remaining steps are reported as `not_started`. Only one batch runs per cycle at a time: calling again while one runs returns `started: false` with the running batch. Not idempotent. For a single step use `produce_plan`.
+Start "Generate all" on a cycle: generate the document for every step that has none yet, in step order, on the server (it keeps going after the call returns). Requires an **Admin** or **Creator** role. Each step is generated with the cycle's topic and the steps it builds on. Generates open `content` steps assigned to or created by the caller (including steps you created that are assigned to a teammate); checklist and action steps, dismissed steps, already-generated steps, and teammates' private or unowned steps are skipped with a reason. When an update-mode step produces a proposal awaiting review (`review_mode: "approval"`), the piece finishes at `status: "skipped"` with `reason: "needs_review"` rather than blocking later steps — inspect and apply it with `list_document_updates` / `get_document_update` / `approve_document_update`. **Uses the team's Studio Credits, one generation per step**; if credits run out the batch stops cleanly and the remaining steps are reported as `not_started`. Only one batch runs per cycle at a time: calling again while one runs returns `started: false` with the running batch. Not idempotent. For a single step use `produce_plan`.
 
 **Parameters:**
 
@@ -2655,7 +2664,7 @@ Start "Generate all" on a cycle: generate the document for every step that has n
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `run_id` | integer | Yes | Cycle id from `list_playbook_cycles` / `instantiate_playbook` |
 
-**Output:** `started`, `nothing_to_generate`, `batch`, `pieces` (each: `position`, `plan_uuid`, `title`, `status` of `queued` / `generating` / `done` / `failed` / `blocked` / `skipped` / `not_started`, `reason`, `message`, `generation_id`, `depends_on`) and `cycle_link_url`. Async: poll `get_cycle_generation` (and `get_generation_status` for one step's `generation_id`).
+**Output:** `started`, `nothing_to_generate`, `batch`, `pieces` (each: `position`, `plan_uuid`, `title`, `status` of `queued` / `generating` / `done` / `failed` / `blocked` / `skipped` / `not_started`, `reason` — including `needs_review` for update proposals awaiting approval — `message`, `generation_id`, `depends_on`) and `cycle_link_url`. Async: poll `get_cycle_generation` (and `get_generation_status` for one step's `generation_id`).
 
 **Example prompts:** "Write all the content in the launch cycle"
 
@@ -2663,7 +2672,7 @@ Start "Generate all" on a cycle: generate the document for every step that has n
 
 ### `get_cycle_generation`
 
-Read the latest "Generate all" batch of a cycle: overall status (`running`, `completed`, `stopped`, `interrupted`) and each step's status with a reason and message where relevant. Returns `batch: null` when none was ever started. Read-only.
+Read the latest "Generate all" batch of a cycle: overall status (`running`, `completed`, `stopped`, `interrupted`) and each step's status with a reason (including `needs_review` when an update-mode step produced a pending proposal) and message where relevant. Returns `batch: null` when none was ever started. Read-only.
 
 **Parameters:**
 
@@ -2675,6 +2684,89 @@ Read the latest "Generate all" batch of a cycle: overall status (`running`, `com
 **Output:** `batch` (or null) and `cycle_link_url`.
 
 **Example prompts:** "How is the cycle generation going?"
+
+---
+
+## Document Updates
+
+Review, approve (with optional inline edits on plan updates), or discard proposed updates to existing documents across content plans, playbook steps, and workflows.
+
+> **Interactive approvals only:** `approve_document_update` and `discard_document_update` require an interactive caller and are refused in background workflow runs and playbook action runs.
+> **ChatGPT client scope:** In ChatGPT, workflow filtering and workflow-sourced document updates are hidden — `list_document_updates` lists plan/playbook updates only (`source_kind: "all" | "plan"`, no `workflow_id` filter) and direct `workflow_id` / workflow `update_id` calls are refused.
+
+### `list_document_updates`
+
+Lists pending or historical document update proposals (across content plans, playbook steps, and workflows), newest first (defaults to `state: "pending"`). Read-only.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
+| `source_kind` | string | No | Source filter: `all` (default), `plan`, or `workflow` (`all` and `plan` only in ChatGPT) |
+| `plan_uuid` | string (uuid) | No | Optional content plan or playbook step UUID to scope results to |
+| `workflow_id` | string (uuid) | No | Optional workflow UUID to scope results to (not available in ChatGPT) |
+| `state` | string | No | Proposal state filter: `pending` (default), `no_changes`, `applying`, `applied`, `rejected`, `conflict`, `superseded`, `failed`, or `all` |
+| `cursor` | string | No | Opaque `next_cursor` from the previous page when more updates remain |
+| `limit` | integer | No | Maximum updates per page (1 to 50, default 20) |
+
+**Output:** `items` (each: `update_id`, `source_kind`, `plan_uuid`, `step_title`, `run_id`, `run_name`, `workflow_id`, `workflow_name`, `item_key`, `item_name`, `document_key`, `root_run_id`, `kind`, `mode`, `state`, `summary`, `base_hash`, `target_content_id`, `target_title`, `target_link_url`, `applied_content_id`, `applied_link_url`, `stale`, `sibling_pending_count`, `created_at`, `decision_at`, `error_code`, `can_approve`) and `next_cursor`. Present `target_link_url` / `applied_link_url` as returned.
+
+**Example prompts:** "What document updates are waiting for review?" · "List pending updates for this playbook step"
+
+---
+
+### `get_document_update`
+
+Reads one document update proposal (content plan, playbook step, or workflow) by `update_id` (from `list_document_updates` or `get_generation_status`). Read-only. Unreadable targets return 404.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
+| `update_id` | string (uuid) | Yes | Document update proposal UUID from `list_document_updates` or `get_generation_status` |
+
+**Output:** `update_id`, `source_kind`, `plan_uuid`, `step_title`, `run_id`, `run_name`, `workflow_id`, `item_key`, `item_name`, `document_key`, `kind`, `mode`, `state`, `summary`, `base_hash`, `current_hash`, `target_content_id`, `target_title`, `target_link_url`, `applied_content_id`, `applied_link_url`, `root_run_id`, `stale`, `stale_edited_at`, `stale_edited_by_name`, `sibling_pending_count`, `created_at`, `decision_at`, `decision_user_id`, `decision_user_name`, `error_code`, `can_approve`, `proposed_body`, `base_body`, `current_body`, `diff`, `evidence`.
+
+**Example prompts:** "Show me the diff for that pricing page update"
+
+---
+
+### `approve_document_update`
+
+Approves a pending document update (or confirms a `no_changes` plan update as done) by `update_id`, applying the reviewed draft to the target document (interactive conversations only; background workflow or playbook action runs are refused). Always call `get_document_update` first, inspect the diff, and confirm with the user unless they asked you to apply it.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
+| `update_id` | string (uuid) | Yes | Document update proposal UUID to approve |
+| `expected_base_hash` | string or null | Yes | 64-character SHA-256 `base_hash` from `get_document_update` or `list_document_updates` (pass `null` only for workflow create-mode proposals where `base_hash` is `null`) |
+| `edited_body` | string | No | Optional edited markdown body replacing `proposed_body` on plan updates before saving (refused on workflow updates and `no_changes` updates) |
+| `confirm_private_sources` | string | No | One-time confirmation token from a prior private-source confirmation prompt after confirming sharing private sources with the target's audience |
+
+**Output:** `source_kind`, `update_id`, `state`, `content_id`, `link_url`, and `plan_stage` (when applicable).
+
+**Example prompts:** "Approve that document update" · "Apply the pricing update with this tweak to the enterprise row"
+
+---
+
+### `discard_document_update`
+
+Discards (rejects) a pending, conflict, or `no_changes` document update proposal by `update_id` without changing the target document (interactive conversations only; background workflow or playbook action runs are refused). Confirm before discarding. Re-run `produce_plan` with `redraft: true` on a plan update for a fresh proposal; workflow-sourced updates do not support redraft.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
+| `update_id` | string (uuid) | Yes | Document update proposal UUID to discard |
+
+**Output:** `source_kind`, `update_id`, `state`, `content_id`, `link_url`.
+
+**Example prompts:** "Discard that proposed update"
 
 ---
 

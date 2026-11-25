@@ -57,9 +57,19 @@ The **starting stage is set automatically from `source`**, you don't control it 
 - **`get_cycle_generation`** — Poll the latest batch (`running` / `completed` / `stopped` / `interrupted`) and each step's status. For one step's output use its `generation_id` with `get_generation_status`.
 - To see every step of a cycle as plans, `list_plans` accepts `run_id` (combine with `assignee_scope: "all_visible"`); each plan row carries its `run_id`.
 
+### Document update proposals (the 4 review tools)
+
+Content plans and playbook content steps can configure `document_update` (`{ mode: "update", target_content_id, review_mode?: "approval" | "direct", instructions? }`, or `{ mode: "create" }` / `null` to reset) to update an existing document instead of creating a new one (`blueprint_id` is cleared in update mode). `produce_plan` starts an async `document_update` draft (pass `redraft: true` and optional one-off `instructions` to replace a pending/conflict/`no_changes` draft); in `generate_cycle_content` / `get_cycle_generation`, approval-mode update steps report `status: "skipped"`, `reason: "needs_review"`.
+
+- **`list_document_updates`** — List pending or historical document update proposals across plans, playbook steps, and workflows (`source_kind`: `all` | `plan` | `workflow`, `state` default `pending`, `plan_uuid`, `workflow_id`). ChatGPT is scoped to `plan` updates only. Unreadable targets are omitted.
+- **`get_document_update`** — Read one proposal (`update_id`) with `proposed_body`, `current_body`, `base_hash`, `stale`, `diff`, `evidence`, and `can_approve`. Always inspect before approving or discarding. Unreadable targets return 404.
+- **`approve_document_update`** — Apply a pending proposal (requires `expected_base_hash` from `get_document_update` unless creating a new workflow document where `base_hash` is `null`; optional `edited_body` on plan updates; also confirms `no_changes` plan updates as done). Interactive conversations only (background workflow/action runs are refused). Re-run `produce_plan(redraft: true)` if `stale` or `conflict`.
+- **`discard_document_update`** — Reject a `pending`, `conflict`, or `no_changes` proposal without modifying the target document. Interactive conversations only.
+
 ### Typical flows
 
 - **Turn a suggestion into content:** `list_plans` (find it) → `update_plan target_stage:"Accepted"` → `produce_plan` → poll `get_generation_status` → hand the user the produced content's link.
+- **Review and apply a document update:** `list_document_updates` → `get_document_update` (inspect diff & `base_hash`) → confirm with user → `approve_document_update(expected_base_hash=…)` (or `produce_plan(redraft: true)` if stale, or `discard_document_update`).
 - **Capture then reuse:** user runs a good batch of plans → `create_playbook_from_plans(team_id, plan_ids)` → later `instantiate_playbook(team_id, playbook_id, anchor_date=…)` to redeploy the sequence.
 - **Author a template:** `create_playbook(team_id, name, items)` → `instantiate_playbook` when ready to deploy.
 - **Run and follow a campaign:** `instantiate_playbook(team_id, playbook_id, anchor_date, topic)` → `generate_cycle_content(team_id, run_id)` (after confirming credits) → poll `get_cycle_generation(team_id, run_id)` → `list_my_playbook_steps(team_id, due_by=today)` each day → `update_playbook_step_status(team_id, plan_uuid, action="complete", result_url=…)` as steps are done.

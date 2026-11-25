@@ -66,6 +66,7 @@ The runner agent's FINAL message becomes the run's summary (rendered as markdown
 - **Hard-delete isn't exposed** — use `update_workflow status:"archived"`. Restore with `status:"inactive"` or `status:"active"`.
 - **Duplicate names aren't prevented** — `list_workflows search:"<name>"` first if re-creating is possible.
 - **Schedule edits via MCP are NOT supported** — changing a schedule, and switching it On or Paused, happen in the app. Direct the user there with the workflow's `link_url`.
+- **Document update proposals from workflows** — inspect with `list_document_updates` / `get_document_update` and approve or discard interactively with `approve_document_update` / `discard_document_update` (not available in ChatGPT; background runner sessions cannot approve or discard).
 - **Runner sessions don't author workflows** — these 6 tools are for interactive sessions; a runner executing a scheduled run uses a different tool set and must not call `create_workflow`/`update_workflow`.
 
 ---

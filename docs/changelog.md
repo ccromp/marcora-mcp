@@ -2,6 +2,16 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## Unreleased
+
+### Added
+
+- **Unified document-update review tools (`list_document_updates`, `get_document_update`, `approve_document_update`, `discard_document_update`):** inspect, approve/apply (with `expected_base_hash` optimistic locking, optional `edited_body` on plan updates, `no_changes` completion, and interactive-only guards blocking background workflow/action runs), or discard proposed updates across content plans, playbook steps, and workflows (ChatGPT sees plan updates only).
+
+### Changed
+
+- **Update-an-existing-document parity across plans, playbooks, and cycles:** `create_plan`, `update_plan`, `get_plan`, `create_playbook`, `update_playbook`, `get_playbook`, `instantiate_playbook`, `get_playbook_cycle`, and `add_playbook_step` support `document_update` (`{ mode: "create" | "update", target_content_id?, review_mode?: "approval" | "direct", instructions? }`, with `target_document_id` alias on input and `target_content_id` on output). `produce_plan` adds `redraft`, one-off `instructions`, and `confirm_private_sources` for update-mode plans (`get_generation_status` exposes `flow_type: "document_update"` + `update`); `generate_cycle_content` and `get_cycle_generation` report `status: "skipped"`, `reason: "needs_review"` for approval-mode update steps.
+
 ## 2026-11-24 (HTML cleaning on context content, source labels & collection headers, get_playbook_cycle run_id)
 
 ### Skill → v0.8.7 · plugin → v1.3.7
