@@ -2,6 +2,21 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## Unreleased (playbook workflow steps)
+
+### Added
+
+- **`list_playbook_workflow_options`, `get_playbook_step_workflow`, `run_playbook_step_workflow`, `update_playbook_step_workflow`:** playbook steps can now run a Marcora workflow. List the workflows you can attach, read a step's live workflow state (input readiness, `can_run`, latest run), run it once now (the step completes when the run succeeds), or swap the workflow on an open step. `run_playbook_step_workflow` returns 409 when the workflow is already running or unavailable, inputs are missing, or the step already ran.
+- **`kind: "workflow"` steps:** `create_playbook`, `update_playbook` (`items[]`) and `add_playbook_step` accept `kind: "workflow"` with `workflow: { workflow_id, inputs? }`. Workflow steps show `step.workflow` (`workflow_id`, `inputs`, `status`, `run_id`, `error`, `ran_at`, `ran_by`) on `get_playbook_cycle`, `get_plan`, `list_plans`, `update_plan`, `list_my_playbook_steps` and `instantiate_playbook`.
+
+### Changed
+
+- **`include_workflow_steps` (default `false`):** `get_playbook`, `create_playbook`, `update_playbook` and `create_playbook_from_plans` leave `kind: "workflow"` steps out of the returned `items` and remap `builds_on` to the visible items, so older clients keep working. Pass `true` to include them.
+- **`update_playbook` refuses to drop workflow steps by accident:** when `items` is sent without `include_workflow_steps: true` and without a workflow step, and the playbook has a workflow step whose `id` is missing, the call returns 409 ("Nothing was changed") and writes nothing. Pass `include_workflow_steps: true` to remove one on purpose.
+- **Manual completion and owner limits:** `update_playbook_step_status` and `update_plan` `target_stage: "Complete"` return 409 on workflow steps (they finish when their workflow runs). A custom-workflow step's owner stays the person who made the workflow: `assigned_to`, `owner_user_id` and `step_overrides.owner` can't change it, and `owner_name` is rejected; team-shared setups allow a teammate who can run them. On `instantiate_playbook`, workflow steps accept only an `owner` override.
+- **ChatGPT:** the four tools are hidden and refused, `include_workflow_steps` / `workflow` / `kind: "workflow"` are removed from the playbook and plan tools, workflow steps are omitted from reads, and writes that add one are refused.
+- **Tool surface:** 81 tools served at `mcp.marcora.ai` (4 added: 40 read-only, 41 non-read-only). Skill and plugin versions are bumped at release.
+
 ## 2026-11-24 (HTML cleaning on context content, source labels & collection headers, get_playbook_cycle run_id)
 
 ### Skill → v0.8.7 · plugin → v1.3.7

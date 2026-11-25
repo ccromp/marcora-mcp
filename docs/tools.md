@@ -2072,6 +2072,8 @@ Plans are units of content intent — a titled, assignable record that captures 
 
 **Visibility:** plans are `private` (creator-only) by default; assigning to another team member auto-promotes to `team`. Playbooks default to `team`, and `instantiate_playbook` inherits the playbook's visibility onto the plans it creates.
 
+**Workflow steps.** A playbook step can be `kind: "workflow"`: it runs one of your Marcora workflows once, on demand, and completes by itself when the run succeeds (it can't be completed or reopened by hand, 409). Playbook reads leave workflow steps out unless you pass `include_workflow_steps: true`. **ChatGPT never sees workflow steps:** the four step-workflow tools are hidden and refused there, `include_workflow_steps`, `workflow` fields and `kind: "workflow"` are removed from the playbook and plan tools, workflow steps are omitted from playbook and plan reads, and writes that try to add one are refused.
+
 ---
 
 ### `list_plans`
@@ -2157,7 +2159,7 @@ Fetch a single plan by UUID with full details including linked references, conte
 | `plan.reference_documents` | array | Content items attached as reference material |
 | `plan.context_collections` | array | Context collections pre-attached to the plan |
 | `plan.targeting_dimensions` | array | Targeting dimension options pre-attached |
-| `plan.step` | object \| null | For playbook cycle steps: `kind`, `optional`, `do_on_date`, `draft_lead_days`, `due_time`, `goes_out_date`, `goes_out_time`, `owner_name`, `schedule_time_zone`, and `schedule` (`enabled`, `due_at`, `generate_at`, `attempted_at`, `time_zone`, `outcome`: `null` \| `waiting_content` \| `waiting` \| `overdue` \| `invalidated` \| `cancelled` \| `skipped` \| `claimed` \| `dispatching` \| `started` \| `failed` \| `unknown`, `execution_uuid`, `error`) |
+| `plan.step` | object \| null | For playbook cycle steps: `kind`, `optional`, `do_on_date`, `draft_lead_days`, `due_time`, `goes_out_date`, `goes_out_time`, `owner_name`, `schedule_time_zone`, and `workflow` (workflow steps only: `workflow_id`, `inputs`, `status`, `run_id`, `error`, `ran_at`, `ran_by`), and `schedule` (`enabled`, `due_at`, `generate_at`, `attempted_at`, `time_zone`, `outcome`: `null` \| `waiting_content` \| `waiting` \| `overdue` \| `invalidated` \| `cancelled` \| `skipped` \| `claimed` \| `dispatching` \| `started` \| `failed` \| `unknown`, `execution_uuid`, `error`) |
 | `plan._produced_content` | object/null | Linked content summary `{content_id, name, stage, visibility}`, or null. Call `get_content` with `content_id` for the full item |
 | `plan._source_metadata_resolved` | object/null | Resolved source metadata, or null |
 
@@ -2239,13 +2241,13 @@ Partial update of a plan: mutable fields and stage transitions. All fields are o
 | `draft_lead_days` | integer | No | Whole calendar days before `due_date` (0–365; rejects `null`) |
 | `schedule_time_zone` | string | No | IANA time zone for scheduled step generation |
 | `generation_settings` | object/null | No | `{ use_cycle_source?: boolean, calls_source?: object | null }`. Replaces the whole object; `null` clears |
-| `assigned_to` | integer | No | Integer user ID. Must be an enabled member of that team. Choosing a team member also clears `owner_name` |
+| `assigned_to` | integer | No | Integer user ID. Must be an enabled member of that team. Choosing a team member also clears `owner_name`. Refused on a custom-workflow step, whose owner stays the person who made the workflow |
 | `visibility` | string | No | `private` or `team` (creator-only) |
 | `reference_document_ids` | string[] | No | A non-empty array REPLACES the full set of reference documents while keeping existing cycle step links unless `builds_on_plan_ids` is sent or earlier same-cycle plan UUIDs are included; any other plan or unknown ID is rejected. `[]` is ignored |
 | `builds_on_plan_ids` | string[]/null | No | REPLACES the `plan_uuid`s of earlier same-cycle steps this step builds on while keeping reference documents. Self, later, out-of-cycle, and unknown IDs are rejected. Pass `[]` or `null` to clear step links |
 | `context_collection_ids` | integer[] | No | Replaces the full set of context collections (`[]` clears; `null` is ignored) |
 | `targeting_dimension_ids` | integer[] | No | Replaces the full set of targeting dimensions (`[]` clears; `null` is ignored) |
-| `target_stage` | string | No | Trigger a stage transition. Use UNDERSCORE form (e.g. `In_Process`). Allowed: `Suggested`, `Accepted`, `In_Process`, `Complete`, `Dismissed` |
+| `target_stage` | string | No | Trigger a stage transition. Use UNDERSCORE form (e.g. `In_Process`). Allowed: `Suggested`, `Accepted`, `In_Process`, `Complete`, `Dismissed` `Complete` is refused with a 409 on a workflow step (`kind: "workflow"`), which finishes automatically when its workflow run succeeds. |
 | `attach_content_id` | string (uuid) | No | Playbook content steps: `content_id` of an existing document (from `list_content` or `create_content`) to attach as this step's output. Content steps only (checklist, action, and dismissed steps are refused). Pending steps are accepted first and accepted steps move to `In_Process`. A step that already has a document requires `replace_attached_content: true` (otherwise 409); the old document is kept. To detach, transition back to `Accepted` |
 | `replace_attached_content` | boolean | No | Set `true` to swap an existing attached document when sending `attach_content_id` (default `false`) |
 | `owner_name` | string/null | No | Playbook steps: typed owner (agent or non-member, max 60 chars) matched case-insensitively to existing team spellings (`list_playbook_owner_names`). Not for action steps. `null` or `assigned_to` clears it |
@@ -2320,8 +2322,9 @@ Fetch one content playbook by id, including its full ordered list of items.
 |---|---|---|---|
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `playbook_id` | integer | Yes | ID of the playbook to fetch |
+| `include_workflow_steps` | boolean | No | Default `false`: `kind: "workflow"` steps are left out of the returned `items` and `builds_on` positions are remapped to the visible items, so older clients keep working. `true` returns them with their `workflow` config. |
 
-**Output:** the playbook object — including `anchor_date` (persisted `YYYY-MM-DD` reference date, or `null`), `anchor_label`, `default_project_id`, `new_project_each_use`, `project_name_pattern`, `variables`, and `link_url` (opens the playbook in the Marcora web app) — with an ordered `items` array. Each item carries `id`, the plan fields it will stamp out (`name`, `title`, `description`, `prompt`, `blueprint_id`, `category_id`), a `builds_on` array (0-based positions of the earlier steps it builds on; empty when none), `offset_days` counted from the anchor date to compute each due date on instantiation, and step fields (`kind` of `content` / `checklist` / `action`, `goes_out_offset_days`, `goes_out_time`, `due_time`, `optional`, `off_by_default`, `owner_user_id`, `owner_name`, `targeting_dimension_ids`, readable `context_collection_ids`, `use_cycle_source`, `draft_lead_days`, `action`). (`reviewer` is deprecated and not returned by MCP.)
+**Output:** the playbook object — including `anchor_date` (persisted `YYYY-MM-DD` reference date, or `null`), `anchor_label`, `default_project_id`, `new_project_each_use`, `project_name_pattern`, `variables`, and `link_url` (opens the playbook in the Marcora web app) — with an ordered `items` array. Each item carries `id`, the plan fields it will stamp out (`name`, `title`, `description`, `prompt`, `blueprint_id`, `category_id`), a `builds_on` array (0-based positions of the earlier steps it builds on; empty when none), `offset_days` counted from the anchor date to compute each due date on instantiation, and step fields (`kind` of `content` / `checklist` / `action`, `goes_out_offset_days`, `goes_out_time`, `due_time`, `optional`, `off_by_default`, `owner_user_id`, `owner_name`, `targeting_dimension_ids`, readable `context_collection_ids`, `use_cycle_source`, `draft_lead_days`, `action`). (`reviewer` is deprecated and not returned by MCP.) Items of `kind: "workflow"` are omitted unless `include_workflow_steps: true`; when included, each carries `workflow` (`{ workflow_id, inputs }`).
 
 **Example prompts:**
 - "What's in my launch-week playbook?"
@@ -2341,12 +2344,13 @@ Create a reusable content playbook — an ordered template of content-plan items
 | `description` | string | No | Free-text description |
 | `visibility` | string | No | `team` (default) or `private` |
 | `anchor_date` | string | No | Optional `YYYY-MM-DD` reference date the playbook is built around (a launch, event, campaign kickoff). Persisted on the playbook; each item's `offset_days` counts from it, and it becomes the default anchor when instantiating. Leave off for an evergreen/undated template |
-| `items` | array | No | Ordered playbook items (each becomes one plan on instantiation). Each item can carry `builds_on`: an array of 0-based positions, in this same `items` array, of EARLIER items the step builds on (a link to itself or a later item is rejected). When the playbook is run, each step's generation draws on the steps it builds on. Each item can also set step fields: `kind` (`content` default, `checklist` — a to-do the owner ticks off — or `action` — a plain instruction the owner's in-app agent carries out), `optional` (may be left out via `skip_item_ids`), `off_by_default` (`true` = starts unticked and is left out unless named in `include_item_ids`; implies `optional`), `owner_user_id` (an active team member), `owner_name` (typed owner up to 60 chars for content/checklist steps, matching `list_playbook_owner_names`, never action), `due_time` (`"HH:MM"`, needs `offset_days`), `goes_out_offset_days` (content steps: a second date, days after anchor), `goes_out_time` (`"HH:MM"`, needs `goes_out_offset_days`), and on content steps: `targeting_dimension_ids`, `context_collection_ids`, `use_cycle_source`, and `draft_lead_days` (0–365). (`reviewer` is deprecated and ignored: not written or returned by MCP; existing values are kept.) For `action` steps, `action: { instruction }`: one or two plain sentences saying what to do, up to 12,000 characters, `{Variable}` allowed. There is no fixed list of actions or apps. When the step's owner presses Run in the Marcora app, their in-app agent carries it out using the owner's own connected apps, asks the owner for exact approval before EVERY write to a connected app or anything that reaches another person, and saves the result on the step. An action step does not run over MCP. |
+| `items` | array | No | Ordered playbook items (each becomes one plan on instantiation). Each item can carry `builds_on`: an array of 0-based positions, in this same `items` array, of EARLIER items the step builds on (a link to itself or a later item is rejected). When the playbook is run, each step's generation draws on the steps it builds on. Each item can also set step fields: `kind` (`content` default, `checklist` — a to-do the owner ticks off — `action` — a plain instruction the owner's in-app agent carries out — or `workflow` — runs a Marcora workflow, with `workflow: { workflow_id, inputs? }`; pick the workflow from `list_playbook_workflow_options`), `optional` (may be left out via `skip_item_ids`), `off_by_default` (`true` = starts unticked and is left out unless named in `include_item_ids`; implies `optional`), `owner_user_id` (an active team member), `owner_name` (typed owner up to 60 chars for content/checklist steps, matching `list_playbook_owner_names`, never action), `due_time` (`"HH:MM"`, needs `offset_days`), `goes_out_offset_days` (content steps: a second date, days after anchor), `goes_out_time` (`"HH:MM"`, needs `goes_out_offset_days`), and on content steps: `targeting_dimension_ids`, `context_collection_ids`, `use_cycle_source`, and `draft_lead_days` (0–365). (`reviewer` is deprecated and ignored: not written or returned by MCP; existing values are kept.) For `action` steps, `action: { instruction }`: one or two plain sentences saying what to do, up to 12,000 characters, `{Variable}` allowed. There is no fixed list of actions or apps. When the step's owner presses Run in the Marcora app, their in-app agent carries it out using the owner's own connected apps, asks the owner for exact approval before EVERY write to a connected app or anything that reaches another person, and saves the result on the step. An action step does not run over MCP. |
 | `anchor_label` | string | No | What `anchor_date` is called in the app, e.g. "Launch day" (up to 60 characters). `null` clears it |
 | `default_project_id` | string (uuid) | No | Project a run of this playbook starts in by default. `null` clears it |
 | `new_project_each_use` | boolean | No | Automatically create a fresh project per cycle run when `project_id` / `new_project` are omitted |
 | `project_name_pattern` | string | No | Name pattern for per-cycle projects when `new_project_each_use: true` (supports `{Variable}` tokens) |
 | `variables` | array | No | Placeholders the person running the playbook fills in once, e.g. `[{ "name": "Product", "required": true }]`; write `{Product}` in item names, descriptions, prompts and action instructions. Up to 30; a name is 1-40 letters, numbers, spaces, dashes or underscores. On update, sending `variables` replaces the whole list |
+| `include_workflow_steps` | boolean | No | Default `false`: `kind: "workflow"` steps are left out of the returned `items` and `builds_on` positions are remapped to the visible items, so older clients keep working. `true` returns them (turned on automatically when you send a `kind: "workflow"` item) with their `workflow` config. |
 
 **Output:** the created playbook object (same shape as `get_playbook`, including `anchor_date`, `anchor_label`, `default_project_id`, `new_project_each_use`, `project_name_pattern`, `variables`, ordered `items` with step fields, and a `link_url` that opens the new playbook in the Marcora web app — share it with the user).
 
@@ -2369,6 +2373,7 @@ Create a playbook by capturing existing content plans as reusable template items
 | `name` | string | No | Playbook name (derived if omitted) |
 | `description` | string | No | Free-text description |
 | `visibility` | string | No | `team` (default) or `private` |
+| `include_workflow_steps` | boolean | No | Default `false`: `kind: "workflow"` steps are left out of the returned `items` (plans that were workflow steps are still captured) and `builds_on` positions are remapped to the visible items, so older clients keep working. `true` returns them with their `workflow` config. |
 
 **Output:** the created playbook object (same shape as `get_playbook`, including `anchor_date`, `anchor_label`, `default_project_id`, `new_project_each_use`, `project_name_pattern`, `variables`, ordered `items` with step fields, and a `link_url` that opens the new playbook in the Marcora web app — share it with the user).
 
@@ -2381,6 +2386,8 @@ Create a playbook by capturing existing content plans as reusable template items
 ### `update_playbook`
 
 Edit a content playbook. Any playbook is fully editable. Pass only the fields to change: `name`, `description`, `variables`, `anchor_date`, `anchor_label`, `default_project_id`, `new_project_each_use`, and `project_name_pattern` patch in place. If `items` is provided it sets the playbook's items and their order; omit `items` to leave them untouched. Changing `visibility` is creator-only.
+
+**Workflow steps are never deleted by accident.** `get_playbook` leaves workflow steps out by default, so a client editing from that view would drop them. When `items` is sent without `include_workflow_steps: true` and without any workflow step, and the playbook has a workflow step whose `id` is missing from `items`, the call is refused with a 409 ("Nothing was changed. This playbook has workflow steps that are not included in this edit…") and nothing is written. Read with `get_playbook` `include_workflow_steps: true` and send the workflow steps back in `items` with their `id`s, or pass `include_workflow_steps: true` to remove one on purpose. Custom-workflow steps keep their owner pinned to the person who made the workflow.
 
 **Parameters:**
 
@@ -2398,6 +2405,7 @@ Edit a content playbook. Any playbook is fully editable. Pass only the fields to
 | `new_project_each_use` | boolean | No | Automatically create a fresh project per cycle run when `project_id` / `new_project` are omitted |
 | `project_name_pattern` | string | No | Name pattern for per-cycle projects when `new_project_each_use: true` (`{Variable}` tokens supported; `null` clears) |
 | `variables` | array | No | Placeholders the person running the playbook fills in once, e.g. `[{ "name": "Product", "required": true }]`; write `{Product}` in item names, descriptions, prompts and action instructions. Up to 30; a name is 1-40 letters, numbers, spaces, dashes or underscores. On update, sending `variables` replaces the whole list |
+| `include_workflow_steps` | boolean | No | Default `false`. With `items` set, a workflow step you leave out is **refused** (409) unless this is `true` or you send a workflow step; `true` also means an omitted workflow step is removed on purpose. Also controls whether workflow steps are returned (default: left out, `builds_on` remapped). |
 
 **Output:** the updated playbook object (same shape as `get_playbook`, including `anchor_date`, `anchor_label`, `default_project_id`, `new_project_each_use`, `project_name_pattern`, `variables`, ordered `items` with step fields, and `link_url`).
 
@@ -2426,7 +2434,7 @@ Run a playbook: create one content plan per playbook item, in order, as a batch.
 | `variables` | object | No | Values for the playbook's variables by name, e.g. `{ "Product": "Acme" }` (up to 500 characters each). Every variable the playbook marks required must be given |
 | `targeting_dimension_ids` | integer[] | No | Run-wide targeting dimension options applied to created content steps for this run (beats template defaults; `[]` clears template defaults for the run; overridden per step by `step_overrides`) |
 | `context_collection_ids` | integer[] | No | Run-wide context collections applied to created content steps for this run (beats template defaults; `[]` clears template defaults for the run; overridden per step by `step_overrides`) |
-| `step_overrides` | array | No | Per-step overrides (`[{ item_id, owner?, prompt?, blueprint_id?, targeting_dimension_ids?, context_collection_ids? }]`; precedence: step override > run-wide > template default; nothing saved on template). Any step kind accepts `owner` (`{ user_id }` or `{ name }`; changing owner or setting typed `name` turns `do_on_date` off, while keeping the same member owner keeps it on). Only content steps accept `prompt` (non-blank; `{Variable}` filled; blank prompts refused), `blueprint_id` (UUID, integer, or `null`), `targeting_dimension_ids`, or `context_collection_ids` (passing content-only fields on checklist/action steps is refused) |
+| `step_overrides` | array | No | Per-step overrides (`[{ item_id, owner?, prompt?, blueprint_id?, targeting_dimension_ids?, context_collection_ids? }]`; precedence: step override > run-wide > template default; nothing saved on template). Any step kind accepts `owner` (`{ user_id }` or `{ name }`; changing owner or setting typed `name` turns `do_on_date` off, while keeping the same member owner keeps it on). Only content steps accept `prompt` (non-blank; `{Variable}` filled; blank prompts refused), `blueprint_id` (UUID, integer, or `null`), `targeting_dimension_ids`, or `context_collection_ids` (passing content-only fields on checklist/action steps is refused) On a workflow step, only `owner` is accepted (never `prompt`, `blueprint_id`, targeting or collections, nor a typed owner `name`); a custom-workflow step's owner stays pinned to the person who made the workflow, and a team-shared setup allows `owner.user_id` only for a teammate who can run it. `step_overrides` never accepts `kind` or `workflow`. |
 | `suggestion_id` | string (uuid) | No | Start a call-detected playbook suggestion from `list_playbook_suggestions` (starts uncovered steps) |
 | `skip_item_ids` | integer[] | No | Ids (from `get_playbook`) of OPTIONAL steps to leave out of this cycle. A step that is not optional is refused, and at least one step must remain |
 | `include_item_ids` | integer[] | No | Ids (from `get_playbook`) of OFF-BY-DEFAULT (`off_by_default`) steps to include in this running playbook. Any off-by-default step not named here is left out, and any `builds_on` link to a left-out step is dropped. Unknown IDs are refused |
@@ -2514,7 +2522,7 @@ List the playbook cycles in the specified team (`team_id`): active by default, o
 
 ### `get_playbook_cycle`
 
-Read one cycle with its steps in order (including any steps added mid-cycle via `add_playbook_step`). Each step's `plan_uuid` is how you change it: to change a step's title, prompt, due date, assignee, typed owner, time of day, targeting/collections, attach an existing document, or dismiss it, use `update_plan` with the step's `plan_uuid`; to complete or reopen it, `update_playbook_step_status`; to rename the cycle or change its topic, `update_playbook_cycle`. Read-only.
+Read one cycle with its steps in order (including any steps added mid-cycle via `add_playbook_step`). Each step's `plan_uuid` is how you change it: to change a step's title, prompt, due date, assignee, typed owner, time of day, targeting/collections, attach an existing document, or dismiss it, use `update_plan` with the step's `plan_uuid`; to complete or reopen it, `update_playbook_step_status`; to rename the cycle or change its topic, `update_playbook_cycle`. **Workflow steps** (`step.kind: "workflow"`, with a `step.workflow` object) are read, run and swapped with `get_playbook_step_workflow`, `run_playbook_step_workflow` and `update_playbook_step_workflow`; a lost or unpickable workflow waits with `step.schedule.outcome: "waiting"` and the reason in `error`, and a busy one waits with `waiting_content`. Read-only.
 
 **Parameters:**
 
@@ -2531,7 +2539,7 @@ Read one cycle with its steps in order (including any steps added mid-cycle via 
 
 ### `list_my_playbook_steps`
 
-List the open playbook steps (not Complete or Dismissed) assigned to you, across all running playbooks, soonest due first (undated last). Pass `owner_name` to list the open steps owned by a typed owner name instead (matched case-insensitively across the team's running playbooks). Read-only. This is the daily "what do I need to do" check.
+List the open playbook steps (not Complete or Dismissed) assigned to you, across all running playbooks, soonest due first (undated last). Pass `owner_name` to list the open steps owned by a typed owner name instead (matched case-insensitively across the team's running playbooks). Read-only. This is the daily "what do I need to do" check. Workflow steps appear like any other step: run them with `run_playbook_step_workflow` rather than completing them by hand.
 
 **Parameters:**
 
@@ -2567,7 +2575,7 @@ List the typed owner names (`owner_name`) in use on your team's playbook steps �
 
 Add one step to a **running** playbook cycle (`run_id`) without changing the playbook template it came from. The new step becomes a normal step of the running playbook: same visibility, project, and category as its other steps, starting at stage `Accepted`, counted in cycle progress, and picked up by `generate_cycle_content`.
 
-Position: right after `after_plan_uuid`, or at the end when omitted. `builds_on` may only name earlier steps in the same cycle. A typed `owner_name` is for `content` and `checklist` steps (never `action`), and times of day (`due_time`, `goes_out_time`) require their corresponding date (`due_date`, `goes_out_date`). Refusals change nothing.
+Position: right after `after_plan_uuid`, or at the end when omitted. `builds_on` may only name earlier steps in the same cycle. A typed `owner_name` is for `content` and `checklist` steps (never `action` or `workflow`; a workflow step with `owner_name` is rejected). A workflow step running a custom workflow stays owned by the person who made it (`owner_user_id` is pinned to them); a team-shared setup allows a teammate who can run it. Content-only fields (targeting, context collections, prompt) are ignored or refused on workflow steps, and times of day (`due_time`, `goes_out_time`) require their corresponding date (`due_date`, `goes_out_date`). Refusals change nothing.
 
 **Parameters:**
 
@@ -2579,14 +2587,15 @@ Position: right after `after_plan_uuid`, or at the end when omitted. `builds_on`
 | `description` | string | No | What the step is for |
 | `prompt` | string | No | Content steps: the generation prompt (`{Variables}` are filled from the running playbook's own values) |
 | `blueprint_uuid` | string (uuid) | No | Content steps: blueprint to write from (from `list_blueprints`) |
-| `kind` | string | No | `content` (default), `checklist`, or `action` (needs `action` and `owner_user_id`; runs in the app, not over MCP) |
+| `kind` | string | No | `content` (default), `checklist`, `action` (needs `action` and `owner_user_id`; runs in the app, not over MCP), or `workflow` (needs `workflow`) |
+| `workflow` | object | No | Required for `kind: "workflow"`: `{ workflow_id, inputs? }`. Pick `workflow_id` from `list_playbook_workflow_options`; `inputs` maps each declared workflow input to `{ from: "step", plan_uuid }`, `{ from: "field", name, value? }` or `{ from: "text", value }` (team-shared setups accept `step` inputs only) |
 | `use_cycle_source` | boolean | No | Content steps: inject a live snapshot of the running cycle (omits private steps with a footer count) |
 | `draft_lead_days` | integer | No | Content steps: whole calendar days before `due_date` (0–365; later editing schedule-sensitive fields via `update_plan` turns auto-generate off) |
 | `targeting_dimension_ids` | integer[] | No | Content steps: targeting dimension options for this step (starts empty unless explicitly passed — no cycle inheritance) |
 | `context_collection_ids` | integer[] | No | Content steps: context collections for this step (starts empty unless passed — no cycle inheritance) |
 | `action` | object/null | No | Required for `kind: "action"`: `{ instruction }`, a plain sentence or two (up to 12,000 characters, `{Variable}` allowed) |
 | `owner_user_id` | integer | No | Team member who owns the step (defaults to caller). Do not send together with `owner_name` |
-| `owner_name` | string | No | Typed owner (agent or non-member) instead of `owner_user_id`. Not for `action` steps. See `list_playbook_owner_names` |
+| `owner_name` | string | No | Typed owner (agent or non-member) instead of `owner_user_id`. Not for `action` or `workflow` steps. See `list_playbook_owner_names` |
 | `due_date` | string | No | `YYYY-MM-DD` deadline the step is due |
 | `due_time` | string | No | Optional `"HH:MM"` 24-hour time due (no time zone). Needs `due_date` |
 | `goes_out_date` | string | No | Content steps: `YYYY-MM-DD` date the finished content goes out |
@@ -2603,7 +2612,7 @@ Position: right after `after_plan_uuid`, or at the end when omitted. `builds_on`
 
 ### `update_playbook_step_status`
 
-Update a playbook cycle step's completion status (`complete` or `reopen`) and record or clear evidence, shown on the step in `get_playbook_cycle`. Works for steps that produce no document, which `update_plan` cannot complete. You must be able to edit the step (its assignee or creator). Plans that are not cycle steps are refused (use `update_plan`).
+Update a playbook cycle step's completion status (`complete` or `reopen`) and record or clear evidence, shown on the step in `get_playbook_cycle`. Works for steps that produce no document, which `update_plan` cannot complete. You must be able to edit the step (its assignee or creator). Plans that are not cycle steps are refused (use `update_plan`). **Workflow steps (`kind: "workflow"`) cannot be completed or reopened by hand: the call returns 409.** They complete on their own when `run_playbook_step_workflow` succeeds.
 
 - **`action: "complete"`:** marks `content` or `checklist` step Complete with optional `result_url` and `note`. **Open `action` steps cannot be completed over external MCP** (always refused with `"Complete this action from its current Marcora conversation"`); action steps complete only inside a Marcora conversation (with both `result_url` and `note`). Calling it again on a step that is already Complete keeps its original `completed_at` / `completed_by`, while newly supplied `result_url` or `note` overwrite previous values (omit them to keep what is recorded). Refuses Dismissed steps (409).
 - **`action: "reopen"`:** unticks a completed **checklist** step back to `Accepted` and clears completion evidence (`completed_at: 0`, `result_url: null`, `note: null`). Non-checklist steps are refused (409); `result_url` and `note` are rejected if sent. Reopening a step that is not Complete changes nothing.
@@ -2621,6 +2630,76 @@ Update a playbook cycle step's completion status (`complete` or `reopen`) and re
 **Output:** `plan_uuid`, `title`, `stage`, `completed_at`, `completed_by`, `result_url`, `note`, `run_id`, `link_url`, `cycle_link_url`.
 
 **Example prompts:** "Mark the press-release step done, here's the confirmation page" · "I ticked that checklist step off by mistake, reopen it"
+
+---
+
+### `list_playbook_workflow_options`
+
+List the active workflows you can attach to a playbook workflow step: your own `custom` workflows and `team_setup` workflows shared with the team. Read-only. Use it before `create_playbook`, `update_playbook` or `add_playbook_step` with `kind: "workflow"`, and before `update_playbook_step_workflow`.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
+
+**Output:** `items` and `total`. Each item: `id` (the `workflow_id` to use), `name`, `description`, `kind` (`custom` = your own workflow, whose step owner stays pinned to you; `team_setup` = a team-shared setup that any teammate who can run it may own, accepting earlier-step documents only), `status`, `inputs` (`name`, `type` of `text` or `document`, `required`, `description`), `has_schedule`, `schedule_config`, `owner_user_id`, `owner_name`, `template_name`. Workflows that publish to a destination are not offered, and neither are other people's custom workflows.
+
+**Example prompts:** "Which workflows can I put in a playbook step?"
+
+---
+
+### `get_playbook_step_workflow`
+
+Read the live workflow state of a playbook workflow step (`plan_uuid` from `get_playbook_cycle`). Read-only; it also settles a finished run so the step shows its final state.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
+| `plan_uuid` | string (uuid) | Yes | The workflow step's `plan_uuid`, from `get_playbook_cycle` |
+
+**Output:** `status` (`idle`, `running`, `failed`, `done` or `unavailable`), `workflow` (`id`, `name`, `status`, `archived`, `archived_at`, `has_schedule`), `inputs` (each with `name`, `state` of `ready`, `empty`, `waiting` or `refused`, `from`, `step_title`, `reason`), `can_run` and `blocked_reason`, `can_choose_another` (true when the attached workflow was archived or lost and can be swapped), `runs_as_user_id` / `runs_as_name` (who the workflow runs as), `read_only`, `mode`, `unavailable_reason`, `run` (latest run: `status`, `run_id`, `execution_uuid`, `error`, `at`, `by`, `finished_at`, `source`, `path`, `link_url`) and `link_url`.
+
+**Example prompts:** "Is the research workflow step ready to run?" · "Why can't I run this step?"
+
+---
+
+### `run_playbook_step_workflow`
+
+Run a playbook workflow step's workflow once, now (the same as pressing Run now in Marcora). Only the step's owner can run it. It never edits or enables the workflow's own schedule. The workflow runs as the step owner (`custom`) or the team-setup execution user (`team_setup`), and the step completes by itself when the run succeeds.
+
+Refused with a 409 when the workflow is already running, was archived or is unavailable, has missing, waiting or private inputs, or the step already ran ("This step already ran. It cannot run again.").
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
+| `plan_uuid` | string (uuid) | Yes | The workflow step's `plan_uuid`, from `get_playbook_cycle` |
+
+**Output:** the same state as `get_playbook_step_workflow` (`status`, `workflow`, `inputs`, `can_run`, `blocked_reason`, `can_choose_another`, `run`, `link_url`) plus `completed` (true when the step finished with this call) and `team`.
+
+**Example prompts:** "Run the competitor research step" · "Kick off the workflow in step 2 now"
+
+---
+
+### `update_playbook_step_workflow`
+
+Replace the workflow and input mappings on an open playbook workflow step (`plan_uuid`, owner only), for example to choose another workflow after the original was archived or lost. Pick the replacement from `list_playbook_workflow_options`. Refused (409) when the step is finished or running.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
+| `plan_uuid` | string (uuid) | Yes | The workflow step's `plan_uuid`, from `get_playbook_cycle` |
+| `workflow` | object | Yes | `{ workflow_id, inputs? }`. `inputs` maps each declared input name to `{ from: "step", plan_uuid }` (an earlier step in the same cycle), `{ from: "field", name, value? }` (a playbook variable) or `{ from: "text", value }`; team-shared setups accept `step` inputs only |
+
+**Output:** the same state as `get_playbook_step_workflow` plus `team`. A swap clears any waiting-workflow hold and re-syncs the step's schedule and `builds_on`.
+
+**Example prompts:** "That workflow was archived; switch the step to the new one"
 
 ---
 
