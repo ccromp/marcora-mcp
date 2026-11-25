@@ -2293,6 +2293,7 @@ Produce (generate) the actual content a plan describes — or draft/redraft a do
 |---|---|---|
 | `path` | string | `blueprint` (plan has a blueprint) or `freeform` (no blueprint, including update-mode plans) |
 | `generation_id` | string | Poll `get_generation_status` with this until complete |
+| `target_content_id` | string (uuid) | Update-mode plans only: UUID of the target document being updated |
 | `plan_uuid` | string (uuid) | The plan being produced |
 
 **Example prompts:**
