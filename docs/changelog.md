@@ -2,15 +2,18 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
-## Unreleased
+## Unreleased (Document-update review tools, Enablement Hub finder & external share updates)
 
 ### Added
 
 - **Unified document-update review tools (`list_document_updates`, `get_document_update`, `approve_document_update`, `discard_document_update`):** inspect, approve/apply (with `expected_base_hash` optimistic locking, optional `edited_body` on plan updates, `no_changes` completion, and interactive-only guards blocking background workflow/action runs), or discard proposed updates across content plans, playbook steps, and workflows (ChatGPT sees plan updates only).
+- **`find_enablement_documents`:** finds and browses curated Enablement Hub documents for the caller's team (search by title, category name/description, or body text, or omit `query` to browse categories and their documents). Returns `title`, `categories`, `internal_only`, and reading-page `link_url`. Hidden from `tools/list` when Enablement is off for all of the caller's active non-collaborator teams and refused on `tools/call` for disabled teams.
 
 ### Changed
 
-- **Update-an-existing-document parity across plans, playbooks, and cycles:** `create_plan`, `update_plan`, `get_plan`, `create_playbook`, `update_playbook`, `get_playbook`, `instantiate_playbook`, `get_playbook_cycle`, and `add_playbook_step` support `document_update` (`{ mode: "create" | "update", target_content_id?, review_mode?: "approval" | "direct", instructions? }`, with `target_document_id` alias on input and `target_content_id` on output). `produce_plan` adds `redraft`, one-off `instructions`, and `confirm_private_sources` for update-mode plans (`get_generation_status` exposes `flow_type: "document_update"` + `update`); `generate_cycle_content` and `get_cycle_generation` report `status: "skipped"`, `reason: "needs_review"` for approval-mode update steps.
+- **Update-an-existing-document parity across plans, playbooks, and cycles:** `create_plan`, `update_plan`, `get_plan`, `create_playbook`, `update_playbook`, `get_playbook`, `instantiate_playbook`, `get_playbook_cycle`, and `add_playbook_step` support `document_update` (`{ mode: "create" | "update", target_content_id?, review_mode?: "approval" | "direct", instructions? }`, with `target_document_id` alias on input and `target_content_id` on output). `produce_plan` adds `redraft`, one-off `instructions`, and `confirm_private_sources` for update-mode plans (`get_generation_status` exposes `flow_type: "document_update"` + `update`); `generate_cycle_content` and `get_cycle_generation` report `status: "skipped"`, `reason: "needs_review"` for approval-mode update steps; `update_playbook_step_status` (`action: "complete"`) refuses `409` on a `document_update` step that has no approved/applied update yet or still has a `pending`/`applying` update.
+- **`add_context` (`import_from` Google Meet):** Google Meet imports now use saved transcript Docs in Google Drive only (`doc:{document_id}`; bare IDs reject the batch, and native conference-record listing and Google Meet connections are no longer used). Importing by ID requires Google Docs; listing calls and creating, enabling, or running automatic-import rules also require Google Drive (discovering transcript Docs and shortcuts by document creation window, excluding Gemini notes, with 1–2 digit month/day name dates, dated/timestamped or `"Meeting ended after hh:mm:ss"` speaker-labelled content, no attendance filters, and `Only me` automatic imports).
+- **`create_external_share`:** accepts optional `confirm_private_sources` so a 409 private-source confirmation challenge can be completed over MCP, and documents that `Internal only` documents cannot be shared outside the workspace.
 
 ## 2026-11-24 (HTML cleaning on context content, source labels & collection headers, get_playbook_cycle run_id)
 

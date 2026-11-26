@@ -285,7 +285,7 @@ You can supply the body in exactly one of four ways:
 
 - **`import_from`** — bring in calls from a call-recording app the user has connected: `{ toolkit, call_ids }`, where `toolkit` is `fathom`, `gong`, `fireflies`, `googlemeet` or `wispr_flow_mcp` and `call_ids` is 1 to 10 of that app's own call ids (found with the app's own list or search tool, then passed in this one call). Marcora fetches and cleans each transcript itself through the user's own connection, so no transcript text is passed or returned. It takes the place of `content`, `import_url` and `connected_webpage_url`, and is used without `as_call`, `call_date`, `call_kind` or `call_company`. `audience`, `project_id` and `collection_id` work as for calls (Only me and filed in Calls unless you say otherwise; a Collaborator must pass `project_id`; choose one of `project_id` or `collection_id`); `name` is ignored because each call keeps its own title.
 
-Google Meet and Wispr Flow imports are Beta. For Google Meet, pass the bare ID from conferenceRecords/{id}, or doc:{document_id} for a saved transcript. Recent discovery is organizer-only within 30 days; a known conference record still requires access. Saved transcripts require your own active Google Meet and Google Docs connections in the same team; discovery also requires Google Drive and searches by document creation window. The document must contain a date and timestamped speaker-labelled transcript, not just Gemini notes. Meet supplies no original meeting title or participant emails; automatic Meet imports stay Only me and do not support attendance filters. For Wispr Flow, use a meeting ID from search: recorded meetings only, not dictation or scratchpad. Wispr attendee search uses calendar invitees; narrow a search that reaches 1,000 matches.
+Google Meet and Wispr Flow imports are Beta. Google Meet imports use saved transcript Docs in Google Drive only (there is no native conference-record listing and no Google Meet connection is needed): pass doc:{document_id} (bare IDs reject the batch with "Google Meet imports use saved transcript Docs: pass doc:{document_id}"). Importing by ID requires your own active Google Docs connection in the same team; listing calls and creating, enabling, or running automatic-import rules also require Google Drive and discover transcript Docs and shortcuts to them by document creation window (Gemini notes excluded; dates in document names accept 1–2 digit months and days). A Doc must be dated, timestamped (or carry Meet's "Meeting ended after hh:mm:ss" line), and speaker-labelled. Meet supplies no participant emails and does not support attendance filters; automatic Meet imports stay Only me. For Wispr Flow, use a meeting ID from search: recorded meetings only, not dictation or scratchpad. Wispr attendee search uses calendar invitees; narrow a search that reaches 1,000 matches.
 
 Providing zero, or more than one, of `content` / `import_url` / `connected_webpage_url` / `import_from` returns a 400.
 
@@ -391,6 +391,39 @@ Looks up the apps Marcora offers to connect (for example Gong or Fathom), by nam
 **Example prompts:**
 - "Can Marcora connect to Gong?"
 - "Which of my call-recording apps are connected?"
+
+---
+
+### `find_enablement_documents`
+
+Finds and browses documents curated in this team's Enablement Hub. Read-only. Only listed and usable when Enablement is enabled for at least one of your active non-collaborator teams.
+
+**When to use it:** when a user asks to browse or find sales enablement materials (battlecards, objection handling, case studies, pricing guides, product docs) in the Enablement Hub and wants links to open them. Do not use `get_relevant_context` or `list_content` to browse the Enablement Hub.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
+| `query` | string | No | Search text matched against document title, assigned category name or description, and document body (case-insensitive). Omit or leave blank to browse categories and their documents. |
+| `category_ids` | string[] | No | Enablement category UUIDs to filter by. Omit or pass `[]` to include all hub categories (and uncategorized hub documents when browsing). |
+| `limit` | integer | No | Maximum documents to return in search mode, 1 to 50. Default 25. |
+
+**Output:**
+
+| Field | Type | Description |
+|---|---|---|
+| `mode` | string | `"browse"` (no query) or `"search"` (ranked query match) |
+| `total_documents` | integer | Total matching published hub documents (before `limit` in search mode) |
+| `categories` | array | Enablement categories in display order (`id`, `name`, `description`, `position`, `document_count`, and ordered `documents` in browse mode) |
+| `documents` | array | Ranked matching hub documents in search mode (empty in browse mode). Each has `id`, `title`, `categories[]`, `internal_only`, `link_url`, and `updated_at`. |
+| `uncategorized_documents` | array | Published hub documents with no category (included in browse mode when `category_ids` is omitted) |
+
+Present each document's `link_url` character for character as returned, and call out `internal_only: true` documents so the user knows they cannot be shared outside the workspace.
+
+**Example prompts:**
+- "What battlecards do we have in the Enablement Hub?"
+- "Browse our Enablement Hub documents"
 
 ---
 
@@ -1840,7 +1873,7 @@ Send a natural-language request to Marcora's in-document **Content Assistant** f
 
 ### `create_external_share`
 
-Creates a public share link for content, with optional expiration. Accessible publicly without a Marcora account.
+Creates a public share link for content, with optional expiration. Accessible publicly without a Marcora account. Documents marked Internal only cannot be shared outside the workspace.
 
 **Parameters:**
 
@@ -1848,7 +1881,8 @@ Creates a public share link for content, with optional expiration. Accessible pu
 |---|---|---|---|
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `content_id` | string | Yes | The ID of the content to share |
-| `expires_at` | integer | No | Unix timestamp for link expiration |
+| `expires_at` | integer | No | Unix timestamp in milliseconds for link expiration |
+| `confirm_private_sources` | string | No | Pass only after the user agrees. Sharing a document built from Only me material outside the workspace is refused with a confirmation token; repeat the same call with that token here only once the user has said yes. |
 
 **Output:**
 
@@ -2285,7 +2319,7 @@ Produce (generate) the actual content a plan describes — or draft/redraft a do
 | `use_extended_thinking` | boolean | No | Quick only: whether the model reasons at length before writing. Default `true`; slower and costlier. Ignored with `multi_model` |
 | `redraft` | boolean | No | Update-mode plans only: `true` supersedes an open `pending`, `conflict`, or `no_changes` proposal and drafts a fresh update |
 | `instructions` | string/null | No | Update-mode plans only: optional one-off steering instructions for this draft only (max 25,000 chars; does not overwrite saved step instructions) |
-| `confirm_private_sources` | string/null | No | One-time disclosure token from a prior `private_sources_confirmation_required` refusal on `review_mode: "direct"` update plans |
+| `confirm_private_sources` | string/null | No | Optional one-time disclosure token authorizing private (`only_me`) sources on `review_mode: "direct"` update plans upfront. If omitted on an unconfirmed direct update draft, `produce_plan` falls back to a pending approval proposal (`error_code: "private_source_disclosure_required"`), and the 409 private-source challenge happens on `approve_document_update` |
 
 **Output:**
 
@@ -2615,7 +2649,7 @@ Position: right after `after_plan_uuid`, or at the end when omitted. `builds_on`
 
 Update a playbook cycle step's completion status (`complete` or `reopen`) and record or clear evidence, shown on the step in `get_playbook_cycle`. Works for steps that produce no document, which `update_plan` cannot complete. You must be able to edit the step (its assignee or creator). Plans that are not cycle steps are refused (use `update_plan`).
 
-- **`action: "complete"`:** marks `content` or `checklist` step Complete with optional `result_url` and `note`. **Open `action` steps cannot be completed over external MCP** (always refused with `"Complete this action from its current Marcora conversation"`); action steps complete only inside a Marcora conversation (with both `result_url` and `note`). Calling it again on a step that is already Complete keeps its original `completed_at` / `completed_by`, while newly supplied `result_url` or `note` overwrite previous values (omit them to keep what is recorded). Refuses Dismissed steps (409).
+- **`action: "complete"`:** marks `content` or `checklist` step Complete with optional `result_url` and `note`. **Open `action` steps cannot be completed over external MCP** (always refused with `"Complete this action from its current Marcora conversation"`); action steps complete only inside a Marcora conversation (with both `result_url` and `note`). **Update-mode (`document_update`) steps require an approved/applied (or `no_changes`-confirmed) update and no `pending`/`applying` update** — otherwise `complete` refuses `409` (`"Apply or mark done a document update before marking this step Complete."` or `"Review or discard the pending document update before marking this step Complete."`). Calling it again on a step that is already Complete keeps its original `completed_at` / `completed_by`, while newly supplied `result_url` or `note` overwrite previous values (omit them to keep what is recorded). Refuses Dismissed steps (409).
 - **`action: "reopen"`:** unticks a completed **checklist** step back to `Accepted` and clears completion evidence (`completed_at: 0`, `result_url: null`, `note: null`). Non-checklist steps are refused (409); `result_url` and `note` are rejected if sent. Reopening a step that is not Complete changes nothing.
 
 **Parameters:**
