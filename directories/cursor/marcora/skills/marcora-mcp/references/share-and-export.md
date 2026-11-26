@@ -11,7 +11,7 @@ Read this before creating an external share link or exporting a document to Word
 **Steps.**
 1. `marcora:create_external_share(team_id, content_id, expires_at?, confirm_private_sources?)` — `expires_at` is an optional Unix timestamp in milliseconds.
 2. Hand the returned `share_link` to the user.
-3. Later, when the user asks whether it was opened: `marcora:get_share_link_activity(team_id, share_link)` with the link or its token, or omit `share_link` (`marcora:get_share_link_activity(team_id, filter?, query?)`) to list every link in that team. Report `summary` (from `link_detail`); if `opened` is true but the viewer list is short or empty, say some opens predate open details (`coverage_note`). Viewers are anonymous numbers, so never name who opened it. Never open the link yourself to check.
+3. Later, when the user asks whether it was opened (or who a link was created for): `marcora:get_share_link_activity(team_id, share_link)` with the link or its token, or omit `share_link` (`marcora:get_share_link_activity(team_id, filter?, query?)`) to list every link in that team. On paid plans with tracking enabled, each link includes `recipient_name` and `recipient_email` (or `null`) for who the link was created for; report `summary` (from `link_detail`), and if `opened` is true but the viewer list is short or empty, say some opens predate open details (`coverage_note`). Viewers are anonymous numbers, so never claim a named recipient opened it. Never open the link yourself to check.
 
 **Rules & Preconditions.**
 - Content must be `completed` — async generations need to finish first.

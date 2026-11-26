@@ -1909,6 +1909,8 @@ Lists tracked share links in the team (`share_link` omitted) or checks detailed 
 
 `opened` and `opens` come from the link's lifetime counter, while `viewers` and `open_log` cover only opens recorded with open details: `opens_without_details` and `coverage_note` explain any older gap. Automated opens (email scanners, data centers) are reported separately under `automated` and excluded from counts.
 
+When open tracking is enabled on the team's plan, each returned link includes `recipient_name` and `recipient_email` (`string | null`) showing who the link was created for; viewers in `viewers[]` and `open_log` remain anonymous numbered identifiers.
+
 Only team Admins and Creators (`admin` / `creator`) who can open the link's document can use it; teams whose plan does not include open tracking get `tracking_locked: true` and no activity.
 
 **Parameters:**
@@ -1931,8 +1933,8 @@ Only team Admins and Creators (`admin` / `creator`) who can open the link's docu
 | `mode` | string | `"list"` or `"detail"` |
 | `tracking_locked` | boolean | `true` when the team plan has no open tracking; only `mode`, `tracking_locked`, `team`, and `message` return |
 | `team` | object | `{ id, name }` of the team |
-| `links_page` | object | List mode when unlocked: `counts`, `summary_7d`, `note`, `links[]`, `total`, `limit`, `offset` |
-| `link_detail` | object | Detail mode when unlocked: `opened`, `summary`, `coverage_note`, `link`, `opens`, `unique_viewers`, `first_opened_at`, `last_opened_at`, `opens_without_details`, `viewers[]`, `automated`, `open_log` |
+| `links_page` | object | List mode when unlocked: `counts`, `summary_7d`, `note`, `links[]` (each link includes optional `recipient_name` and `recipient_email`, or `null`), `total`, `limit`, `offset` |
+| `link_detail` | object | Detail mode when unlocked: `opened`, `summary`, `coverage_note`, `link` (includes optional `recipient_name` and `recipient_email`, or `null`), `opens`, `unique_viewers`, `first_opened_at`, `last_opened_at`, `opens_without_details`, `viewers[]`, `automated`, `open_log` |
 
 **Example prompts:**
 - "Which of Acme's shared documents were opened?"
