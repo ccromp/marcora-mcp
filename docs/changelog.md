@@ -10,6 +10,7 @@ All notable changes to the Marcora MCP server will be documented in this file.
 
 ### Changed
 
+- **`add_context` (`import_from` Google Meet):** Google Meet imports now use saved transcript Docs in Google Drive only (`doc:{document_id}`; bare IDs reject the batch, and native conference-record listing and Google Meet connections are no longer used). Importing by ID requires Google Docs; listing calls and creating, enabling, or running automatic-import rules also require Google Drive (discovering transcript Docs and shortcuts by document creation window, excluding Gemini notes, with 1–2 digit month/day name dates, dated/timestamped or `"Meeting ended after hh:mm:ss"` speaker-labelled content, no attendance filters, and `Only me` automatic imports).
 - **`create_external_share`:** accepts optional `confirm_private_sources` so a 409 private-source confirmation challenge can be completed over MCP, and documents that `Internal only` documents cannot be shared outside the workspace.
 
 ## 2026-11-24 (HTML cleaning on context content, source labels & collection headers, get_playbook_cycle run_id)
