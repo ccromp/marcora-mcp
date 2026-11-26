@@ -844,7 +844,7 @@ Context Intelligence is Marcora's automated review layer for your reference libr
 
 List Context Intelligence findings for your team — issues Marcora's automated scans detected in your reference library or document grounding checks. This is the right **first call** to get finding UUIDs and see what needs action.
 
-When both `bucket` and `status` are omitted, `list_ci_findings` returns the team's **actionable queue** (open questions, queued auto-fixes, and non-library `pending` findings — undecided library rows stay hidden). Pass `bucket` to inspect one lifecycle view directly. Findings are returned **newest-first**, withholding evidence details the caller cannot access.
+When `bucket` is omitted, `list_ci_findings` returns all non-draft findings across library and `content_grounding` scans (respecting `status`, `severity`, and `process_type` filters; undecided library rows stay hidden). Pass `bucket` (`questions`, `queued`, `applied`, or `cleared`) to filter library findings by lifecycle view (`content_grounding` rows are excluded when `bucket` is set). Findings are returned **newest-first** (or next-to-apply for `queued` and most-recently-applied for `applied`), withholding evidence details the caller cannot access.
 
 **Parameters:**
 
