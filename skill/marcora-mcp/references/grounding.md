@@ -30,7 +30,12 @@ Read this before calling `check_content_grounding` or `apply_finding_fix`: check
 
 **Private sources stay in Marcora.** Documents built from `Only me` sources cannot be grounded over MCP (`check_content_grounding` refuses with a link for the owner to run an isolated private check in Marcora; `get_grounding_result` reads shared scans only). On shared re-checks, dismissed findings stay dismissed as long as the claim and its warning evidence are unchanged. Calling `get_grounding_result({ team_id, content_id })` reads the latest completed scan with live finding statuses and counts (so dismissed or resolved findings appear as `dismissed` / `resolved` immediately), whereas `get_grounding_result({ team_id, scan_id })` reads that scan's frozen snapshot (captured per-scan claims and completion-time finding statuses; returns `"Grounding result not found."` if a cited source was later erased).
 
-`apply_finding_fix` handles both content-grounding fixes and Context Intelligence health-audit recommendations from `list_ci_findings` / `trigger_health_audit_scan` (`web_freshness` and `impact_scan` findings cannot be applied automatically and return in `errors[]` pointing to `update_ci_finding_status`). Full recipe: `references/grounding-recipe.md`.
+**Context Intelligence findings (`list_ci_findings`, `answer_finding_question`, `apply_finding_fix`, `undo_finding_fix`):**
+- Call `list_ci_findings({ team_id })` (omit `bucket`/`status` for the actionable queue, or pass `bucket: "questions" | "queued" | "applied" | "cleared"`).
+- Answer open questions (`decision: "ask"`) with `answer_finding_question({ team_id, finding_id, choice })` (`apply`, `edit` + `text`, `leave_out`, `library_right`, `this_right`, `both_right`).
+- Queued library `auto_fix` findings apply synchronously in `apply_finding_fix` (returned in `applied[]` with `can_undo`), or can be declined/re-queued with `update_ci_finding_status({ status: "decline" | "undecline" })`.
+- Revert applied fixes when `can_undo` is true with `undo_finding_fix({ team_id, finding_id })` (refuses with `changed_since_apply` if edited afterward or `never_applied` if resolved outside Marcora).
+- Unsupported `web_freshness` / `impact_scan` findings without a queued fix return in `errors[]` pointing to `update_ci_finding_status`. Full recipe: `references/grounding-recipe.md`.
 
 ---
 

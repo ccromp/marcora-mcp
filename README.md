@@ -144,13 +144,15 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Context & Resources | `remove_call_instruction` | Permanently remove a standing call instruction |
 | Context & Resources | `find_app` | Look up available third-party apps connected to Marcora |
 | Enablement | `find_enablement_documents` | Find and browse curated Enablement Hub documents (visible when Enablement is on for a team) |
-| Context Intelligence | `list_ci_findings` | List findings from automated context-library scans |
+| Context Intelligence | `list_ci_findings` | List findings by queue/lifecycle `bucket` (`questions`, `queued`, `applied`, `cleared`) or `status` |
 | Context Intelligence | `get_ci_finding` | Get one finding in full detail by UUID |
-| Context Intelligence | `update_ci_finding_status` | Acknowledge, dismiss, or resolve a finding |
+| Context Intelligence | `update_ci_finding_status` | Acknowledge, dismiss, resolve, decline, or undecline a finding |
+| Context Intelligence | `answer_finding_question` | Answer an open question finding (`apply`, `edit`, `leave_out`, `library_right`, `this_right`, `both_right`) |
+| Context Intelligence | `undo_finding_fix` | Revert an applied Marcora fix when `can_undo` is true |
 | Context Intelligence | `trigger_health_audit_scan` | Start a library-wide context health audit |
 | Content Grounding | `check_content_grounding` | Check a document's claims against your context library |
 | Content Grounding | `get_grounding_result` | Read a grounding scan's result (poll with `scan_id`) |
-| Content Grounding | `apply_finding_fix` | Apply recommended fixes for grounding or health-audit findings by id |
+| Content Grounding | `apply_finding_fix` | Apply queued auto-fixes synchronously (`applied[]`) or grounding/legacy fixes async (`jobs[]`) |
 | Reference | `list_content_categories` | List content categories |
 | Reference | `list_targeting_dimensions` | List targeting dimensions and options |
 | Reference | `learn_marcora_tools` | Search/read Marcora Documentation pages (`{}`, `page`, `query`) or compact `topic` sections |
