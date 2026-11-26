@@ -16,7 +16,7 @@
 **Cause:** Your account doesn't have permission to perform the requested action.
 
 **Solutions:**
-- Check your team role — some actions require an Admin or Creator seat. Creating documents (`create_content`, `produce_plan`, `generate_cycle_content`, `create_blueprint_draft`) now requires an Admin or Creator role (*"Only Admins and Creators can create documents."*), connected-app call imports (`add_context` `import_from`) and Webhooks require a Creator or Admin seat (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*; `find_app` works for any active team role), and `update_workflow` and `run_workflow` can only be called by the workflow's creator (`created_by_user_id`)
+- Check your team role — some actions require an Admin or Creator seat. Creating documents (`create_content`, `produce_plan`, `generate_cycle_content`, `create_blueprint_draft`) now requires an Admin or Creator role (*"Only Admins and Creators can create documents."*), connected-app call imports (`add_context` `import_from`) and Webhooks require a Creator or Admin seat (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*; `find_app` works for any active team role). For `update_workflow` and `run_workflow`, workflows set up from a template allow any team member to run (and the owner or a team admin to update via setup) when team-shared and only the owner when private; any other workflow is creator-only (`created_by_user_id`)
 - Verify you passed the right `team_id` (check `get_current_user_info`)
 - Private content/collections are only accessible by their creator
 
