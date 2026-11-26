@@ -1880,7 +1880,7 @@ Send a natural-language request to Marcora's in-document **Content Assistant** f
 
 ### `create_external_share`
 
-Creates a public share link for content, with optional expiration. Accessible publicly without a Marcora account. Documents marked Internal only cannot be shared outside the workspace.
+Creates a public share link for content, with optional expiration and optional recipient details (`recipient_name`, `recipient_email`). Accessible publicly without a Marcora account. Documents marked Internal only cannot be shared outside the workspace.
 
 **Parameters:**
 
@@ -1890,16 +1890,20 @@ Creates a public share link for content, with optional expiration. Accessible pu
 | `content_id` | string | Yes | The ID of the content to share |
 | `expires_at` | integer | No | Unix timestamp in milliseconds for link expiration |
 | `confirm_private_sources` | string | No | Pass only after the user agrees. Sharing a document built from Only me material outside the workspace is refused with a confirmation token; repeat the same call with that token here only once the user has said yes. |
+| `recipient_name` | string \| null | No | Optional recipient name (trimmed, max 200 characters; `null` or `""` omits) |
+| `recipient_email` | string \| null | No | Optional recipient email (trimmed, lowercased, validated, max 320 characters; `null` or `""` omits) |
 
 **Output:**
 
 | Field | Type | Description |
 |---|---|---|
 | `share_link` | string | Public URL anyone can use to view the content |
+| `recipient_name` | string \| null | Trimmed recipient name recorded on the link, or `null` if omitted |
+| `recipient_email` | string \| null | Lowercased recipient email recorded on the link, or `null` if omitted |
 
 **Example prompts:**
 - "Create a share link for my latest blog post"
-- "Share this document with an expiration in 7 days"
+- "Share this document with Jane Buyer (jane@acme.com) expiring in 7 days"
 
 ---
 
