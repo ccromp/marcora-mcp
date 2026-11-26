@@ -407,19 +407,21 @@ Finds and browses documents curated in this team's Enablement Hub. Read-only. On
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `query` | string | No | Search text matched against document title, assigned category name or description, and document body (case-insensitive). Omit or leave blank to browse categories and their documents. |
 | `category_ids` | string[] | No | Enablement category UUIDs to filter by. Omit or pass `[]` to include all hub categories (and uncategorized hub documents when browsing). |
-| `limit` | integer | No | Maximum documents to return in search mode, 1 to 50. Default 25. |
+| `limit` | integer | No | Maximum document entries to return, 1 to 50. Default 25. Bounds ranked documents in search mode, and total category placements plus uncategorized documents in browse mode (since a document appears under each of its categories). |
 
 **Output:**
 
 | Field | Type | Description |
 |---|---|---|
 | `mode` | string | `"browse"` (no query) or `"search"` (ranked query match) |
-| `total_documents` | integer | Total matching published hub documents (before `limit` in search mode) |
-| `categories` | array | Enablement categories in display order (`id`, `name`, `description`, `position`, `document_count`, and ordered `documents` in browse mode) |
+| `total_documents` | integer | Total matching published unique hub documents (before `limit`) |
+| `has_more` | boolean | `true` when more matching documents or category placements exist beyond `limit` (there is no offset; narrow with `category_ids` or `query`) |
+| `note` | string | Present when `has_more` is `true`, reporting how many entries were returned and to narrow with `category_ids` or `query` |
+| `categories` | array | Enablement categories in display order (`id`, `name`, `description`, `position`, full `document_count`, and ordered `documents` in browse mode up to the remaining `limit` budget) |
 | `documents` | array | Ranked matching hub documents in search mode (empty in browse mode). Each has `id`, `title`, `categories[]`, `internal_only`, `link_url`, and `updated_at`. |
-| `uncategorized_documents` | array | Published hub documents with no category (included in browse mode when `category_ids` is omitted) |
+| `uncategorized_documents` | array | Published hub documents with no category (included in browse mode when `category_ids` is omitted, up to the remaining `limit` budget) |
 
-Present each document's `link_url` character for character as returned, and call out `internal_only: true` documents so the user knows they cannot be shared outside the workspace.
+Present each document's `link_url` character for character as returned, and call out `internal_only: true` documents so the user knows they cannot be shared outside the workspace. When `has_more` is `true`, narrow with `category_ids` or `query`.
 
 **Example prompts:**
 - "What battlecards do we have in the Enablement Hub?"
@@ -594,6 +596,8 @@ Both `collection_id` and `project_id` accept a JSON `null` — the tool's input 
 | `updated_at` | integer | Unix timestamp of last update |
 | `relevancy_processed_status` | string | RAG re-processing status (`unprocessed`, `provisional`, `complete`). Flips to `unprocessed` whenever name or content changes |
 | `link_url` | string | Direct URL to view this context item in the Marcora app |
+
+> **Curated Enablement material:** when Enablement is on and the item is curated in Enablement, non-curators receive `"Curated in Enablement · comment to suggest a change"` (403).
 
 **Example prompts:**
 - "Rename that brand voice context item to 'Brand Voice v2'"
@@ -1136,6 +1140,7 @@ You never compose the fix yourself. Every finding already stores its recommended
 - **Finding not found.** — per finding, in `errors[]`: a `finding_id` that is unknown or that you cannot read. That finding is skipped; the others still run.
 - **Marcora is already updating this document.** — per finding, in `errors[]`: another run on that document (for example the user's own Content Assistant request, or an earlier `apply_finding_fix` call) is still in progress. Wait for it to finish, then retry those findings.
 - **Nothing was applied. This document has private source history** (an `isError` result) — a fix on such a document cannot update a context item in your reference library. The message names the next step that will work: call again with the same `finding_ids` and without `context_item_overrides` when that fixes the document itself; otherwise revise the document with `update_content`, then re-check.
+- **"Curated in Enablement · comment to suggest a change"** (in `errors[]` for a target `content_document` or `context_item`) — when Enablement is on and the document is curated in Enablement, non-curators cannot apply fixes to it directly. Suggest the change via an Enablement comment instead.
 
 **Example prompts:**
 - "Fix the pricing conflict it found"
@@ -1813,6 +1818,7 @@ Update a content document by `content_id`. Partial-update semantics — every fi
 - `notfound` — `content_id` doesn't match any content document
 - `inputerror` — no mutable field supplied; invalid `category_id`; invalid `project_id`; or the document is a non-editable document type (e.g. a context-item editor document, which is managed by a separate sync flow)
 - `accessdenied` — you don't have write access to the document
+- `enablement_curated` (`"Curated in Enablement · comment to suggest a change"`) — when Enablement is on and the document is curated in Enablement, non-curators cannot edit it directly; suggest the change via an Enablement comment instead
 
 **Example prompts:**
 - "Mark my latest case study as ready"
@@ -1866,6 +1872,7 @@ Send a natural-language request to Marcora's in-document **Content Assistant** f
 **Errors:**
 - `notfound` — `content_id` matches no content document
 - "Marcora is already updating this document." — another run on this document is still in progress. Wait for it to finish (poll `get_generation_status` if you have its `generation_id`), then retry. Do not retry in a tight loop.
+- `"Curated in Enablement · comment to suggest a change"` — when Enablement is on, the document is curated in Enablement, `chat_only_mode` is `false`, and the caller is not an Enablement curator. Read-only questions (`chat_only_mode: true`) remain allowed.
 
 ---
 
@@ -2260,6 +2267,8 @@ Partial update of a plan: mutable fields and stage transitions. All fields are o
 - `In_Process` → `Complete`, `Accepted`, or `Dismissed`
 - `Complete` → `Accepted` or `Dismissed`
 - `Dismissed` → terminal, no further transitions
+
+> **Update-mode & workflow `Complete` gates:** workflow steps cannot move to `Complete` manually (returns 409; they complete automatically when their workflow run succeeds), and `document_update.mode: "update"` plans/steps require an approved or confirmed-`no_changes` update (with no `pending` update) before moving to `Complete` (returns 409).
 
 **Parameters:**
 
@@ -2745,7 +2754,8 @@ Lists pending or historical document update proposals (across content plans, pla
 | `cursor` | string | No | Opaque `next_cursor` from the previous page when more updates remain |
 | `limit` | integer | No | Maximum updates per page (1 to 50, default 20) |
 
-**Output:** `items` (each: `update_id`, `source_kind`, `plan_uuid`, `step_title`, `run_id`, `run_name`, `workflow_id`, `workflow_name`, `item_key`, `item_name`, `document_key`, `root_run_id`, `kind`, `mode`, `state`, `summary`, `base_hash`, `target_content_id`, `target_title`, `target_link_url`, `applied_content_id`, `applied_link_url`, `stale`, `sibling_pending_count`, `created_at`, `decision_at`, `error_code`, `can_approve`) and `next_cursor`. Present `target_link_url` / `applied_link_url` as returned.
+**Output:** `items` (each: `update_id`, `source_kind`, `plan_uuid`, `step_title`, `run_id`, `run_name`, `kind`, `mode`, `state`, `summary`, `base_hash`, `target_content_id`, `target_title`, `target_link_url`, `applied_content_id`, `applied_link_url`, `stale`, `sibling_pending_count`, `created_at`, `decision_at`, `error_code`, `can_approve`) and `next_cursor`. Present `target_link_url` / `applied_link_url` as returned.
+- Workflow updates also include `workflow_id`, `workflow_name`, `item_key`, `item_name`, `document_key`, and `root_run_id`.
 
 **Example prompts:** "What document updates are waiting for review?" · "List pending updates for this playbook step"
 
@@ -2762,7 +2772,8 @@ Reads one document update proposal (content plan, playbook step, or workflow) by
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `update_id` | string (uuid) | Yes | Document update proposal UUID from `list_document_updates` or `get_generation_status` |
 
-**Output:** `update_id`, `source_kind`, `plan_uuid`, `step_title`, `run_id`, `run_name`, `workflow_id`, `item_key`, `item_name`, `document_key`, `kind`, `mode`, `state`, `summary`, `base_hash`, `current_hash`, `target_content_id`, `target_title`, `target_link_url`, `applied_content_id`, `applied_link_url`, `root_run_id`, `stale`, `stale_edited_at`, `stale_edited_by_name`, `sibling_pending_count`, `created_at`, `decision_at`, `decision_user_id`, `decision_user_name`, `error_code`, `can_approve`, `proposed_body`, `base_body`, `current_body`, `diff`, `evidence`.
+**Output:** `update_id`, `source_kind`, `plan_uuid`, `step_title`, `run_id`, `run_name`, `kind`, `mode`, `state`, `summary`, `base_hash`, `current_hash`, `target_content_id`, `target_title`, `target_link_url`, `applied_content_id`, `applied_link_url`, `stale`, `stale_edited_at`, `stale_edited_by_name`, `sibling_pending_count`, `created_at`, `decision_at`, `decision_user_id`, `decision_user_name`, `error_code`, `can_approve`, `proposed_body`, `current_body`, `diff`, `evidence`.
+- Workflow updates also include `workflow_id`, `item_key`, `item_name`, `document_key`, `root_run_id`, and `base_body`.
 
 **Example prompts:** "Show me the diff for that pricing page update"
 
@@ -2780,7 +2791,7 @@ Approves a pending document update (or confirms a `no_changes` plan update as do
 | `update_id` | string (uuid) | Yes | Document update proposal UUID to approve |
 | `expected_base_hash` | string or null | Yes | 64-character SHA-256 `base_hash` from `get_document_update` or `list_document_updates` (pass `null` only for workflow create-mode proposals where `base_hash` is `null`) |
 | `edited_body` | string | No | Optional edited markdown body replacing `proposed_body` on plan updates before saving (refused on workflow updates and `no_changes` updates) |
-| `confirm_private_sources` | string | No | One-time confirmation token from a prior private-source confirmation prompt after confirming sharing private sources with the target's audience |
+| `confirm_private_sources` | string | No | Pass only after the user agrees. One-time token from a prior `private_sources_confirmation_required` refusal; repeat the call with that token only once the user confirms sharing private sources with the target's audience |
 
 **Output:** `source_kind`, `update_id`, `state`, `target_content_id` (existing target document UUID, or `null` when creating a new workflow document), `content_id` (applied or newly created document UUID), `link_url`, and `plan_stage` (when applicable).
 

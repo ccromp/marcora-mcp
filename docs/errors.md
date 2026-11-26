@@ -84,6 +84,14 @@ Neither error returns any context or the project's brief.
 - For `"Nothing was applied. This document has private source history..."`, follow the next step named in the message: call `apply_finding_fix` again with the same `finding_ids` and without `context_item_overrides` when that fixes the document itself; otherwise revise the document with `update_content`, then re-check.
 - For `"This check cannot use the document’s private sources..."`, when the private sources are the caller's own, the message includes a link to check the document privately in Marcora; relay that link to the user.
 
+### "Curated in Enablement · comment to suggest a change"
+
+**Cause:** While Enablement is turned on for a team, only Enablement curators (team Admins or members granted curator permission) can edit curated Enablement material. Non-curators receive this `403` (`isError: true`) refusal from `ask_content_assistant` (when `chat_only_mode` is `false`), `apply_finding_fix`, `update_content`, `update_context`, and related edit/delete/restore paths when targeting a curated item or its linked document.
+
+**Solutions:**
+- Relay the refusal to the user — do not retry or duplicate the material. Tell them they can comment on the document in the Marcora Enablement Hub to suggest a change, or ask an Enablement curator to make the edit.
+- For `ask_content_assistant`, passing `chat_only_mode: true` still works for read-only questions without editing the document.
+
 ### Content generation timeout
 
 **Cause:** Content and blueprint generation can take a few minutes: Quick content up to about 3½ minutes, Multi-model and blueprint content 3–5 minutes, and blueprint creation/drafting 1–3 minutes.
