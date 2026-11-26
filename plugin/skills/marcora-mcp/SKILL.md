@@ -4,7 +4,7 @@ description: "Use this skill BEFORE calling any Marcora MCP tool (create_content
 license: MIT
 metadata:
   mcp-server: marcora
-  version: 0.8.7
+  version: 0.8.8
 ---
 
 # Marcora AI Workflows
@@ -58,6 +58,7 @@ The Marcora MCP server is hosted; the user's MCP client connects directly. You d
 | Review, approve, edit, or discard proposed updates to existing documents (from update-mode plans, playbook steps, or workflows) | `list_document_updates`, `get_document_update`, `approve_document_update`, `discard_document_update` | `references/plans-and-playbooks.md` |
 | Create a blueprint (template), or browse / import one from the Blueprint Exchange | `create_blueprint`, `list_community_blueprints` | `references/blueprints.md` |
 | Share a document externally or export it to Word | `create_external_share`, `convert_markdown_to_word_doc` | `references/share-and-export.md` |
+| Publish a document to a connected app destination (Google Docs, Notion, etc.), update linked copies, or check publish status | `publish_content` | `references/share-and-export.md` |
 
 Also on demand:
 - **Two tools look like they both fit** (documents vs context items, briefs, editing vs the Content Assistant, refreshing web pages, search vs browse, teams) → `references/choosing-tools.md`.
