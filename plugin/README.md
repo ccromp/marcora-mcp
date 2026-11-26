@@ -31,10 +31,10 @@ Marcora is built for product marketers and go-to-market teams at B2B SaaS compan
 
 ## Get Started
 
-1. Add the Marcora plugin from the directory in Claude.
-2. Open the plugin's **Connectors** tab, connect Marcora, and sign in with your Marcora account. New to Marcora? [Create a free account](https://app.marcora.ai/signup).
-3. Ask Claude something that needs your context, like "What's our positioning against our top competitor?" or "Draft a launch email for our newest feature."
-4. The first time Claude uses each Marcora tool, it asks for your permission. Choose **Always allow** to skip the prompt next time.
+1. Select **Add** on the Marcora plugin listing in Claude's directory.
+2. Under **Connectors**, select **Connect** next to Marcora, sign in with your Marcora account, and select **Allow**. New to Marcora? [Create a free account](https://app.marcora.ai/signup).
+3. Ask Claude something that needs your context, like "What's our positioning against our top competitor?" or "Draft a launch email for our newest feature." (Check **+** > **Plugins** in a chat to make sure Marcora is switched on.)
+4. Whether Claude asks before using a Marcora tool depends on the chat's **Permission mode**: in **Manual** mode it asks, and in **Auto** (the default for new chats) it runs on its own and pauses if something looks unsafe. You can set each tool (**Always allow**, **Needs approval**, **Always ask**, or **Blocked**) on the listing's **Permissions** tab.
 
 Marcora's free plan is permanent, not a trial. One person gets context access, their own Brand Foundation, and a one-time set of Studio Credits to try content generation, Content Grounding, and Context Intelligence, and reading your context is always free. Paid plans (Solo, Team, and Enterprise) add full library capacity, connected apps, team sharing, and optional monthly Studio Credit subscriptions. [See pricing](https://marcora.ai/pricing).
 
