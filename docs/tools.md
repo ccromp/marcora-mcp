@@ -713,7 +713,9 @@ The IDs you pass here can come from `list_context_items`, `get_project({ team_id
 
 Searches the team's context library and returns the passages most relevant to a given prompt, with sources.
 
-**How results are ranked:** each passage is scored on its own and against the whole document it belongs to, and the two scores are blended; weak matches are dropped, so fewer than 10 can come back. `dimension_option_ids` lean the ranking toward the chosen audience, persona or industry. It searches the reference library plus the project, collections and shared collections the user can access.
+**How results are ranked:** each passage is scored on its own and against the whole document it belongs to, and the two scores are blended; weak matches are dropped, so fewer than 10 library passages can come back. `dimension_option_ids` lean the ranking toward the chosen audience, persona or industry. It searches the Reference Library plus the project, collections and shared collections the user can access.
+
+In default scope (when `only_these_collections` is omitted or `false`), any readable team collection item whose name — or a distinctive word from its name — appears in `prompt` is also surfaced in its own named collection block (`--- From the "<name>" collection: <desc> ---`), up to 3 items and up to 3 passages each, alongside up to 10 library passages. Name matching applies only to the caller's own readable team items and never runs for `only_these_collections: true`, Calls, or collections already passed in `collection_ids`. Passing `collection_ids` still searches an entire collection semantically.
 
 `collection_ids` and `project_id` are **additive** by default: they broaden the search to ALSO include those collections / that project's context alongside your general reference library — they do not restrict results to only that collection or project unless you pass `only_these_collections: true` (which restricts the search strictly to `collection_ids`, excluding the general Reference Library, and cannot combine with `project_id` or `calls`).
 
