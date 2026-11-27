@@ -851,8 +851,8 @@ When `bucket` is omitted, `list_ci_findings` returns all non-draft findings acro
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
-| `bucket` | string | No | Lifecycle bucket: `questions` (open questions needing `answer_finding_question`), `queued` (auto-fixes queued to apply, including declined), `applied` (fixes applied by Marcora in the last 14 days and not undone), or `cleared` (resolved/dismissed/acknowledged with reason). Omit with `status` for the default actionable queue |
-| `status` | string | No | Filter by status: `pending`, `acknowledged`, `dismissed`, `resolved`. Omit to use `bucket` or the default actionable queue |
+| `bucket` | string | No | Filter library findings only (excludes `content_grounding`) by lifecycle bucket: `questions` (open questions needing `answer_finding_question`), `queued` (auto-fixes queued to apply, including declined), `applied` (fixes applied by Marcora in the last 14 days and not undone), or `cleared` (dismissed with a clear reason, or acknowledged). Omit to return all non-draft decided library and `content_grounding` findings across statuses |
+| `status` | string | No | Filter by status: `pending`, `acknowledged`, `dismissed`, `resolved`. Omit to include all non-draft statuses (or pass `bucket` for a library lifecycle view) |
 | `severity` | string | No | Filter by severity as recorded by the scan: `critical`, `warning`, or `info`. Omit for all |
 | `process_type` | string | No | Filter by originating scan: `health_audit` (library-wide sweep), `web_freshness` (tracked webpage changes), `impact_scan` (downstream change impact), or `content_grounding` (document grounding check). Omit for all |
 | `page` | integer | No | Page number (default 1) |
@@ -862,7 +862,7 @@ When `bucket` is omitted, `list_ci_findings` returns all non-draft findings acro
 
 | Field | Type | Description |
 |---|---|---|
-| `items` | array | Presented finding objects: `id` (uuid), `summary`, `recommendation`, `severity`, `status`, `process_type`, `finding_type`, `suggested_fix`, `decision` (`auto_fix` \| `ask` \| `no_action`), `decision_reason`, `decision_confidence`, `question`, `fix_ops`, `apply_after`, `applied_at`, `applied_by_marcora`, `declined`, `declined_at`, `declined_by`, `undone_at`, `undone_by`, `clear_reason`, `can_undo`, `target` (`{ kind, id, name }`), `context_item_ids`, `core_context_item_ids`, `content_type`, `content_id`, `link_url`, `created_at`, `resolved_at`, `resolved_by` |
+| `items` | array | Presented finding objects: `id` (uuid), `summary`, `recommendation`, `severity`, `status`, `process_type`, `finding_type`, `suggested_fix`, `decision` (`auto_fix` \| `ask` \| `clear`), `decision_reason`, `decision_confidence`, `question`, `fix_ops`, `apply_after`, `applied_at`, `applied_by_marcora`, `declined`, `declined_at`, `declined_by`, `undone_at`, `undone_by`, `clear_reason`, `can_undo`, `target` (`{ kind, id, name }`), `context_item_ids`, `core_context_item_ids`, `content_type`, `content_id`, `link_url`, `created_at`, `resolved_at`, `resolved_by` |
 | `itemsTotal` | integer | Total findings matching the filter |
 | `curPage` | integer | Current page number |
 | `nextPage` | integer \| null | Next page number, or `null` |
@@ -900,7 +900,7 @@ Depending on its state, act with [`answer_finding_question`](#answer_finding_que
 | `process_type` | string | Originating scan (`health_audit`, `web_freshness`, `impact_scan`, or `content_grounding`) |
 | `finding_type` | string | The kind of issue detected |
 | `suggested_fix` | object \| null | Proposed fix: `field`, `new_value`, `context_item_id`, etc. |
-| `decision` | string \| null | Decider classification (`auto_fix`, `ask`, or `no_action`) |
+| `decision` | string \| null | Decider classification (`auto_fix`, `ask`, or `clear`) |
 | `decision_reason` | string \| null | Rationale (`null` when evidence is withheld) |
 | `decision_confidence` | number \| null | Decider confidence score |
 | `question` | object \| null | Question prompt and answer choices when `decision` is `ask` (`null` when evidence is withheld) |
@@ -938,7 +938,7 @@ Update a Context Intelligence finding's status — **acknowledge**, **dismiss**,
 
 Status meanings:
 - `acknowledged` — seen, kept on the radar (shown in the `cleared` bucket with reason `acknowledged`).
-- `dismissed` — not relevant / won't fix — removes it from the actionable queue.
+- `dismissed` — not relevant / won't fix — closes the finding without applying a fix (use `status: "decline"` instead to mark a queued library `auto_fix` as declined while keeping it in `bucket: "queued"`).
 - `resolved` — the underlying issue was fixed outside Marcora (records who resolved it and when). This records resolution **only** — it does **not** apply a fix (and does not create an undoable Marcora edit). To apply a fix, use `apply_finding_fix`.
 - `decline` — decline a queued library `auto_fix` before it runs (`declined: true`, stays visible in `bucket: "queued"` for reversal).
 - `undecline` — restore a declined library `auto_fix` back to the active queue.
@@ -990,7 +990,7 @@ The updated presented finding object (`id`, `status`, `decision`, `clear_reason`
 
 **Errors:**
 - **400 (`isError: true`)** — invalid `finding_id`, invalid `choice`, missing `text` when `choice` is `edit`, or finding unreadable.
-- **409 (`isError: true`, prefixed with reason code)** — `finding_already_applied`, `finding_not_a_question`, `answer_not_applicable`, `history_unavailable`, `finding_target_changed`, or `linked_document_requires_edit`.
+- **409 (`isError: true`, prefixed with reason code)** — `finding_already_applied`, `finding_not_a_question`, `answer_not_applicable`, `history_unavailable`, `finding_target_changed`, `linked_document_requires_edit`, `linked_document_drifted`, `linked_document_being_edited`, or `linked_document_run_active`.
 
 **Example prompts:**
 - "Apply Marcora's suggested fix for that question"
@@ -1019,7 +1019,7 @@ The updated presented finding object (`id`, `status`, `undone_at`, `undone_by`, 
 **Errors:**
 - **`changed_since_apply`** (`isError: true`) — the target context item or Brand Foundation was edited after Marcora applied the fix, so automatic revert is blocked.
 - **`never_applied`** (`isError: true`) — the finding was marked resolved outside Marcora rather than applied by Marcora.
-- **Other 409 reason codes (`isError: true`)** — `already_undone`, `not_applied`, `not_undoable`, `undo_unsupported`, `history_unavailable`, or `release_source_document`.
+- **Other 409 refusals (`isError: true`)** — `already_undone`, `not_applied`, `not_undoable`, `undo_unsupported`, `history_unavailable`, `linked_document_requires_edit`, `linked_document_drifted`, `linked_document_being_edited`, `linked_document_run_active`, or a private-source-history refusal when the finding cites private source history on a document.
 
 **Example prompts:**
 - "Undo that Context Intelligence fix we just applied"
@@ -1216,7 +1216,7 @@ You never compose the fix yourself. Every finding already stores its recommended
 - **finding_ids must be finding_id UUIDs** (400, tool error `isError: true`).
 - **context_item_overrides names a finding not in finding_ids** (400, tool error `isError: true`) — the override would be ignored, so it is rejected rather than silently dropped.
 - **You are not authorized to perform this action** (403) — applying requires an Admin or Creator role.
-- Per-finding failures (`finding_needs_answer`, `finding_declined`, `override_not_supported`, already resolved, or unsupported `web_freshness`/`impact_scan` without a queued fix) arrive in `errors[]`, not as a thrown error.
+- Per-finding failures (`finding_needs_answer`, `finding_declined`, `override_not_supported`, `linked_document_drifted`, `linked_document_being_edited`, `linked_document_run_active`, already resolved, or unsupported `web_freshness`/`impact_scan` without a queued fix) arrive in `errors[]`, not as a thrown error.
 - **Finding not found.** — per finding, in `errors[]`: a `finding_id` that is unknown or whose evidence you cannot read. That finding is skipped; the others still run.
 - **Marcora is already updating this document.** — per finding, in `errors[]`: another run on that document is still in progress. Wait for it to finish, then retry those findings.
 - **Nothing was applied. This document has private source history** (an `isError` result) — a fix on such a document cannot update a context item in your reference library. The message names the next step that will work: call again with the same `finding_ids` and without `context_item_overrides` when that fixes the document itself; otherwise revise the document with `update_content`, then re-check.
