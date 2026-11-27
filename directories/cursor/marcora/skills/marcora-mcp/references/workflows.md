@@ -29,8 +29,8 @@ If intent is ambiguous, ask: *"Do you want to run this once, or set it up as a r
 - **`create_workflow`** — Create a template. Inputs: `name`, `steps`, `description`, `inputs`, `allowed_tools`, `tags`, optional `schedule_config`. Saves the workflow **Inactive** and any schedule **Paused**; the response carries a `next_step` saying what will and won't run.
 - **`get_workflow`** — Read-only. Returns one workflow's name, description, status (Active / Inactive), steps, inputs, `allowed_tools` and tags, plus its triggers (including the schedule, if any) and latest run, and `run_state` (one sentence covering both switches) and `schedule` (its read-back, when it has one). Call before `update_workflow` to avoid clobbering unknown fields, and before saying whether a workflow runs.
 - **`list_workflows`** — List the user's workflows (`status`, `search`, pagination). Call with `search:` before creating to spot duplicate names. The list does not show schedules — `status: "active"` in it does not mean a workflow is running.
-- **`update_workflow`** — Partial update; send only keys you want to change. Only the workflow's creator (`created_by_user_id`) can update it; anyone else gets an access-denied error. `status` accepts `"active"`, `"inactive"` or `"archived"` (soft-delete); anything else is refused and nothing is saved. It cannot edit a schedule or switch one On. When the call changes the status to Active or Inactive, the response carries a `next_step`.
-- **`run_workflow`** — Manually run a workflow: creates a run record and starts an automated agent session that carries out the steps, using Marcora tools and the user's connected apps, instructed to use only the tools in `allowed_tools`. Only the workflow's creator (`created_by_user_id`) can run it manually; anyone else gets an access-denied error. Only an **Active** workflow runs; the schedule plays no part in a manual run. Inspect `.status`: `"running"` = success, `"failed"` = check `.error_reason`.
+- **`update_workflow`** — Partial update; send only keys you want to change. Who can update it: for a workflow set up from a template, the owner or a team admin if it is shared with the team, only the owner if it is private, and it changes through its setup (a direct edit returns `setup_required`); for any other workflow, only its creator (`created_by_user_id`). Anyone else gets an access-denied error. `status` accepts `"active"`, `"inactive"` or `"archived"` (soft-delete); anything else is refused and nothing is saved. It cannot edit a schedule or switch one On. When the call changes the status to Active or Inactive, the response carries a `next_step`.
+- **`run_workflow`** — Manually run a workflow: creates a run record and starts an automated agent session that carries out the steps, using Marcora tools and the user's connected apps, instructed to use only the tools in `allowed_tools`. Who can run it: for a workflow set up from a template and shared with the team, any team member; if it is private, only its owner; for any other workflow, only its creator (`created_by_user_id`). Anyone else gets an access-denied error. Only an **Active** workflow runs; the schedule plays no part in a manual run. Inspect `.status`: `"running"` = success, `"failed"` = check `.error_reason`.
 - **`get_workflow_runs`** — Run history. Pass `run_id` for single-run detail (step logs + tool-call logs); omit for a paginated list.
 
 ### Building well
@@ -66,14 +66,17 @@ The runner agent's FINAL message becomes the run's summary (rendered as markdown
 - **Hard-delete isn't exposed** — use `update_workflow status:"archived"`. Restore with `status:"inactive"` or `status:"active"`.
 - **Duplicate names aren't prevented** — `list_workflows search:"<name>"` first if re-creating is possible.
 - **Schedule edits via MCP are NOT supported** — changing a schedule, and switching it On or Paused, happen in the app. Direct the user there with the workflow's `link_url`.
+- **Document update proposals from workflows** — inspect with `list_document_updates` / `get_document_update` and approve or discard interactively with `approve_document_update` / `discard_document_update` (not available in ChatGPT; background runner sessions cannot approve or discard).
 - **Runner sessions don't author workflows** — these 6 tools are for interactive sessions; a runner executing a scheduled run uses a different tool set and must not call `create_workflow`/`update_workflow`.
 
 ---
 
 ## E20 — Updating or manually running a teammate's workflow (`update_workflow` / `run_workflow`)
 
-**Symptom.** `marcora:update_workflow` or `marcora:run_workflow` returns an access-denied error even though the caller is an Admin or Creator.
+**Symptom.** `marcora:update_workflow` or `marcora:run_workflow` returns an access-denied error even though the caller is an Admin or Creator, or `marcora:update_workflow` returns `setup_required`.
 
-**Cause.** Only the workflow's creator (`created_by_user_id`) can update it or run it manually; anyone else gets an access-denied error.
+**Cause.**
+- **Workflow set up from a template:** for `run_workflow`, any team member can run it when shared with the team, while only its owner can run a private one; for `update_workflow`, the owner or a team admin can update a team-shared one and only the owner can update a private one, and it changes through its setup (a direct edit returns `setup_required`).
+- **Any other workflow:** only its creator (`created_by_user_id`) can update it or run it manually; anyone else gets an access-denied error.
 
-**What to do.** Check `created_by_user_id` on `get_workflow` / `list_workflows` against `get_current_user_info`. Explain that only the workflow's creator can update or manually run it, or offer to create a new workflow (`create_workflow`).
+**What to do.** If `update_workflow` returns `setup_required`, direct the user to update or activate it through the workflow's setup in the Marcora app (`link_url`). Otherwise check `created_by_user_id` on `get_workflow` / `list_workflows` against `get_current_user_info`, explain who can run or update the workflow, or offer to create a new workflow (`create_workflow`).

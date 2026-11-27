@@ -31,24 +31,24 @@ Pass the key in an `Authorization: Bearer <your-api-key>` header — the server 
 
 ### Claude
 
-Marcora is in Claude's connector directory, so there is no URL and no token to paste.
+Marcora is in Claude's directory, so there is no URL and no token to paste.
 
-1. Open the [Marcora listing](https://claude.ai/directory/connectors/marcora) in Claude's connector directory
-2. Click **Connect**, then **Allow** on Marcora's authorization page to finish the OAuth flow
-3. Start a chat and just ask — Marcora is enabled by default in every new conversation, so there is nothing to turn on in the composer
-4. The first time Claude uses each Marcora tool it stops and asks — *"Claude wants to use **Get Brand Foundation** from Marcora: Brand Context & Writing"* — so click **Always allow**
+1. Open the [Marcora listing](https://claude.ai/directory/marcora) in Claude's directory (it opens under **Plugins**)
+2. Select **Add** at the top right, then select **Connect** under **Connectors**, sign in to Marcora if asked, and select **Allow** on Marcora's authorization screen to finish the OAuth flow
+3. Open a chat and ask — e.g., *"What's my brand foundation?"* Marcora should already be switched on in new chats (to check, click **+** then **Plugins**)
+4. Whether Claude asks before using a Marcora tool depends on the chat's **Permission mode**, next to the model picker. New chats start in **Auto**: Claude runs on its own and pauses to ask if anything looks unsafe, so you may not see a prompt. In **Manual** mode Claude asks before using new tools. To set it tool by tool, open Marcora's listing, choose the **Permissions** tab, and pick **Always allow**, **Needs approval**, **Always ask**, or **Blocked** for each tool
 
-Step 4 is easy to miss and it is load-bearing: **nothing reaches Marcora until you approve it.** The prompt is per tool rather than per connector, so expect it again the first time each new Marcora tool comes up; approvals then persist across your conversations.
+> **Tip:** In **Auto** mode, Claude's safety check can still stop a Marcora call instead of pausing to ask — when that happens, the call just doesn't run. Name your Marcora team in the request, or switch that chat to **Manual**.
 
-Manage the connection afterwards under **Customize → Connectors**, where Marcora shows as **Connected**. It only appears in that list once connected — searching for it there beforehand returns nothing, which is why step 1 starts at the directory.
+Manage the connection afterwards by opening **Plugins** in Claude ([claude.ai/plugins](https://claude.ai/plugins)) and opening Marcora's listing, where its **Connectors** section shows **Connected**. Anthropic's help articles may still call this page **Customize → Connectors**.
 
 **Adding it by URL instead** — use this for a whole Team or Enterprise workspace, or simply by preference:
 
-1. In Claude, go to **Customize → Connectors**, click **Add**, then choose **Add custom connector**
-2. Give the connector a name and paste the Marcora MCP Server URL: `https://mcp.marcora.ai`
-3. Click **Add**, then click **Connect** next to "Marcora" and approve access to finish the OAuth flow
+1. In Claude, open **Plugins** (in Settings, or at [claude.ai/plugins](https://claude.ai/plugins)), select **Add**, and choose **Add custom connector** (Anthropic's help articles may still call this page **Customize → Connectors**)
+2. Enter a name and paste the Marcora connection URL (`https://mcp.marcora.ai`) into **MCP server URL**, then select **Continue**. Claude checks the server and moves to the next screen. Keep the sign-in settings Claude detects and select **Add** — Marcora doesn't need its own OAuth client ID or secret
+3. Select **Connect** next to Marcora, sign in to Marcora if asked, and select **Allow** on Marcora's authorization screen
 
-Then carry on from step 3 above — the per-tool approval prompt works the same way. Note that Free Claude accounts are limited to one custom connector; connecting from the directory does not use that slot.
+Then carry on from step 3 above. Note that Free Claude accounts are limited to one custom connector; connecting from the directory does not use that slot.
 
 ### ChatGPT
 

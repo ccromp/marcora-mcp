@@ -143,6 +143,7 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Context & Resources | `update_call_instruction` | Edit or switch on/off a standing call instruction |
 | Context & Resources | `remove_call_instruction` | Permanently remove a standing call instruction |
 | Context & Resources | `find_app` | Look up available third-party apps connected to Marcora |
+| Enablement | `find_enablement_documents` | Find and browse curated Enablement Hub documents (visible when Enablement is on for a team) |
 | Context Intelligence | `list_ci_findings` | List findings from automated context-library scans |
 | Context Intelligence | `get_ci_finding` | Get one finding in full detail by UUID |
 | Context Intelligence | `update_ci_finding_status` | Acknowledge, dismiss, or resolve a finding |
@@ -166,9 +167,10 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Content | `list_content` | List all content (optional semantic `search`) |
 | Content | `get_content` | Get full content by ID |
 | Content | `update_content` | Update a content document |
+| Content | `publish_content` | Check publish status, publish a document to a connected app destination, update all linked copies, or link an existing external copy |
 | Content | `ask_content_assistant` | Run the in-document Content Assistant on a document |
-| Sharing & Export | `create_external_share` | Create a public share link |
-| Sharing & Export | `get_share_link_activity` | List workspace share links (`share_link` omitted) or inspect one link's viewers and opens |
+| Sharing & Export | `create_external_share` | Create a public share link (optional recipient name/email; refused for Internal only documents; supports `confirm_private_sources`) |
+| Sharing & Export | `get_share_link_activity` | List workspace share links (`share_link` omitted) or inspect one link's viewers, recipient, and opens |
 | Sharing & Export | `convert_markdown_to_word_doc` | Export markdown as Word doc |
 | Projects | `list_projects` | List all projects |
 | Projects | `get_project` | Get project details, including its brief |
@@ -192,10 +194,18 @@ Releases are tagged `marcora-vX.Y.Z` — see [Releases](https://github.com/ccrom
 | Plans & Playbooks | `list_my_playbook_steps` | List open playbook steps assigned to you (or to a typed `owner_name`), soonest due first |
 | Plans & Playbooks | `list_playbook_owner_names` | List the typed owner names in use on the team's playbook steps |
 | Plans & Playbooks | `add_playbook_step` | Add a step to a running playbook cycle without changing its template |
-| Plans & Playbooks | `update_playbook_step_status` | Mark a cycle step Complete (`action: "complete"`) or reopen a completed checklist step (`action: "reopen"`) |
+| Plans & Playbooks | `update_playbook_step_status` | Mark a cycle step Complete (`action: "complete"`) or reopen a completed checklist step (`action: "reopen"`); workflow steps finish by running |
+| Plans & Playbooks | `list_playbook_workflow_options` | List the workflows you can attach to a playbook workflow step |
+| Plans & Playbooks | `get_playbook_step_workflow` | Read a workflow step's live state, input readiness and latest run |
+| Plans & Playbooks | `run_playbook_step_workflow` | Run a workflow step's workflow once, now (completes the step on success) |
+| Plans & Playbooks | `update_playbook_step_workflow` | Swap the workflow and input mappings on an open workflow step |
 | Plans & Playbooks | `update_playbook_cycle` | Rename a cycle and change its topic |
 | Plans & Playbooks | `generate_cycle_content` | Generate the content for every step of a cycle that has none (uses Studio Credits) |
 | Plans & Playbooks | `get_cycle_generation` | Check the progress of a cycle's "Generate all" batch |
+| Document Updates | `list_document_updates` | List document update proposals across plans, playbook steps, and workflows (ChatGPT sees plan updates only) |
+| Document Updates | `get_document_update` | Read one document update proposal with proposed/current body, diff, and evidence |
+| Document Updates | `approve_document_update` | Approve and apply a pending update proposal (or confirm `no_changes` on a plan update) |
+| Document Updates | `discard_document_update` | Discard a pending, conflict, or `no_changes` update proposal without modifying the document |
 | Workflows | `list_workflows` | List workflows |
 | Workflows | `get_workflow` | Get a workflow's full definition |
 | Workflows | `create_workflow` | Create a new workflow template |
@@ -220,7 +230,7 @@ See [docs/tools.md](docs/tools.md) for the complete tool reference.
 ## Security, Privacy & Runtime Disclosures
 
 - **External service & authentication:** This package connects over HTTPS to Marcora's hosted MCP server at `https://mcp.marcora.ai/`. Connecting requires a Marcora account (a permanent Free tier is available at [marcora.ai/pricing](https://marcora.ai/pricing)) authenticated via OAuth 2.1 with PKCE (`/oauth/authorize`, `/oauth/token`, `/oauth/register`, `/oauth/revoke`) or a user-generated Bearer API token from [Integration Settings](https://app.marcora.ai/integration-settings).
-- **Runtime tool surface (`77` tools) & Studio Credit costs:** At runtime, `https://mcp.marcora.ai/` serves **77 MCP tools**: **38 read-only tools** (`readOnlyHint: true`, `destructiveHint: false`, always free to call) and **39 non-read-only tools** (`readOnlyHint: false`, of which **19** have `destructiveHint: false` and **20** have `destructiveHint: true` because they overwrite existing records in place, trigger scans/workflows, or send team invites). Those 39 tools create or update team records or consume team Marcora Studio Credits when AI generation, scans, or Word exports run (`create_content` on the `instructions` generation path, `produce_plan`, `generate_cycle_content` (one generation per step), `create_blueprint_draft`, `create_project` with `project_brief_instructions`, `ask_content_assistant`, `check_content_grounding`, `trigger_health_audit_scan`, `convert_markdown_to_word_doc` at 2 Studio Credits per conversion, and `run_workflow`). Every team-scoped tool requires an explicit numeric `team_id` (and team-scoped writes echo `team: { id, name }`).
+- **Runtime tool surface (up to `87` tools) & Studio Credit costs:** At runtime, `https://mcp.marcora.ai/` serves up to **87 MCP tools**: **43 read-only tools** (`readOnlyHint: true`, `destructiveHint: false`, always free to call) and **44 non-read-only tools** (`readOnlyHint: false`, of which **21** have `destructiveHint: false` and **23** have `destructiveHint: true` because they overwrite existing records in place, trigger scans/workflows/publishes, or send team invites; `find_enablement_documents` is listed only when Enablement is on for a team). Those 44 tools create or update team records or consume team Marcora Studio Credits when AI generation, scans, or Word exports run (`create_content` on the `instructions` generation path, `produce_plan`, `generate_cycle_content` (one generation per step), `create_blueprint_draft`, `create_project` with `project_brief_instructions`, `ask_content_assistant`, `check_content_grounding`, `trigger_health_audit_scan`, `convert_markdown_to_word_doc` at 2 Studio Credits per conversion, `run_workflow`, and `run_playbook_step_workflow`). Every team-scoped tool requires an explicit numeric `team_id` (and team-scoped writes echo `team: { id, name }`).
 - **Server-side background agents, scheduled workflows & connected apps:** Calling `run_workflow` starts an automated agent session on Marcora's backend that executes the workflow's steps using Marcora tools and any third-party apps the user has connected in Marcora (`allowed_tools` on a workflow is a prompt instruction to the workflow runner, not a separate hard permission check). Workflows created (`create_workflow`) or activated (`update_workflow` with `status: "active"`) that have an `On` schedule are dispatched automatically by Marcora's server-side scheduler independently of the local MCP client. Calling `ask_content_assistant` starts an asynchronous background AI assistant run on an existing document that may edit the document body in place.
 - **Advisory nature of MCP annotations & Hermes `trust: "untrusted"` scope:** MCP `ToolAnnotations` (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) are advisory hints; each MCP host decides whether and how to prompt for confirmation. In Hermes Agent, `plugin.json` declares `"trust": "untrusted"` and `"timeout": 180` on the `marcora` server so Hermes's host policy prompts before client-initiated calls to non-read-only tools, but client-side `trust: "untrusted"` and MCP annotations only govern calls initiated by the local client and do not prevent server-side scheduled workflow runs or background agent execution once a workflow is started or activated on Marcora.
 - **Privacy Policy:** [marcora.ai/privacy-policy](https://marcora.ai/privacy-policy)

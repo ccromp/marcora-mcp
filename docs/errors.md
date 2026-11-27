@@ -16,7 +16,7 @@
 **Cause:** Your account doesn't have permission to perform the requested action.
 
 **Solutions:**
-- Check your team role — some actions require an Admin or Creator seat. Creating documents (`create_content`, `produce_plan`, `generate_cycle_content`, `create_blueprint_draft`) now requires an Admin or Creator role (*"Only Admins and Creators can create documents."*), connected-app call imports (`add_context` `import_from`) and Webhooks require a Creator or Admin seat (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*; `find_app` works for any active team role), and `update_workflow` and `run_workflow` can only be called by the workflow's creator (`created_by_user_id`)
+- Check your team role — some actions require an Admin or Creator seat. Creating documents (`create_content`, `produce_plan`, `generate_cycle_content`, `create_blueprint_draft`) now requires an Admin or Creator role (*"Only Admins and Creators can create documents."*), connected-app call imports (`add_context` `import_from`) and Webhooks require a Creator or Admin seat (*"Integrations are only available with a creator license. Please contact your admin to upgrade your role."*; `find_app` works for any active team role). For `update_workflow` and `run_workflow`, workflows set up from a template allow any team member to run (and the owner or a team admin to update via setup) when team-shared and only the owner when private; any other workflow is creator-only (`created_by_user_id`)
 - Verify you passed the right `team_id` (check `get_current_user_info`)
 - Private content/collections are only accessible by their creator
 
@@ -83,6 +83,14 @@ Neither error returns any context or the project's brief.
 **Solutions:**
 - For `"Nothing was applied. This document has private source history..."`, follow the next step named in the message: call `apply_finding_fix` again with the same `finding_ids` and without `context_item_overrides` when that fixes the document itself; otherwise revise the document with `update_content`, then re-check.
 - For `"This check cannot use the document’s private sources..."`, when the private sources are the caller's own, the message includes a link to check the document privately in Marcora; relay that link to the user.
+
+### "Curated in Enablement · comment to suggest a change"
+
+**Cause:** While Enablement is turned on for a team, only Enablement curators (team Admins or members granted curator permission) can edit curated Enablement material. Non-curators receive this `403` (`isError: true`) refusal from `ask_content_assistant` (when `chat_only_mode` is `false`), `apply_finding_fix`, `update_content`, `update_context`, and related edit/delete/restore paths when targeting a curated item or its linked document.
+
+**Solutions:**
+- Relay the refusal to the user — do not retry or duplicate the material. Tell them they can comment on the document in the Marcora Enablement Hub to suggest a change, or ask an Enablement curator to make the edit.
+- For `ask_content_assistant`, passing `chat_only_mode: true` still works for read-only questions without editing the document.
 
 ### Content generation timeout
 
