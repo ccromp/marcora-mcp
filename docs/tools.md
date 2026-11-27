@@ -2977,7 +2977,7 @@ Discards (rejects) a pending, conflict, or `no_changes` document update proposal
 
 Workflows are reusable, multi-step automations that Marcora runs on demand or on a schedule. Build them with `create_workflow`, set them Active or Inactive and edit them with `update_workflow`, trigger them with `run_workflow`, and inspect run history with `get_workflow_runs`.
 
-> **Two switches, two vocabularies.** A workflow is **Active** or **Inactive** (or Archived). Its schedule, if it has one, is **On** or **Paused**. A scheduled run needs both: the workflow Active **and** the schedule On. A manual run needs only Active. New workflows are saved Inactive and every schedule is saved Paused; no MCP tool can turn a schedule On — the user does that in the Marcora app with **Resume schedule**. When describing a workflow as Active, always say whether its schedule is On, Paused, or absent. The companion **`marcora-mcp`** skill documents authoring patterns (step design, scheduling, deduplication, runner-summary conventions) in its Workflows chapter.
+> **Two switches, two vocabularies.** A workflow is **Active** or **Inactive** (or Archived). Its schedule, if it has one, is **On** or **Paused**. A scheduled run needs both: the workflow Active **and** the schedule On. A manual run needs only Active. New workflows are saved Inactive by default and every schedule is saved Paused; no MCP tool can turn a schedule On — the user does that in the Marcora app with **Resume schedule**. When describing a workflow as Active, always say whether its schedule is On, Paused, or absent. The companion **`marcora-mcp`** skill documents authoring patterns (step design, scheduling, deduplication, runner-summary conventions) in its Workflows chapter.
 
 ### `list_workflows`
 
@@ -3036,7 +3036,7 @@ Read-only. Returns one workflow template by `workflow_id`: its name, description
 | `workflow.inputs` | object | Declared input schema |
 | `workflow.allowed_tools` | array | Tool allowlist for the runner |
 | `workflow._triggers` | array | Raw schedule/trigger configs |
-| `workflow.schedule` | object | Present only when the workflow has a schedule: `trigger_id`, `is_enabled` (`true` = On, `false` = Paused), `summary` (plain language, times in UTC), `schedule_config` |
+| `workflow.schedule` | object | Present only when the workflow has a schedule: `trigger_id`, `is_enabled` (`true` = On, `false` = Paused), `summary` (plain language: local time and timezone for v2, UTC for legacy v1), `schedule_config` |
 | `workflow.run_state` | string | One sentence stating what will and won't run, across both switches. Follow it when describing the workflow |
 | `workflow._latest_run` | object/null | Most recent run (carries its own `link_url`), or null if never run |
 | `workflow.link_url` | string (uri) | Direct URL to view the workflow in Marcora |
@@ -3050,7 +3050,7 @@ Read-only. Returns one workflow template by `workflow_id`: its name, description
 
 ### `create_workflow`
 
-Create a new workflow template for the specified team (`team_id`). New workflows are saved **Inactive**, and any schedule is saved **Paused** — set the workflow Active with `update_workflow` once the user asks for it. Check `list_workflows` with a `search` filter for duplicate names first.
+Create a new workflow template for the specified team (`team_id`). New workflows are saved **Inactive** by default (an allowed `status` of `active`, `inactive`, or `archived` passed by a caller is kept), and any schedule is saved **Paused** — set the workflow Active with `update_workflow` once the user asks for it. Check `list_workflows` with a `search` filter for duplicate names first.
 
 > **Scheduling:** include `schedule_config` ONLY if the user explicitly wants the workflow scheduled. Otherwise omit it and the workflow runs on demand via `run_workflow`.
 
@@ -3065,9 +3065,9 @@ Create a new workflow template for the specified team (`team_id`). New workflows
 | `inputs` | object | No | Declares what the workflow needs (e.g. `topic`, `date_range`) |
 | `allowed_tools` | array | **Yes** | **Required, non-empty.** The tools the runner agent is instructed to use when the workflow runs. A workflow cannot be created without an explicit allowlist. Prefer tight allowlists, especially for scheduled runs |
 | `tags` | string[] | No | Optional tags |
-| `schedule_config` | object | No | Omit unless scheduling is requested. **Calendar mode (preferred):** `{ "frequency": "daily"\|"weekly", "hour": 0-23, "days_of_week": [0-6], "timezone": "<IANA zone>" }` — `hour` and `days_of_week` are UTC (0 = Sunday); `days_of_week` takes 1–7 distinct days, so "3 times a week" is one schedule. **Interval mode** (no `hour`): runs every `interval_hours` hours. `timezone` is display-only. Always saved Paused |
+| `schedule_config` | object | No | Omit unless scheduling is requested. **Calendar mode v2 (preferred, DST-safe):** `{ "version": 2, "frequency": "daily"\|"weekly", "time": "HH:MM", "timezone": "<IANA zone>", "days": [0-6] }` — local 24-hour `HH:MM` and local weekdays (`0 = Sunday` … `6 = Saturday`; 1–7 distinct days for `weekly`, omit for `daily`); do not convert to UTC. **Legacy v1 / interval mode:** v1 `{ "frequency": "daily"\|"weekly", "hour": 0-23, "days_of_week": [0-6], "timezone": "<IANA zone>" }` (UTC `hour` and `days_of_week`) and interval mode (no `version: 2` or `hour`, optional `interval_hours`) remain accepted. Always saved Paused |
 
-**Output:** The created workflow object — `id`, `team_id`, `created_by_user_id`, `name`, `description`, `status` (`inactive`), `inputs`, `steps`, `allowed_tools`, `tags`, `created_at`, `updated_at`, `link_url` — plus `next_step` (always present: what will and won't run, computed from what was saved — lead your reply with it) and, when a schedule was saved, `schedule` (`is_enabled: false`, and a plain-language `summary` to quote to the user). Use `id` as `workflow_id` in the other workflow tools.
+**Output:** The created workflow object — `id`, `team_id`, `created_by_user_id`, `name`, `description`, `status` (`inactive` by default), `inputs`, `steps`, `allowed_tools`, `tags`, `created_at`, `updated_at`, `link_url` — plus `next_step` (always present: what will and won't run, computed from what was saved — lead your reply with it) and, when a schedule was saved, `schedule` (`is_enabled: false`, and a plain-language `summary` to quote to the user). Use `id` as `workflow_id` in the other workflow tools.
 
 **Example prompts:**
 - "Create a workflow that drafts a weekly LinkedIn post from our latest content"

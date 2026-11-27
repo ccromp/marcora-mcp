@@ -2,6 +2,13 @@
 
 All notable changes to the Marcora MCP server will be documented in this file.
 
+## Unreleased
+
+### Changed
+
+- **`create_workflow` v2 local-time schedules & default status:** `create_workflow` now prefers v2 calendar `schedule_config` (`{ version: 2, frequency: "daily"|"weekly", time: "HH:MM", timezone: "<IANA>", days?: [0-6] }`) using local wall-clock time and local weekdays with no UTC conversion (preserving minutes and local time across DST); legacy v1 (`hour`, `days_of_week`, `day_of_week`) and interval mode remain accepted. Clarified that new workflows are saved **Inactive** by default (keeping an allowed passed `status`), while any `schedule_config` is still always saved **Paused**.
+- **Workflow schedule read-back:** `create_workflow`, `update_workflow`, and `get_workflow` `schedule.summary` now describe v2 schedules in local time and timezone (e.g., `"Weekly on Monday, Wednesday and Friday at 09:30, America/New_York"`), while preserving v1 UTC and interval summaries.
+
 ## 2026-11-26 (Document updates, Enablement Hub finder, publish_content, playbook workflow steps, Meet Drive transcripts & share recipients)
 
 ### Skill → v0.8.8 · plugin → v1.3.8
