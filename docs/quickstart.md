@@ -38,6 +38,8 @@ Marcora is in Claude's directory, so there is no URL and no token to paste.
 3. Open a chat and ask — e.g., *"What's my brand foundation?"* Marcora should already be switched on in new chats (to check, click **+** then **Plugins**)
 4. Whether Claude asks before using a Marcora tool depends on the chat's **Permission mode**, next to the model picker. New chats start in **Auto**: Claude runs on its own and pauses to ask if anything looks unsafe, so you may not see a prompt. In **Manual** mode Claude asks before using new tools. To set it tool by tool, open Marcora's listing, choose the **Permissions** tab, and pick **Always allow**, **Needs approval**, **Always ask**, or **Blocked** for each tool
 
+> **Tip:** In **Auto** mode, Claude's safety check can still stop a Marcora call instead of pausing to ask — when that happens, the call just doesn't run. Name your Marcora team in the request, or switch that chat to **Manual**.
+
 Manage the connection afterwards by opening **Plugins** in Claude ([claude.ai/plugins](https://claude.ai/plugins)) and opening Marcora's listing, where its **Connectors** section shows **Connected**. Anthropic's help articles may still call this page **Customize → Connectors**.
 
 **Adding it by URL instead** — use this for a whole Team or Enterprise workspace, or simply by preference:
