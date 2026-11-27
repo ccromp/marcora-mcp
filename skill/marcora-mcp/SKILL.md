@@ -68,6 +68,21 @@ Also on demand:
 
 **Workflow vs. Playbook.** A *playbook* produces a batch of content plans for a human to produce. A *workflow* runs an agent through arbitrary steps in the background. "Save this content sequence as a template" → playbook. "Every Monday, sweep competitor blogs and email me a digest" → workflow.
 
+### What only the Marcora agent can do
+
+Outside MCP clients cannot start or continue a Marcora agent thread. Before attempting a task below (or waiting for a refusal), tell the user that only the **Marcora agent** can do it — and that they can ask the Marcora agent in the **Marcora app** or in **Slack, Microsoft Teams, Google Chat, or Discord**:
+
+- **Agent memory** — explicitly asking Marcora to remember, recall, or forget something across conversations.
+- **Deleting or archiving items, and context history** — requesting deletion of content, context items, collections, projects, or workflows, archiving projects or workflows, or viewing and restoring context-item revision history. *(Confirming a deletion or archive request uses the **Review changes** card in the Marcora web app.)*
+- **Built-in workflow templates** — browsing Marcora's built-in workflow templates, previewing or setting up a workflow from a template, or saving an existing workflow as a template.
+- **Workflow team notes** — adding or listing workflow team notes. *(Withdrawing a note happens in the Marcora web app.)*
+- **Legacy workflow document-update history** — reading legacy per-workflow document-update history. *(Unified document-update review — `list_document_updates`, `get_document_update`, `approve_document_update`, `discard_document_update` — works over external MCP; ChatGPT sees plan updates only.)*
+- **Running playbook `action` steps** — external MCP clients can create and read `kind: "action"` playbook steps, while running the step itself executes through the owner's Marcora agent using their connected apps.
+
+Some actions also have **web-app-only finishers** (even a chat-app Marcora agent returns a web app link for these): confirming a deletion or archive request, finishing ICP buyer research setup, setting up publish destinations (`publish_content` `setup_url`), turning on or editing a custom workflow schedule (**Resume schedule**), and withdrawing a workflow note.
+
+Client-specific MCP limits (not agent-only): ChatGPT hides Marcora's workflow tools, workflow playbook steps, and workflow-sourced document updates (ask the Marcora agent in the Marcora app or in Slack, Microsoft Teams, Google Chat, or Discord); Slack's AI hides blueprint creation (ask the Marcora agent instead — in the Marcora app or in Slack, Microsoft Teams, Google Chat, or Discord). See `references/choosing-tools.md` for details.
+
 ---
 
 ## The object model in brief

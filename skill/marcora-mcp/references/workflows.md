@@ -24,7 +24,7 @@ If intent is ambiguous, ask: *"Do you want to run this once, or set it up as a r
 
 ### The 6 workflow tools
 
-(Not available in ChatGPT, where these six tools aren't offered; set workflows up in the Marcora app there. Every other client sees them.)
+(Not available in ChatGPT, where these six tools aren't offered; ask the Marcora agent in the Marcora app or in Slack, Microsoft Teams, Google Chat, or Discord. Every other client sees them.)
 
 - **`create_workflow`** — Create a template. Inputs: `name`, `steps`, `description`, `inputs`, `allowed_tools`, `tags`, optional `schedule_config`. Saves the workflow **Inactive** and any schedule **Paused**; the response carries a `next_step` saying what will and won't run.
 - **`get_workflow`** — Read-only. Returns one workflow's name, description, status (Active / Inactive), steps, inputs, `allowed_tools` and tags, plus its triggers (including the schedule, if any) and latest run, and `run_state` (one sentence covering both switches) and `schedule` (its read-back, when it has one). Call before `update_workflow` to avoid clobbering unknown fields, and before saying whether a workflow runs.

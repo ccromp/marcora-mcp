@@ -2,7 +2,7 @@
 
 Marcora is the context layer for go-to-market teams — one source of truth for brand and company context, so your whole team produces consistent, on-brand content in any AI tool. It stores your brand context, manages reusable content templates (blueprints), and generates documents informed by your full company context.
 
-The Marcora MCP Server exposes Marcora's tools directly inside AI assistants like Claude and ChatGPT, letting you create blueprints, generate content, manage context, share documents and see whether they were opened, and more — without leaving your AI chat. Available tools vary by client: ChatGPT doesn't include the ten workflow tools (the six standalone workflow tools plus the four playbook workflow-step tools; set workflows up in the Marcora app), and Slack hides the three blueprint-building tools (create blueprints in the Marcora app).
+The Marcora MCP Server exposes Marcora's tools directly inside AI assistants like Claude and ChatGPT, letting you create blueprints, generate content, manage context, share documents and see whether they were opened, and more — without leaving your AI chat. Available tools vary by client: ChatGPT doesn't include the ten workflow tools (the six standalone workflow tools plus the four playbook workflow-step tools; ask the Marcora agent in the Marcora app or in Slack, Microsoft Teams, Google Chat, or Discord), and Slack's AI hides the three blueprint-building tools (ask the Marcora agent instead — in the Marcora app or in Slack, Microsoft Teams, Google Chat, or Discord).
 
 ## Team Scoping (`team_id`)
 

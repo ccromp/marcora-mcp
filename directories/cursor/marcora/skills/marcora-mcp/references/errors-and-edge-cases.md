@@ -84,6 +84,16 @@ Don't show the user a UUID like `7b2c4f...` as an identifier. Surface the human-
 
 ---
 
+## E22 — Task requires the Marcora agent (or is restricted in ChatGPT / Slack's AI)
+
+**Symptom.** The user asks for agent memory (remember/recall/forget), item deletion or archiving, context-item revision history, setting up a workflow from a built-in template or saving one as a template, workflow team notes, legacy workflow document-update reads, or running a playbook `action` step — or ChatGPT refuses a workflow tool / workflow-step playbook edit (`"Workflows aren't available in ChatGPT..."`), or Slack's AI refuses blueprint creation (`"Creating blueprints isn't available through Slack's AI..."`).
+
+**Cause.** External MCP clients do not expose the interactive Marcora agent tools, and ChatGPT and Slack's AI each hide specific tool sets (`references/choosing-tools.md`).
+
+**What to do.** Tell the user the Marcora agent can handle it — in the **Marcora app** or in **Slack, Microsoft Teams, Google Chat, or Discord** (and in Slack, distinguish Slack's own AI from the Marcora agent in Slack). If the task includes a web-app-only finisher (confirming a deletion/archive on the **Review changes** card, finishing ICP buyer research setup, setting up a publish destination, turning a workflow schedule On with **Resume schedule**, or withdrawing a workflow note), mention that the Marcora agent will provide a link to finish that step in the Marcora web app.
+
+---
+
 ## When you encounter something not in this list
 
 1. Surface the raw error to the user — don't silently retry.

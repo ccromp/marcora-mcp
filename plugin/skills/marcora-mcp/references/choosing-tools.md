@@ -35,3 +35,33 @@ Read this when two Marcora tools look like they could both do the job: documents
 | To find or browse curated Sales Enablement Hub documents and give the user their reading-page links | `marcora:find_enablement_documents(team_id, query?, category_ids?, limit?)` | `get_relevant_context` searches Reference Library/collections, not Enablement Hub categories or `internal_only` tags. Omit `query` to browse categories and their documents; pass `query` for ranked title/category/body matches. `limit` (1–50, default 25) caps ranked documents in search mode and total category placements plus uncategorized docs in browse mode — if `has_more` is true, narrow with `category_ids` or `query` (no offset). Present `link_url` as returned and flag `internal_only: true` docs as workspace-only. (Only listed when Enablement is on for a team.) |
 | To publish a document to a connected app destination (Google Docs, Notion, etc.), update all published copies, or link an existing copy | `marcora:publish_content` | `run_workflow` refuses publish destinations, `create_external_share` makes a public Marcora share link, and destinations can only be set up in the Marcora app — not over MCP. Call `mode: "status"` first to see `workflow_id` destinations and `is_private`/`is_owner`. |
 | To act in a specific team (or across multiple teams in one session) | Pass `team_id` on each team-scoped tool call (get `team_id` from `initialize` instructions or `marcora:get_current_user_info`) | There is no global active-team switch tool: passing `team_id` scopes only that call and never changes open Marcora app tabs or other sessions. |
+| To do something only the Marcora agent can do (agent memory, deleting/archiving items or context history, setting up a workflow from a built-in template or saving one as a template, workflow team notes, legacy workflow document-update reads, or running a playbook `action` step) | Tell the user to ask the **Marcora agent** in the **Marcora app** or in **Slack, Microsoft Teams, Google Chat, or Discord** | No external MCP tool can start or continue a Marcora agent thread, and those capabilities are hidden from external MCP clients. See **What only the Marcora agent can do** below for which finishers still require the Marcora web app. |
+
+---
+
+## What only the Marcora agent can do
+
+There is no MCP tool to start a Marcora agent task, list Agent Threads, or continue a thread. When a user asks for any of the capabilities below, say up front that only the **Marcora agent** can handle it — in the **Marcora app** (**Start here**) or in **Slack, Microsoft Teams, Google Chat, or Discord** — rather than attempting an unsupported workaround:
+
+| Capability | Where to send the user | Notes |
+|---|---|---|
+| Explicit agent memory (remember, recall, forget across conversations) | Marcora agent (Marcora app, Slack, Microsoft Teams, Google Chat, or Discord) | Separate from the team Reference Library (`add_context` / `get_relevant_context` are available over external MCP). |
+| Deleting or archiving items (`content`, context items, collections, projects, workflows) and reading/restoring context-item revision history | Marcora agent (same channels) to start the request; **Marcora web app** to confirm | Confirming a deletion or archive requires the **Review changes** card in the Marcora web app (cannot be confirmed in chat apps). |
+| Browsing built-in workflow templates, previewing or setting up a workflow from a template, or saving an existing workflow as a template | Marcora agent (same channels); **Marcora web app** to finish ICP buyer research or publish destination setup | Custom workflows can still be built directly over MCP with `create_workflow` (except in ChatGPT). |
+| Adding or listing workflow team notes | Marcora agent (same channels); **Marcora web app** to withdraw a note | Withdrawing a note is web-app-only. |
+| Reading legacy per-workflow document-update history | Marcora agent (same channels) | Current document-update proposals use `list_document_updates`, `get_document_update`, `approve_document_update`, and `discard_document_update` over external MCP (ChatGPT sees plan updates only). |
+| Running a playbook `action` step | Marcora agent (same channels) / step owner in Marcora | External MCP clients can create and read `kind: "action"` steps (`create_playbook` / `update_playbook`), while execution runs through the owner's Marcora agent using their connected apps. |
+
+### Web-app-only finishers (cannot finish in chat apps)
+
+Even when using the Marcora agent in Slack, Microsoft Teams, Google Chat, or Discord, the agent returns a link to finish these steps in the Marcora web app:
+- Confirming a deletion or archive request (**Review changes** card)
+- Finishing ICP buyer research template setup
+- Setting up publish destinations (`publish_content` `setup_url`)
+- Turning a custom workflow schedule On (**Resume schedule**) or editing a schedule (`update_workflow` ignores schedule edits)
+- Withdrawing a workflow note
+
+### Client-specific MCP limits (available in other clients, not agent-only)
+
+- **ChatGPT**: hides Marcora's workflow tools (`list_workflows`, `get_workflow`, `get_workflow_runs`, `create_workflow`, `update_workflow`, `run_workflow`, and playbook workflow-step tools), `kind: "workflow"` playbook steps, and workflow-sourced document updates. Tell ChatGPT users to ask the Marcora agent in the Marcora app or in Slack, Microsoft Teams, Google Chat, or Discord (or use another MCP client such as Claude).
+- **Slack's AI**: hides the blueprint-creation tools (`create_blueprint`, `create_blueprint_draft`, `finalize_blueprint_draft`). Tell users to ask the Marcora agent instead — in the Marcora app or in Slack, Microsoft Teams, Google Chat, or Discord (distinguish Slack's own AI from the Marcora agent in Slack).
