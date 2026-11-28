@@ -89,7 +89,7 @@ Neither error returns any context or the project's brief.
 
 ### "Curated in Enablement · comment to suggest a change"
 
-**Cause:** While Enablement is turned on for a team, only Enablement curators (team Admins or members granted curator permission) can edit curated Enablement material. Non-curators receive this `403` (`isError: true`) refusal from `ask_content_assistant` (when `chat_only_mode` is `false`), `apply_finding_fix`, `answer_finding_question`, `undo_finding_fix`, `update_ci_finding_status` (`decline`/`undecline`), `update_content`, `update_context`, and related edit/delete/restore paths when targeting a curated item or its linked document.
+**Cause:** While Enablement is turned on for a team, only Enablement curators (team Admins or members granted curator permission) can edit curated Enablement material. Non-curators receive this `403` (`isError: true`) refusal from `ask_content_assistant` (when `chat_only_mode` is `false`), `apply_finding_fix`, `answer_finding_question`, `undo_finding_fix`, `update_content`, `update_context`, and related edit/delete/restore paths when targeting a curated item or its linked document.
 
 **Solutions:**
 - Relay the refusal to the user — do not retry or duplicate the material. Tell them they can comment on the document in the Marcora Enablement Hub to suggest a change, or ask an Enablement curator to make the edit.
