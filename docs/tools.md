@@ -959,7 +959,7 @@ The updated presented finding object (including `status`, `declined`, `declined_
 
 **Errors:**
 - **Invalid status** — must be one of `acknowledged`, `dismissed`, `resolved`, `decline`, `undecline`.
-- **Finding not found** / **You do not have access to this finding.** — `finding_id` is unknown or its evidence/target cannot be accessed for writing.
+- **Finding not found** / **You do not have access to this finding.** — `finding_id` is unknown, its target is inaccessible, or (for `decline`/`undecline`) its cited evidence or target cannot be accessed for writing.
 - **Conflict (409, `isError: true`)** — e.g. `finding_not_queued`, `finding_already_applied`, `finding_not_declined`.
 
 **Example prompts:**
