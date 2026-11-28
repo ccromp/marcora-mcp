@@ -838,20 +838,21 @@ Neither error returns any context or brief.
 
 > **In ChatGPT** the three tools below appear as `list_context_intelligence_findings`, `get_context_intelligence_finding` and `update_context_intelligence_finding_status`. Everywhere else the names stay as documented here.
 
-Context Intelligence is Marcora's automated review layer for your reference/context library. Health-audit and web-freshness scans produce **findings** — stale content, contradictions, outdated web sources, classification gaps — each with a status lifecycle (`pending` → `acknowledged` / `dismissed` / `resolved`). These tools list and inspect findings, record your decision on them, and kick off a new health-audit sweep. To **apply** a finding's suggested fix, use [`apply_finding_fix`](#apply_finding_fix) — it works on health-audit findings and content-grounding findings alike.
+Context Intelligence is Marcora's automated review layer for your reference library. Health-audit, web-freshness, and impact-scan findings follow a **decide → queue → apply / decline → undo** lifecycle: Marcora either raises an open **question** for you to answer (`answer_finding_question`), queues a deterministic **`auto_fix`** (`apply_finding_fix` or `update_ci_finding_status` with `decline`/`undecline`), or lets you revert applied fixes (`undo_finding_fix`).
 
 ### `list_ci_findings`
 
-List Context Intelligence findings for your team — issues Marcora's automated scans detected in your reference/context library (stale content, contradictions, outdated web sources, classification gaps). This is also the right **first call** before updating any finding's status, to get its UUID.
+List Context Intelligence findings for your team — issues Marcora's automated scans detected in your reference library or document grounding checks. This is the right **first call** to get finding UUIDs and see what needs action.
 
-Findings are returned **newest-first**. Each has a status lifecycle: `pending` (new, needs review) → `acknowledged` / `dismissed` / `resolved`.
+When `bucket` is omitted, `list_ci_findings` returns all non-draft findings across library and `content_grounding` scans (respecting `status`, `severity`, and `process_type` filters; undecided library rows stay hidden). Pass `bucket` (`questions`, `queued`, `applied`, or `cleared`) to filter library findings by lifecycle view (`content_grounding` rows are excluded when `bucket` is set). Findings are returned **newest-first** (or next-to-apply for `queued` and most-recently-applied for `applied`), withholding evidence details the caller cannot access.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
-| `status` | string | No | Filter by status: `pending` (the actionable queue), `acknowledged`, `dismissed`, `resolved`. Omit for all |
+| `bucket` | string | No | Filter library findings only (excludes `content_grounding`) by lifecycle bucket: `questions` (open questions needing `answer_finding_question`), `queued` (auto-fixes queued to apply, including declined), `applied` (fixes applied by Marcora in the last 14 days and not undone), or `cleared` (dismissed with a clear reason, or acknowledged). Omit to return all non-draft decided library and `content_grounding` findings across statuses |
+| `status` | string | No | Filter by status: `pending`, `acknowledged`, `dismissed`, `resolved`. Omit to include all non-draft statuses (or pass `bucket` for a library lifecycle view) |
 | `severity` | string | No | Filter by severity as recorded by the scan: `critical`, `warning`, or `info`. Omit for all |
 | `process_type` | string | No | Filter by originating scan: `health_audit` (library-wide sweep), `web_freshness` (tracked webpage changes), `impact_scan` (downstream change impact), or `content_grounding` (document grounding check). Omit for all |
 | `page` | integer | No | Page number (default 1) |
@@ -861,24 +862,24 @@ Findings are returned **newest-first**. Each has a status lifecycle: `pending` (
 
 | Field | Type | Description |
 |---|---|---|
-| `items` | array | Finding objects, each with `id` (uuid), `summary`, `recommendation`, `severity`, `status`, `process_type`, `finding_type`, `suggested_fix`, `context_item_ids`, `created_at`, `resolved_at`, `resolved_by` |
+| `items` | array | Presented finding objects: `id` (uuid), `summary`, `recommendation`, `severity`, `status`, `process_type`, `finding_type`, `suggested_fix`, `decision` (`auto_fix` \| `ask` \| `clear`), `decision_reason`, `decision_confidence`, `question`, `fix_ops`, `apply_after`, `applied_at`, `applied_by_marcora`, `declined`, `declined_at`, `declined_by`, `undone_at`, `undone_by`, `clear_reason`, `can_undo`, `target` (`{ kind, id, name }`), `context_item_ids`, `core_context_item_ids`, `content_type`, `content_id`, `link_url`, `created_at`, `resolved_at`, `resolved_by` |
 | `itemsTotal` | integer | Total findings matching the filter |
 | `curPage` | integer | Current page number |
 | `nextPage` | integer \| null | Next page number, or `null` |
 | `prevPage` | integer \| null | Previous page number, or `null` |
 
 **Example prompts:**
-- "What did Context Intelligence find in our reference library?"
-- "Show me the open (pending) context findings"
-- "Any high-severity issues from the last health audit?"
+- "What questions does Context Intelligence need me to answer?"
+- "Show me the queued auto-fixes in our reference library"
+- "What fixes did Marcora apply recently?"
 
 ---
 
 ### `get_ci_finding`
 
-Fetch one Context Intelligence finding in full detail by its UUID (from `list_ci_findings`). Use it when you want the specifics of a finding — the full recommendation, the suggested fix content, or which context items it involves — before deciding to act on it.
+Fetch one Context Intelligence finding in full detail by its UUID (from `list_ci_findings`), including `suggested_fix`, `decision`, `question`, `fix_ops`, `apply_after`, `applied_at`, `declined`, `can_undo`, `target`, and `link_url`.
 
-The `suggested_fix` object (when present) contains the proposed replacement content. Review it with the user, then **apply** it with [`apply_finding_fix`](#apply_finding_fix) — or record a decision without applying anything using `update_ci_finding_status`.
+Depending on its state, act with [`answer_finding_question`](#answer_finding_question) (open question), [`apply_finding_fix`](#apply_finding_fix) (queued auto-fix or grounding/legacy fix), [`undo_finding_fix`](#undo_finding_fix) (revert an applied fix when `can_undo` is true), or [`update_ci_finding_status`](#update_ci_finding_status) (mark status or decline/undecline).
 
 **Parameters:**
 
@@ -896,32 +897,51 @@ The `suggested_fix` object (when present) contains the proposed replacement cont
 | `recommendation` | string \| null | Full recommended action |
 | `severity` | string | Severity as recorded by the scan |
 | `status` | string | `pending`, `acknowledged`, `dismissed`, or `resolved` |
-| `process_type` | string | Originating scan (`health_audit` or `web_freshness`) |
+| `process_type` | string | Originating scan (`health_audit`, `web_freshness`, `impact_scan`, or `content_grounding`) |
 | `finding_type` | string | The kind of issue detected |
-| `suggested_fix` | object \| null | Proposed fix: `field`, `new_value`, `context_item_id`. Apply it with `apply_finding_fix` |
+| `suggested_fix` | object \| null | Proposed fix: `field`, `new_value`, `context_item_id`, etc. |
+| `decision` | string \| null | Decider classification (`auto_fix`, `ask`, or `clear`) |
+| `decision_reason` | string \| null | Rationale (`null` when evidence is withheld) |
+| `decision_confidence` | number \| null | Decider confidence score |
+| `question` | object \| null | Question prompt and answer choices when `decision` is `ask` (`null` when evidence is withheld) |
+| `fix_ops` | array \| null | Structured edit operations for queued or applied fixes (`null` when evidence is withheld) |
+| `apply_after` | integer \| null | Scheduled auto-apply timestamp (Unix ms) |
+| `applied_at` | integer \| null | Timestamp when applied (Unix ms) |
+| `applied_by_marcora` | boolean \| null | Whether Marcora applied the fix (vs resolved externally) |
+| `declined` | boolean | Whether a queued auto-fix is currently declined |
+| `declined_at` | integer \| null | Timestamp when declined |
+| `declined_by` | integer \| null | User ID who declined it |
+| `undone_at` | integer \| null | Timestamp when undone |
+| `undone_by` | integer \| null | User ID who undid it |
+| `clear_reason` | string \| null | Reason the finding left the open queue |
+| `can_undo` | boolean | `true` when `undo_finding_fix` can revert this applied fix |
+| `target` | object \| null | Target `{ kind: "core" \| "item", id, name }` (`null` when evidence is withheld) |
 | `context_item_ids` | array \| null | Context items this finding involves |
+| `link_url` | string | Deep link to the finding in Marcora |
 | `created_at` | integer | Unix timestamp of creation |
 | `resolved_at` | integer \| null | Unix timestamp when resolved, or `null` |
 | `resolved_by` | integer \| null | User ID who resolved it, or `null` |
 
 **Errors:**
 - **Not a valid UUID** (400, tool error `isError: true`) — malformed `finding_id`.
-- **Finding not found.** (404, tool error `isError: true`) — the UUID is unknown or belongs to another team.
+- **Finding not found.** (404/400, tool error `isError: true`) — the UUID is unknown or belongs to another team.
 
 **Example prompts:**
 - "Show me the full details of that finding"
-- "What's the suggested fix for that context issue?"
+- "Can we undo that fix?"
 
 ---
 
 ### `update_ci_finding_status`
 
-Update the status of a Context Intelligence finding — **acknowledge** it, **dismiss** it, or mark it **resolved**. Use it after the user has reviewed a finding (via `list_ci_findings` / `get_ci_finding`) and told you their decision.
+Update a Context Intelligence finding's status — **acknowledge**, **dismiss**, or mark **resolved** — or **decline** / **undecline** a queued library `auto_fix`. Use it after the user has reviewed a finding (via `list_ci_findings` / `get_ci_finding`) and told you their decision.
 
 Status meanings:
-- `acknowledged` — seen, kept on the radar (still open).
-- `dismissed` — not relevant / won't fix — removes it from the actionable queue.
-- `resolved` — the underlying issue was fixed (records who resolved it and when). This records the resolution **only** — it does **not** apply the suggested fix. To actually apply it, use `apply_finding_fix` (which resolves the finding for you on success).
+- `acknowledged` — seen, kept on the radar (shown in the `cleared` bucket with reason `acknowledged`).
+- `dismissed` — not relevant / won't fix — closes the finding without applying a fix (use `status: "decline"` instead to mark a queued library `auto_fix` as declined while keeping it in `bucket: "queued"`).
+- `resolved` — the underlying issue was fixed outside Marcora (records who resolved it and when). This records resolution **only** — it does **not** apply a fix (and does not create an undoable Marcora edit). To apply a fix, use `apply_finding_fix`.
+- `decline` — decline a queued library `auto_fix` before it runs (`declined: true`, stays visible in `bucket: "queued"` for reversal).
+- `undecline` — restore a declined library `auto_fix` back to the active queue.
 
 **Parameters:**
 
@@ -929,22 +949,81 @@ Status meanings:
 |---|---|---|---|
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `finding_id` | string (uuid) | Yes | UUID of the finding (from `list_ci_findings`) |
-| `status` | string | Yes | New status: `acknowledged`, `dismissed`, or `resolved` |
+| `status` | string | Yes | New status: `acknowledged`, `dismissed`, `resolved`, `decline`, or `undecline` |
 
 **Output:**
 
-The updated finding row, including the new `status` (and `resolved_at` / `resolved_by` when resolved).
+The updated presented finding object (including `status`, `declined`, `declined_at`, `declined_by`, `can_undo`, `clear_reason`, and `link_url`).
 
-**Authorization:** requires **Admin or Creator** role. Confirm with the user before dismissing or resolving a finding they haven't explicitly decided on.
+**Authorization:** requires **Admin or Creator** role. `decline` and `undecline` also require all cited evidence to be readable.
 
 **Errors:**
-- **Invalid status** — must be one of `acknowledged`, `dismissed`, `resolved`.
-- **Finding not found** / **You do not have access to this finding.**
+- **Invalid status** — must be one of `acknowledged`, `dismissed`, `resolved`, `decline`, `undecline`.
+- **Finding not found** / **You do not have access to this finding.** — `finding_id` is unknown, its target is inaccessible, or (for `decline`/`undecline`) its cited evidence cannot be accessed.
+- **Conflict (409, `isError: true`)** — e.g. `finding_not_queued`, `finding_already_applied`, `finding_not_declined`.
 
 **Example prompts:**
+- "Decline that queued auto-fix — don't change that page"
+- "Re-queue that declined fix so we can apply it"
 - "Dismiss that finding — it's not relevant"
-- "Mark that one as resolved"
-- "Acknowledge those for now"
+
+---
+
+### `answer_finding_question`
+
+Answer an open Context Intelligence question finding (`decision: "ask"`) by UUID, applying the chosen update or clearing the finding.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
+| `finding_id` | string (uuid) | Yes | UUID of the open question finding (from `list_ci_findings({ bucket: "questions" })`) |
+| `choice` | string | Yes | One of: `apply` (apply Marcora's proposed fix), `edit` (apply custom wording/instructions in `text`), `leave_out` (close without changing the document or context item), `library_right`, `this_right`, or `both_right` (resolve a conflict by declaring which source is right) |
+| `text` | string | Conditional | Required when `choice` is `edit`: custom replacement wording or edit instructions |
+
+**Output:**
+
+The updated presented finding object (`id`, `status`, `decision`, `clear_reason`, `applied_at`, `applied_by_marcora`, `can_undo`, `target`, `link_url`, `resolved_at`, `resolved_by`).
+
+**Authorization:** requires **Admin or Creator** role, all cited evidence readable, and write access to the target context item (not Enablement-curated for non-curators).
+
+**Errors:**
+- **400 (`isError: true`)** — invalid `finding_id`, invalid `choice`, missing `text` when `choice` is `edit`, or finding unreadable.
+- **409 (`isError: true`, prefixed with reason code)** — `finding_already_applied`, `finding_not_a_question`, `answer_not_applicable`, `history_unavailable`, `finding_target_changed`, `linked_document_requires_edit`, `linked_document_drifted`, `linked_document_being_edited`, or `linked_document_run_active`.
+
+**Example prompts:**
+- "Apply Marcora's suggested fix for that question"
+- "Answer that finding with custom wording: ..."
+- "Resolve that conflict — both our library and this source are right"
+
+---
+
+### `undo_finding_fix`
+
+Revert an applied Marcora fix by `finding_id` when `can_undo` is true, restoring the prior context item or Brand Foundation text.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
+| `finding_id` | string (uuid) | Yes | UUID of an applied finding (`can_undo: true`) |
+
+**Output:**
+
+The updated presented finding object (`id`, `status`, `undone_at`, `undone_by`, `can_undo: false`, `declined`, `clear_reason`, `target`, `link_url`).
+
+**Authorization:** requires **Admin or Creator** role and full evidence readability on the finding.
+
+**Errors:**
+- **`changed_since_apply`** (`isError: true`) — the target context item or Brand Foundation was edited after Marcora applied the fix, so automatic revert is blocked.
+- **`never_applied`** (`isError: true`) — the finding was marked resolved outside Marcora rather than applied by Marcora.
+- **Other 409 refusals (`isError: true`)** — `already_undone`, `not_applied`, `not_undoable`, `undo_unsupported`, `history_unavailable`, `linked_document_requires_edit`, `linked_document_drifted`, `linked_document_being_edited`, `linked_document_run_active`, or a private-source-history refusal when the finding cites private source history on a document.
+
+**Example prompts:**
+- "Undo that Context Intelligence fix we just applied"
+- "Revert the change Marcora made on finding `<id>`"
 
 ---
 
@@ -1097,21 +1176,21 @@ Read the two-pass grounding result of a scan (`supported`, `conflict`, `gap`, `n
 
 ### `apply_finding_fix`
 
-Apply Marcora's recommended fix for one or more findings — "yes, do recommendation `<id>`".
+Apply Marcora's recommended fix for one or more findings — queued library `auto_fix` findings, content-grounding findings, or legacy Context Intelligence health-audit findings.
 
-**When to use:** the user has reviewed findings (from `check_content_grounding`, `get_grounding_result`, or `list_ci_findings`) and wants them acted on. **Read the finding's `suggested_fix` and confirm with the user first** — this writes to their library.
+**When to use:** the user has reviewed findings (from `check_content_grounding`, `get_grounding_result`, or `list_ci_findings`) and wants them acted on. **Read the finding's `fix_ops` or `suggested_fix` and confirm with the user first** — this writes to their library, Brand Foundation, or checked document.
 
-You never compose the fix yourself. Every finding already stores its recommended update, so applying is purely a reference by `finding_id`. This is the same action as the Apply button in the Marcora app: same permissions, same billing, same result.
+You never compose the fix yourself. Every finding already stores its recommended update, so applying is purely a reference by `finding_id`.
 
-**Works on both finding families** — content-grounding findings (where conflicts come only from what the document was built from in pass 1, while pass-2 disagreements from other collections surface as non-actionable `claims[].notes[]` rather than findings; a `conflict_scope: "company_material"` conflict means the document disagrees with your material about another company and its fix revises the document, never your facts; a company gap offers no add-to-library because `add_to_library_eligible` is `false` and the backend refuses it; and recorded research appears as a source while grounding itself never browses) and Context Intelligence health-audit recommendations.
+**Two execution paths:**
+- **Queued library auto-fixes (`decision: "auto_fix"`):** apply **synchronously** during the `apply_finding_fix` call, returning in the optional `applied[]` array with `can_undo` (revert later with [`undo_finding_fix`](#undo_finding_fix)) and `target`. Queued fixes apply to their pinned target and do not accept `context_item_overrides`.
+- **Content-grounding & legacy `health_audit` findings:** run **asynchronously** via `jobs[]` (conflicts come only from pass-1 built-from sources; pass-2 disagreements surface as non-actionable `claims[].notes[]`; `conflict_scope: "company_material"` conflicts revise the document, never your facts; company gaps offer no add-to-library because `add_to_library_eligible` is `false`). Poll each distinct `generation_id` via `get_generation_status`.
 
-**Where each fix lands:** by default the context item named in that finding's `context_item_id`. A `null` `context_item_id` means the fix targets the document itself. Pass `context_item_overrides` to send a specific fix somewhere else.
+**Questions and declined findings:** open questions (`decision: "ask"`) are refused per finding in `errors[]` with reason `finding_needs_answer` (use [`answer_finding_question`](#answer_finding_question)); declined queued fixes return `finding_declined` (re-queue with `update_ci_finding_status({ status: "undecline" })` first).
 
-**Asynchronous.** Returns immediately with one job per finding. To follow one to completion, poll `get_generation_status` with its `generation_id` — a **UUID** (the response hands you the UUID poll key `get_generation_status` expects).
+**Findings that land in the same document share one async run.** Async findings whose fixes land in the same document share a `generation_id`. Poll each distinct `generation_id` once; its `document_updated` field (`true` vs `false`) covers every finding in that run.
 
-**Findings that land in the same document share one run.** Findings whose fixes land in the same document (the same context item, or the same content document when `context_item_id` is null) are applied together in one run, so their jobs share a `generation_id`. Poll that `generation_id` once; its `document_updated` covers all of them. Brand Foundation findings are not grouped: each keeps its own run and `generation_id`. The honest outcome is the **`document_updated`** field on that response's `content` object: `true` means the document was actually changed, `false` means the recommendation was already covered and nothing was written. Report that distinction rather than assuming every applied fix changed something.
-
-**Partial success is normal:** findings that could not be started come back in `errors[]` with a reason while the rest still run. Check **both** `jobs[]` and `errors[]`.
+**Partial success is normal:** findings that could not be applied come back in `errors[]` while queued fixes apply (`applied[]`) and valid async jobs start (`jobs[]`). Check `applied[]`, `jobs[]`, and `errors[]`.
 
 **Parameters:**
 
@@ -1119,28 +1198,29 @@ You never compose the fix yourself. Every finding already stores its recommended
 |---|---|---|---|
 | `team_id` | integer | Yes | Team id to scope this call to (from `initialize` instructions or `get_current_user_info`) |
 | `finding_ids` | array of uuid | Yes | The findings to apply. One or many |
-| `context_item_overrides` | object | No | Map of `finding_id` → `context_item_id` to redirect specific fixes. Every key must also appear in `finding_ids` |
+| `context_item_overrides` | object | No | Map of `finding_id` → `context_item_id` to redirect `content_grounding` fixes. Every key must also appear in `finding_ids` (not supported for queued `auto_fix` findings) |
 
 **Output:**
 
 | Field | Type | Description |
 |---|---|---|
 | `requested` | integer | How many findings were submitted |
-| `queued` | integer | How many runs actually started |
-| `skipped` | integer | How many could not start — see `errors[]` |
-| `jobs` | array | Per finding: `finding_id`, `status`, `generation_id` (uuid — poll `get_generation_status` with it; jobs whose fixes land in the same document share one, so poll each distinct `generation_id` once), `document_uuid`, `context_item_id` |
-| `errors` | array | Per finding: `finding_id`, `error` |
+| `queued` | integer | How many async runs actually started |
+| `skipped` | integer | How many could not run — see `errors[]` |
+| `applied` | array | Optional (omitted when 0 queued fixes apply synchronously). Per applied finding: `finding_id`, `can_undo`, optional `target` (`{ kind, id, name }`) |
+| `jobs` | array | Per async run: `finding_ids`, `status`, `generation_id` (uuid — poll `get_generation_status` with it), `target_type`, `target_id` |
+| `errors` | array | Per finding: `finding_id`, optional `reason`, `error` |
 
 **Errors:**
 - **Missing param: finding_ids** (400, tool error `isError: true`) — pass `finding_id` values from a prior findings response.
 - **finding_ids must be finding_id UUIDs** (400, tool error `isError: true`).
 - **context_item_overrides names a finding not in finding_ids** (400, tool error `isError: true`) — the override would be ignored, so it is rejected rather than silently dropped.
 - **You are not authorized to perform this action** (403) — applying requires an Admin or Creator role.
-- Per-finding failures (already resolved, not a grounding/health-audit finding) arrive in `errors[]`, not as a thrown error; `web_freshness` and `impact_scan` findings return in `errors[]` pointing to `update_ci_finding_status`.
-- **Finding not found.** — per finding, in `errors[]`: a `finding_id` that is unknown or that you cannot read. That finding is skipped; the others still run.
-- **Marcora is already updating this document.** — per finding, in `errors[]`: another run on that document (for example the user's own Content Assistant request, or an earlier `apply_finding_fix` call) is still in progress. Wait for it to finish, then retry those findings.
+- Per-finding failures (`finding_needs_answer`, `finding_declined`, `override_not_supported`, `linked_document_drifted`, `linked_document_being_edited`, `linked_document_run_active`, already resolved, or unsupported `web_freshness`/`impact_scan` without a queued fix) arrive in `errors[]`, not as a thrown error.
+- **Finding not found.** — per finding, in `errors[]`: a `finding_id` that is unknown or whose evidence you cannot read. That finding is skipped; the others still run.
+- **Marcora is already updating this document.** — per finding, in `errors[]`: another run on that document is still in progress. Wait for it to finish, then retry those findings.
 - **Nothing was applied. This document has private source history** (an `isError` result) — a fix on such a document cannot update a context item in your reference library. The message names the next step that will work: call again with the same `finding_ids` and without `context_item_overrides` when that fixes the document itself; otherwise revise the document with `update_content`, then re-check.
-- **"Curated in Enablement · comment to suggest a change"** (in `errors[]` for a target `content_document` or `context_item`) — when Enablement is on and the document is curated in Enablement, non-curators cannot apply fixes to it directly. Suggest the change via an Enablement comment instead.
+- **"Curated in Enablement · comment to suggest a change"** (in `errors[]` for a target `content_document` or `context_item`, or 403) — when Enablement is on and the target is curated in Enablement, non-curators cannot apply fixes to it directly. Suggest the change via an Enablement comment instead.
 
 **Example prompts:**
 - "Fix the pricing conflict it found"

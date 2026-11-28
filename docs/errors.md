@@ -76,17 +76,20 @@ Neither error returns any context or the project's brief.
 ### Grounding and Context Intelligence finding errors
 
 **Cause:**
-- **`"Finding not found."`** — returned as a tool error (`isError: true`) by `get_ci_finding` when the `finding_id` is unknown or belongs to another team, or per finding in `apply_finding_fix`'s `errors[]` when a `finding_id` is unknown or unreadable to the caller (that finding is skipped while the remaining findings in the call still run).
+- **`"Finding not found."`** — returned as a tool error (`isError: true`) by `get_ci_finding`, `update_ci_finding_status`, `answer_finding_question`, or `undo_finding_fix` (and per finding in `apply_finding_fix`'s `errors[]`) when the `finding_id` is unknown, belongs to another team, or targets an item you cannot access; `update_ci_finding_status` (`decline`/`undecline`), `answer_finding_question`, `undo_finding_fix`, and queued-lifecycle findings in `apply_finding_fix` also return it when any cited evidence is private or unreadable.
+- **`finding_needs_answer` / `finding_declined` (in `apply_finding_fix` `errors[]`)** — `apply_finding_fix` cannot apply an open question (`decision: "ask"`) or a declined auto-fix directly. Answer questions with `answer_finding_question`, or restore a declined auto-fix with `update_ci_finding_status({ status: "undecline" })` first.
+- **`changed_since_apply` / `never_applied` (`undo_finding_fix`, `isError: true`)** — `undo_finding_fix` refuses when the target was edited after Marcora applied the fix (`changed_since_apply`), or when the finding was resolved manually outside Marcora (`never_applied`). Other 409 reasons (`already_undone`, `not_applied`, `not_undoable`, `undo_unsupported`, `history_unavailable`) carry their reason prefix as well.
 - **`"Nothing was applied. This document has private source history..."`** — returned as a tool error (`isError: true`) by `apply_finding_fix` when a fix on a document with private source history would update a context item in your Reference Library.
 - **`"This check cannot use the document’s private sources..."`** — returned as a tool error (`isError: true`) by `check_content_grounding` when the document was built from Only me sources, which are never sent to an AI app.
 
 **Solutions:**
+- For `changed_since_apply`, show the user that the target changed after Marcora applied the fix and offer to inspect/edit the current item directly instead of auto-reverting. For `never_applied`, explain that Marcora cannot automatically undo a manual resolution.
 - For `"Nothing was applied. This document has private source history..."`, follow the next step named in the message: call `apply_finding_fix` again with the same `finding_ids` and without `context_item_overrides` when that fixes the document itself; otherwise revise the document with `update_content`, then re-check.
 - For `"This check cannot use the document’s private sources..."`, when the private sources are the caller's own, the message includes a link to check the document privately in Marcora; relay that link to the user.
 
 ### "Curated in Enablement · comment to suggest a change"
 
-**Cause:** While Enablement is turned on for a team, only Enablement curators (team Admins or members granted curator permission) can edit curated Enablement material. Non-curators receive this `403` (`isError: true`) refusal from `ask_content_assistant` (when `chat_only_mode` is `false`), `apply_finding_fix`, `update_content`, `update_context`, and related edit/delete/restore paths when targeting a curated item or its linked document.
+**Cause:** While Enablement is turned on for a team, only Enablement curators (team Admins or members granted curator permission) can edit curated Enablement material. Non-curators receive this `403` (`isError: true`) refusal from `ask_content_assistant` (when `chat_only_mode` is `false`), `apply_finding_fix`, `answer_finding_question`, `undo_finding_fix`, `update_content`, `update_context`, and related edit/delete/restore paths when targeting a curated item or its linked document.
 
 **Solutions:**
 - Relay the refusal to the user — do not retry or duplicate the material. Tell them they can comment on the document in the Marcora Enablement Hub to suggest a change, or ask an Enablement curator to make the edit.
